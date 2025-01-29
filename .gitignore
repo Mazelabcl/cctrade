@@ -1,0 +1,22 @@
+# Ignore environments
+env/
+*.env
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore logs and temporary files
+*.log
+*.tmp
+
+# Ignore Conda environment lock files
+*.conda
+*.lock
+
+# Add any additional files or folders you want to ignore
+.venv
+*.venv

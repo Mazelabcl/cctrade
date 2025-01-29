@@ -1,0 +1,8 @@
+python-binance
+pandas
+numpy
+matplotlib
+mplfinance
+tqdm
+requests
+python-dotenv

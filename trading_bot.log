@@ -1,0 +1,1147 @@
+2024-09-24 13:02:49,193 - INFO - Fetching 1d data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-09-24 13:02:50,090 - INFO - Fetched 30 records for 1d timeframe.
+2024-09-24 13:02:50,091 - INFO - Fetching 1w data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-09-24 13:02:50,441 - INFO - Fetched 4 records for 1w timeframe.
+2024-09-24 13:02:50,442 - INFO - Fetching 1M data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-09-24 13:02:50,787 - INFO - Fetched 1 records for 1M timeframe.
+2024-09-24 13:02:50,788 - INFO - Fetching 1m data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-09-24 13:03:15,789 - INFO - Fetched 41761 records for 1m timeframe.
+2024-09-24 13:03:15,795 - INFO - Fetching 1h data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-09-24 13:03:16,198 - INFO - Fetched 697 records for 1h timeframe.
+2024-09-24 13:03:16,199 - INFO - Detecting fractals for daily timeframe
+2024-09-24 13:03:16,217 - INFO - Detected 4 up fractals and 4 down fractals for daily timeframe.
+2024-09-24 13:03:16,217 - INFO - Calculating HTF levels for daily timeframe
+2024-09-24 13:03:16,234 - INFO - Calculated 17 HTF levels for daily timeframe.
+2024-09-24 13:03:16,234 - INFO - Calculating Fibonacci levels for daily timeframe
+2024-09-24 13:03:16,280 - INFO - Detecting fractals for weekly timeframe
+2024-09-24 13:03:16,282 - INFO - Detected 0 up fractals and 0 down fractals for weekly timeframe.
+2024-09-24 13:03:16,282 - INFO - Calculating HTF levels for weekly timeframe
+2024-09-24 13:03:16,284 - INFO - Calculated 2 HTF levels for weekly timeframe.
+2024-09-24 13:03:16,285 - INFO - Calculating Fibonacci levels for weekly timeframe
+2024-09-24 13:03:16,314 - INFO - Detecting fractals for monthly timeframe
+2024-09-24 13:03:16,315 - INFO - Detected 0 up fractals and 0 down fractals for monthly timeframe.
+2024-09-24 13:03:16,315 - INFO - Calculating HTF levels for monthly timeframe
+2024-09-24 13:03:16,315 - INFO - Calculated 0 HTF levels for monthly timeframe.
+2024-09-24 13:03:16,315 - INFO - Calculating Fibonacci levels for monthly timeframe
+2024-09-24 13:03:16,342 - INFO - Generating ML datasets
+2024-09-24 13:03:16,342 - INFO - Detecting fractals for 1h timeframe
+2024-09-24 13:03:16,421 - INFO - Detected 106 up fractals and 102 down fractals for 1h timeframe.
+2024-09-24 13:31:45,727 - INFO - Fetching 1d data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-09-24 13:31:47,075 - INFO - Fetched 30 records for 1d timeframe.
+2024-09-24 13:31:47,076 - INFO - Fetching 1w data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-09-24 13:31:47,424 - INFO - Fetched 4 records for 1w timeframe.
+2024-09-24 13:31:47,424 - INFO - Fetching 1M data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-09-24 13:31:47,777 - INFO - Fetched 1 records for 1M timeframe.
+2024-09-24 13:31:47,777 - INFO - Fetching 1m data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-09-24 13:32:14,568 - INFO - Fetched 41761 records for 1m timeframe.
+2024-09-24 13:32:14,578 - INFO - Fetching 1h data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-09-24 13:32:14,960 - INFO - Fetched 697 records for 1h timeframe.
+2024-09-24 13:32:14,961 - INFO - Detecting fractals for daily timeframe
+2024-09-24 13:32:14,994 - INFO - Detected 4 up fractals and 4 down fractals for daily timeframe.
+2024-09-24 13:32:14,995 - INFO - Calculating HTF levels for daily timeframe
+2024-09-24 13:32:15,020 - INFO - Calculated 17 HTF levels for daily timeframe.
+2024-09-24 13:32:15,020 - INFO - Calculating Fibonacci levels for daily timeframe
+2024-09-24 13:32:15,162 - INFO - Detecting fractals for weekly timeframe
+2024-09-24 13:32:15,165 - INFO - Detected 0 up fractals and 0 down fractals for weekly timeframe.
+2024-09-24 13:32:15,165 - INFO - Calculating HTF levels for weekly timeframe
+2024-09-24 13:32:15,169 - INFO - Calculated 2 HTF levels for weekly timeframe.
+2024-09-24 13:32:15,170 - INFO - Calculating Fibonacci levels for weekly timeframe
+2024-09-24 13:32:15,218 - INFO - Detecting fractals for monthly timeframe
+2024-09-24 13:32:15,219 - INFO - Detected 0 up fractals and 0 down fractals for monthly timeframe.
+2024-09-24 13:32:15,220 - INFO - Calculating HTF levels for monthly timeframe
+2024-09-24 13:32:15,221 - INFO - Calculated 0 HTF levels for monthly timeframe.
+2024-09-24 13:32:15,221 - INFO - Calculating Fibonacci levels for monthly timeframe
+2024-09-24 13:32:15,271 - INFO - Generating ML datasets
+2024-09-24 13:32:15,271 - INFO - Detecting fractals for 1h timeframe
+2024-09-24 13:32:15,380 - INFO - Detected 106 up fractals and 102 down fractals for 1h timeframe.
+2024-09-24 13:32:15,766 - INFO - ML Price Action dataset saved to ml_dataset.csv
+2024-09-24 13:32:15,766 - INFO - Levels dataset saved to levels_dataset.csv
+2024-09-24 13:48:57,237 - INFO - Fetching 1d data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-09-24 13:48:57,694 - INFO - Fetched 30 records for 1d timeframe.
+2024-09-24 13:48:57,695 - INFO - Fetching 1w data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-09-24 13:48:58,031 - INFO - Fetched 4 records for 1w timeframe.
+2024-09-24 13:48:58,032 - INFO - Fetching 1M data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-09-24 13:48:58,370 - INFO - Fetched 1 records for 1M timeframe.
+2024-09-24 13:48:58,370 - INFO - Fetching 1m data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-09-24 13:49:27,467 - INFO - Fetched 41761 records for 1m timeframe.
+2024-09-24 13:49:27,507 - INFO - Fetching 1h data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-09-24 13:49:27,905 - INFO - Fetched 697 records for 1h timeframe.
+2024-09-24 13:49:27,906 - INFO - Detecting fractals for daily timeframe
+2024-09-24 13:49:27,914 - INFO - Detected 4 up fractals and 4 down fractals for daily timeframe.
+2024-09-24 13:49:27,914 - INFO - Calculating HTF levels for daily timeframe
+2024-09-24 13:49:27,923 - INFO - Calculated 17 HTF levels for daily timeframe.
+2024-09-24 13:49:27,923 - INFO - Calculating Fibonacci levels for daily timeframe
+2024-09-24 13:49:27,982 - INFO - Detecting fractals for weekly timeframe
+2024-09-24 13:49:27,983 - INFO - Detected 0 up fractals and 0 down fractals for weekly timeframe.
+2024-09-24 13:49:27,984 - INFO - Calculating HTF levels for weekly timeframe
+2024-09-24 13:49:27,986 - INFO - Calculated 2 HTF levels for weekly timeframe.
+2024-09-24 13:49:27,986 - INFO - Calculating Fibonacci levels for weekly timeframe
+2024-09-24 13:49:28,016 - INFO - Detecting fractals for monthly timeframe
+2024-09-24 13:49:28,017 - INFO - Detected 0 up fractals and 0 down fractals for monthly timeframe.
+2024-09-24 13:49:28,017 - INFO - Calculating HTF levels for monthly timeframe
+2024-09-24 13:49:28,018 - INFO - Calculated 0 HTF levels for monthly timeframe.
+2024-09-24 13:49:28,019 - INFO - Calculating Fibonacci levels for monthly timeframe
+2024-09-24 13:49:28,043 - INFO - Generating ML datasets
+2024-09-24 13:49:28,043 - INFO - Detecting fractals for 1h timeframe
+2024-09-24 13:49:28,119 - INFO - Detected 106 up fractals and 102 down fractals for 1h timeframe.
+2024-09-24 13:49:28,279 - INFO - ML Price Action dataset saved to ml_dataset.csv
+2024-09-24 13:49:28,280 - INFO - Levels dataset saved to levels_dataset.csv
+2024-09-24 13:49:28,282 - INFO - Plotting Daily timeframe levels
+2024-09-24 13:49:28,286 - ERROR - Error plotting daily timeframe levels: name 'np' is not defined
+2024-09-24 13:49:28,287 - INFO - Plotting Weekly timeframe levels
+2024-09-24 13:49:28,291 - ERROR - Error plotting weekly timeframe levels: name 'np' is not defined
+2024-09-24 13:49:28,292 - INFO - Plotting Monthly timeframe levels
+2024-09-24 13:49:28,296 - INFO - Saving plot to BTCUSDT_monthly_timeframe_with_levels.png
+2024-09-24 13:49:33,418 - INFO - Plot saved successfully to BTCUSDT_monthly_timeframe_with_levels.png
+2024-12-22 21:47:16,495 - INFO - Fetching 1d data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:47:16,895 - INFO - Fetched 30 records for 1d timeframe.
+2024-12-22 21:47:16,895 - INFO - Fetching 1w data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:47:17,205 - INFO - Fetched 4 records for 1w timeframe.
+2024-12-22 21:47:17,205 - INFO - Fetching 1M data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:47:17,516 - INFO - Fetched 1 records for 1M timeframe.
+2024-12-22 21:47:17,516 - INFO - Fetching 1m data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:47:35,613 - INFO - Fetched 41761 records for 1m timeframe.
+2024-12-22 21:47:35,619 - INFO - Fetching 1h data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:47:35,982 - INFO - Fetched 697 records for 1h timeframe.
+2024-12-22 21:47:35,982 - INFO - Detecting fractals for daily timeframe
+2024-12-22 21:47:35,987 - INFO - Detected 4 up fractals and 4 down fractals for daily timeframe.
+2024-12-22 21:47:35,987 - INFO - Calculating HTF levels for daily timeframe
+2024-12-22 21:47:35,994 - INFO - Calculated 17 HTF levels for daily timeframe.
+2024-12-22 21:47:35,994 - INFO - Calculating Fibonacci levels for daily timeframe
+2024-12-22 21:47:36,025 - INFO - Calculated 1 support and 3 resistance Fibonacci patterns for daily
+2024-12-22 21:47:36,026 - INFO - Calculating Volume Profile levels for daily timeframe
+2024-12-22 21:47:36,060 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:36,559 - INFO - Volume Profile calculated - POC: 20008.1, VAH: 19846.8, VAL: 20121.7
+2024-12-22 21:47:36,563 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:37,095 - INFO - Volume Profile calculated - POC: 20095.0, VAH: 19847.2, VAL: 20263.2
+2024-12-22 21:47:37,099 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:37,461 - INFO - Volume Profile calculated - POC: 19797.2, VAH: 19690.8, VAL: 19883.4
+2024-12-22 21:47:37,463 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:37,779 - INFO - Volume Profile calculated - POC: 19786.5, VAH: 19705.6, VAL: 19873.8
+2024-12-22 21:47:37,782 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:38,114 - INFO - Volume Profile calculated - POC: 19733.7, VAH: 19674.3, VAL: 19843.3
+2024-12-22 21:47:38,117 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:38,820 - INFO - Volume Profile calculated - POC: 19908.1, VAH: 19240.7, VAL: 20180.0
+2024-12-22 21:47:38,824 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:39,281 - INFO - Volume Profile calculated - POC: 18768.8, VAH: 18612.8, VAL: 18976.0
+2024-12-22 21:47:39,285 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:39,646 - INFO - Volume Profile calculated - POC: 19300.0, VAH: 19168.9, VAL: 19330.2
+2024-12-22 21:47:39,650 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:40,390 - INFO - Volume Profile calculated - POC: 21253.2, VAH: 20666.4, VAL: 21437.9
+2024-12-22 21:47:40,396 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:40,818 - INFO - Volume Profile calculated - POC: 21302.0, VAH: 21185.0, VAL: 21482.8
+2024-12-22 21:47:40,822 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:41,143 - INFO - Volume Profile calculated - POC: 21613.5, VAH: 21543.3, VAL: 21675.5
+2024-12-22 21:47:41,147 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:41,740 - INFO - Volume Profile calculated - POC: 22319.7, VAH: 21980.6, VAL: 22458.7
+2024-12-22 21:47:41,745 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:43,148 - INFO - Volume Profile calculated - POC: 22208.0, VAH: 20888.9, VAL: 22790.7
+2024-12-22 21:47:43,154 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:43,571 - INFO - Volume Profile calculated - POC: 20297.7, VAH: 20158.5, VAL: 20386.3
+2024-12-22 21:47:43,576 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:44,152 - INFO - Volume Profile calculated - POC: 20139.3, VAH: 19833.1, VAL: 20314.0
+2024-12-22 21:47:44,157 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:44,531 - INFO - Volume Profile calculated - POC: 19738.8, VAH: 19612.8, VAL: 19825.3
+2024-12-22 21:47:44,535 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:44,882 - INFO - Volume Profile calculated - POC: 19861.1, VAH: 19800.3, VAL: 20022.1
+2024-12-22 21:47:44,884 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:45,346 - INFO - Volume Profile calculated - POC: 20001.7, VAH: 19703.1, VAL: 20095.7
+2024-12-22 21:47:45,349 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:46,135 - INFO - Volume Profile calculated - POC: 18465.0, VAH: 18367.9, VAL: 19227.6
+2024-12-22 21:47:46,141 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:46,727 - INFO - Volume Profile calculated - POC: 18954.0, VAH: 18807.5, VAL: 19298.7
+2024-12-22 21:47:46,731 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:47,355 - INFO - Volume Profile calculated - POC: 19003.4, VAH: 18833.5, VAL: 19351.2
+2024-12-22 21:47:47,362 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:48,001 - INFO - Volume Profile calculated - POC: 18995.6, VAH: 18727.9, VAL: 19318.3
+2024-12-22 21:47:48,005 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:48,675 - INFO - Volume Profile calculated - POC: 18722.7, VAH: 18556.3, VAL: 19226.9
+2024-12-22 21:47:48,680 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:48,999 - INFO - Volume Profile calculated - POC: 19095.8, VAH: 19024.5, VAL: 19176.8
+2024-12-22 21:47:49,002 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:49,351 - INFO - Volume Profile calculated - POC: 18951.0, VAH: 18882.5, VAL: 19088.4
+2024-12-22 21:47:49,354 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:49,839 - INFO - Volume Profile calculated - POC: 19124.0, VAH: 18898.7, VAL: 19280.0
+2024-12-22 21:47:49,844 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:50,804 - INFO - Volume Profile calculated - POC: 20199.4, VAH: 19222.4, VAL: 20363.4
+2024-12-22 21:47:50,810 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:51,654 - INFO - Volume Profile calculated - POC: 18732.7, VAH: 18485.0, VAL: 19411.7
+2024-12-22 21:47:51,663 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:52,111 - INFO - Volume Profile calculated - POC: 19452.8, VAH: 19272.7, VAL: 19539.0
+2024-12-22 21:47:52,116 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:52,122 - INFO - Volume Profile calculated - POC: 19587.5, VAH: 19587.5, VAL: 19607.1
+2024-12-22 21:47:52,123 - INFO - Successfully calculated 30 volume profiles for daily timeframe
+2024-12-22 21:47:52,129 - INFO - Detecting fractals for weekly timeframe
+2024-12-22 21:47:52,130 - INFO - Detected 0 up fractals and 0 down fractals for weekly timeframe.
+2024-12-22 21:47:52,130 - INFO - Calculating HTF levels for weekly timeframe
+2024-12-22 21:47:52,132 - INFO - Calculated 2 HTF levels for weekly timeframe.
+2024-12-22 21:47:52,132 - INFO - Calculating Fibonacci levels for weekly timeframe
+2024-12-22 21:47:52,135 - INFO - Calculated 0 support and 0 resistance Fibonacci patterns for weekly
+2024-12-22 21:47:52,135 - INFO - Calculating Volume Profile levels for weekly timeframe
+2024-12-22 21:47:52,155 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:53,317 - INFO - Volume Profile calculated - POC: 19797.0, VAH: 19716.0, VAL: 20077.6
+2024-12-22 21:47:53,331 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:56,580 - INFO - Volume Profile calculated - POC: 19777.4, VAH: 19364.3, VAL: 21850.0
+2024-12-22 21:47:56,608 - INFO - Calculating Volume Profile levels
+2024-12-22 21:47:59,744 - INFO - Volume Profile calculated - POC: 19735.3, VAH: 19335.4, VAL: 21170.6
+2024-12-22 21:47:59,776 - INFO - Calculating Volume Profile levels
+2024-12-22 21:48:02,134 - INFO - Volume Profile calculated - POC: 19093.0, VAH: 18671.1, VAL: 19274.9
+2024-12-22 21:48:02,167 - INFO - Calculating Volume Profile levels
+2024-12-22 21:48:03,828 - INFO - Volume Profile calculated - POC: 19124.0, VAH: 18824.8, VAL: 19617.2
+2024-12-22 21:48:03,850 - INFO - Successfully calculated 5 volume profiles for weekly timeframe
+2024-12-22 21:48:03,854 - INFO - Detecting fractals for monthly timeframe
+2024-12-22 21:48:03,855 - INFO - Detected 0 up fractals and 0 down fractals for monthly timeframe.
+2024-12-22 21:48:03,856 - INFO - Calculating HTF levels for monthly timeframe
+2024-12-22 21:48:03,856 - INFO - Calculated 0 HTF levels for monthly timeframe.
+2024-12-22 21:48:03,856 - INFO - Calculating Fibonacci levels for monthly timeframe
+2024-12-22 21:48:03,860 - INFO - Calculated 0 support and 0 resistance Fibonacci patterns for monthly
+2024-12-22 21:48:03,860 - INFO - Calculating Volume Profile levels for monthly timeframe
+2024-12-22 21:48:03,877 - INFO - Calculating Volume Profile levels
+2024-12-22 21:48:13,044 - INFO - Volume Profile calculated - POC: 19094.7, VAH: 18628.0, VAL: 20107.7
+2024-12-22 21:48:13,168 - INFO - Successfully calculated 1 volume profiles for monthly timeframe
+2024-12-22 21:48:13,173 - INFO - Generating ML datasets
+2024-12-22 21:48:13,173 - INFO - Detecting fractals for 1h timeframe
+2024-12-22 21:48:13,248 - INFO - Detected 106 up fractals and 102 down fractals for 1h timeframe.
+2024-12-22 21:48:13,291 - INFO - Added Volume Profile levels for daily timeframe
+2024-12-22 21:48:13,302 - INFO - Added Volume Profile levels for weekly timeframe
+2024-12-22 21:48:13,304 - INFO - Added Volume Profile levels for monthly timeframe
+2024-12-22 21:48:13,382 - INFO - ML Price Action dataset saved to ml_dataset.csv
+2024-12-22 21:48:13,383 - INFO - Levels dataset saved to levels_dataset.csv
+2024-12-22 21:48:13,384 - INFO - Plotting Daily timeframe levels
+2024-12-22 21:48:13,395 - INFO - Saving plot to BTCUSDT_daily_timeframe_with_levels.png
+2024-12-22 21:48:14,272 - INFO - Plot saved successfully to BTCUSDT_daily_timeframe_with_levels.png
+2024-12-22 21:48:14,273 - ERROR - Error in main execution: visualize_volume_profile() takes 2 positional arguments but 3 were given
+2024-12-22 21:55:38,892 - INFO - Fetching 1d data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:55:39,236 - INFO - Fetched 30 records for 1d timeframe.
+2024-12-22 21:55:39,237 - INFO - Fetching 1w data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:55:39,558 - INFO - Fetched 4 records for 1w timeframe.
+2024-12-22 21:55:39,558 - INFO - Fetching 1M data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:55:39,876 - INFO - Fetched 1 records for 1M timeframe.
+2024-12-22 21:55:39,877 - INFO - Fetching 1m data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:55:56,745 - INFO - Fetched 41761 records for 1m timeframe.
+2024-12-22 21:55:56,751 - INFO - Fetching 1h data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:55:57,111 - INFO - Fetched 697 records for 1h timeframe.
+2024-12-22 21:55:57,112 - INFO - Detecting fractals for daily timeframe
+2024-12-22 21:55:57,117 - INFO - Detected 4 up fractals and 4 down fractals for daily timeframe.
+2024-12-22 21:55:57,117 - INFO - Calculating HTF levels for daily timeframe
+2024-12-22 21:55:57,124 - INFO - Calculated 17 HTF levels for daily timeframe.
+2024-12-22 21:55:57,124 - INFO - Calculating Fibonacci levels for daily timeframe
+2024-12-22 21:55:57,151 - INFO - Calculated 1 support and 3 resistance Fibonacci patterns for daily
+2024-12-22 21:55:57,151 - INFO - Calculating Volume Profile levels for daily timeframe
+2024-12-22 21:55:57,180 - INFO - Calculating Volume Profile levels
+2024-12-22 21:55:57,621 - INFO - Volume Profile calculated - POC: 20008.1, VAH: 19846.8, VAL: 20121.7
+2024-12-22 21:55:57,625 - INFO - Calculating Volume Profile levels
+2024-12-22 21:55:58,110 - INFO - Volume Profile calculated - POC: 20095.0, VAH: 19847.2, VAL: 20263.2
+2024-12-22 21:55:58,114 - INFO - Calculating Volume Profile levels
+2024-12-22 21:55:58,436 - INFO - Volume Profile calculated - POC: 19797.2, VAH: 19690.8, VAL: 19883.4
+2024-12-22 21:55:58,439 - INFO - Calculating Volume Profile levels
+2024-12-22 21:55:58,744 - INFO - Volume Profile calculated - POC: 19786.5, VAH: 19705.6, VAL: 19873.8
+2024-12-22 21:55:58,747 - INFO - Calculating Volume Profile levels
+2024-12-22 21:55:59,055 - INFO - Volume Profile calculated - POC: 19733.7, VAH: 19674.3, VAL: 19843.3
+2024-12-22 21:55:59,058 - INFO - Calculating Volume Profile levels
+2024-12-22 21:55:59,741 - INFO - Volume Profile calculated - POC: 19908.1, VAH: 19240.7, VAL: 20180.0
+2024-12-22 21:55:59,745 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:00,192 - INFO - Volume Profile calculated - POC: 18768.8, VAH: 18612.8, VAL: 18976.0
+2024-12-22 21:56:00,195 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:00,524 - INFO - Volume Profile calculated - POC: 19300.0, VAH: 19168.9, VAL: 19330.2
+2024-12-22 21:56:00,527 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:01,266 - INFO - Volume Profile calculated - POC: 21253.2, VAH: 20666.4, VAL: 21437.9
+2024-12-22 21:56:01,271 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:01,690 - INFO - Volume Profile calculated - POC: 21302.0, VAH: 21185.0, VAL: 21482.8
+2024-12-22 21:56:01,694 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:02,046 - INFO - Volume Profile calculated - POC: 21613.5, VAH: 21543.3, VAL: 21675.5
+2024-12-22 21:56:02,049 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:02,628 - INFO - Volume Profile calculated - POC: 22319.7, VAH: 21980.6, VAL: 22458.7
+2024-12-22 21:56:02,635 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:04,062 - INFO - Volume Profile calculated - POC: 22208.0, VAH: 20888.9, VAL: 22790.7
+2024-12-22 21:56:04,069 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:04,482 - INFO - Volume Profile calculated - POC: 20297.7, VAH: 20158.5, VAL: 20386.3
+2024-12-22 21:56:04,486 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:05,047 - INFO - Volume Profile calculated - POC: 20139.3, VAH: 19833.1, VAL: 20314.0
+2024-12-22 21:56:05,051 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:05,423 - INFO - Volume Profile calculated - POC: 19738.8, VAH: 19612.8, VAL: 19825.3
+2024-12-22 21:56:05,427 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:05,769 - INFO - Volume Profile calculated - POC: 19861.1, VAH: 19800.3, VAL: 20022.1
+2024-12-22 21:56:05,772 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:06,233 - INFO - Volume Profile calculated - POC: 20001.7, VAH: 19703.1, VAL: 20095.7
+2024-12-22 21:56:06,236 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:07,011 - INFO - Volume Profile calculated - POC: 18465.0, VAH: 18367.9, VAL: 19227.6
+2024-12-22 21:56:07,017 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:07,581 - INFO - Volume Profile calculated - POC: 18954.0, VAH: 18807.5, VAL: 19298.7
+2024-12-22 21:56:07,585 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:08,210 - INFO - Volume Profile calculated - POC: 19003.4, VAH: 18833.5, VAL: 19351.2
+2024-12-22 21:56:08,217 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:08,849 - INFO - Volume Profile calculated - POC: 18995.6, VAH: 18727.9, VAL: 19318.3
+2024-12-22 21:56:08,854 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:09,523 - INFO - Volume Profile calculated - POC: 18722.7, VAH: 18556.3, VAL: 19226.9
+2024-12-22 21:56:09,528 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:09,848 - INFO - Volume Profile calculated - POC: 19095.8, VAH: 19024.5, VAL: 19176.8
+2024-12-22 21:56:09,851 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:10,193 - INFO - Volume Profile calculated - POC: 18951.0, VAH: 18882.5, VAL: 19088.4
+2024-12-22 21:56:10,197 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:10,707 - INFO - Volume Profile calculated - POC: 19124.0, VAH: 18898.7, VAL: 19280.0
+2024-12-22 21:56:10,712 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:11,673 - INFO - Volume Profile calculated - POC: 20199.4, VAH: 19222.4, VAL: 20363.4
+2024-12-22 21:56:11,678 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:12,506 - INFO - Volume Profile calculated - POC: 18732.7, VAH: 18485.0, VAL: 19411.7
+2024-12-22 21:56:12,511 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:12,959 - INFO - Volume Profile calculated - POC: 19452.8, VAH: 19272.7, VAL: 19539.0
+2024-12-22 21:56:12,965 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:12,971 - INFO - Volume Profile calculated - POC: 19587.5, VAH: 19587.5, VAL: 19607.1
+2024-12-22 21:56:12,972 - INFO - Successfully calculated 30 volume profiles for daily timeframe
+2024-12-22 21:56:12,977 - INFO - Detecting fractals for weekly timeframe
+2024-12-22 21:56:12,978 - INFO - Detected 0 up fractals and 0 down fractals for weekly timeframe.
+2024-12-22 21:56:12,978 - INFO - Calculating HTF levels for weekly timeframe
+2024-12-22 21:56:12,980 - INFO - Calculated 2 HTF levels for weekly timeframe.
+2024-12-22 21:56:12,980 - INFO - Calculating Fibonacci levels for weekly timeframe
+2024-12-22 21:56:12,984 - INFO - Calculated 0 support and 0 resistance Fibonacci patterns for weekly
+2024-12-22 21:56:12,984 - INFO - Calculating Volume Profile levels for weekly timeframe
+2024-12-22 21:56:13,002 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:14,165 - INFO - Volume Profile calculated - POC: 19797.0, VAH: 19716.0, VAL: 20077.6
+2024-12-22 21:56:14,178 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:17,449 - INFO - Volume Profile calculated - POC: 19777.4, VAH: 19364.3, VAL: 21850.0
+2024-12-22 21:56:17,475 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:20,629 - INFO - Volume Profile calculated - POC: 19735.3, VAH: 19335.4, VAL: 21170.6
+2024-12-22 21:56:20,661 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:23,001 - INFO - Volume Profile calculated - POC: 19093.0, VAH: 18671.1, VAL: 19274.9
+2024-12-22 21:56:23,033 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:24,720 - INFO - Volume Profile calculated - POC: 19124.0, VAH: 18824.8, VAL: 19617.2
+2024-12-22 21:56:24,742 - INFO - Successfully calculated 5 volume profiles for weekly timeframe
+2024-12-22 21:56:24,748 - INFO - Detecting fractals for monthly timeframe
+2024-12-22 21:56:24,750 - INFO - Detected 0 up fractals and 0 down fractals for monthly timeframe.
+2024-12-22 21:56:24,750 - INFO - Calculating HTF levels for monthly timeframe
+2024-12-22 21:56:24,750 - INFO - Calculated 0 HTF levels for monthly timeframe.
+2024-12-22 21:56:24,750 - INFO - Calculating Fibonacci levels for monthly timeframe
+2024-12-22 21:56:24,753 - INFO - Calculated 0 support and 0 resistance Fibonacci patterns for monthly
+2024-12-22 21:56:24,753 - INFO - Calculating Volume Profile levels for monthly timeframe
+2024-12-22 21:56:24,771 - INFO - Calculating Volume Profile levels
+2024-12-22 21:56:33,837 - INFO - Volume Profile calculated - POC: 19094.7, VAH: 18628.0, VAL: 20107.7
+2024-12-22 21:56:33,970 - INFO - Successfully calculated 1 volume profiles for monthly timeframe
+2024-12-22 21:56:33,974 - INFO - Generating ML datasets
+2024-12-22 21:56:33,974 - INFO - Detecting fractals for 1h timeframe
+2024-12-22 21:56:34,050 - INFO - Detected 106 up fractals and 102 down fractals for 1h timeframe.
+2024-12-22 21:56:34,093 - INFO - Added Volume Profile levels for daily timeframe
+2024-12-22 21:56:34,104 - INFO - Added Volume Profile levels for weekly timeframe
+2024-12-22 21:56:34,107 - INFO - Added Volume Profile levels for monthly timeframe
+2024-12-22 21:56:34,145 - INFO - ML Price Action dataset saved to ml_dataset.csv
+2024-12-22 21:56:34,145 - INFO - Levels dataset saved to levels_dataset.csv
+2024-12-22 21:56:34,146 - INFO - Plotting Daily timeframe levels
+2024-12-22 21:56:34,157 - INFO - Saving plot to BTCUSDT_daily_timeframe_with_levels.png
+2024-12-22 21:56:34,575 - INFO - Plot saved successfully to BTCUSDT_daily_timeframe_with_levels.png
+2024-12-22 21:56:34,576 - ERROR - Error in main execution: visualize_volume_profile() takes 2 positional arguments but 3 were given
+2024-12-22 21:57:18,907 - INFO - Fetching 1d data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:57:19,240 - INFO - Fetched 30 records for 1d timeframe.
+2024-12-22 21:57:19,240 - INFO - Fetching 1w data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:57:19,548 - INFO - Fetched 4 records for 1w timeframe.
+2024-12-22 21:57:19,548 - INFO - Fetching 1M data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:57:19,858 - INFO - Fetched 1 records for 1M timeframe.
+2024-12-22 21:57:19,858 - INFO - Fetching 1m data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:57:37,363 - INFO - Fetched 41761 records for 1m timeframe.
+2024-12-22 21:57:37,371 - INFO - Fetching 1h data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:57:37,734 - INFO - Fetched 697 records for 1h timeframe.
+2024-12-22 21:57:37,734 - INFO - Detecting fractals for daily timeframe
+2024-12-22 21:57:37,738 - INFO - Detected 4 up fractals and 4 down fractals for daily timeframe.
+2024-12-22 21:57:37,739 - INFO - Calculating HTF levels for daily timeframe
+2024-12-22 21:57:37,744 - INFO - Calculated 17 HTF levels for daily timeframe.
+2024-12-22 21:57:37,745 - INFO - Calculating Fibonacci levels for daily timeframe
+2024-12-22 21:57:37,773 - INFO - Calculated 1 support and 3 resistance Fibonacci patterns for daily
+2024-12-22 21:57:37,773 - INFO - Calculating Volume Profile levels for daily timeframe
+2024-12-22 21:57:37,803 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:38,335 - INFO - Volume Profile calculated - POC: 20008.1, VAH: 19846.8, VAL: 20121.7
+2024-12-22 21:57:38,339 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:39,276 - INFO - Volume Profile calculated - POC: 20095.0, VAH: 19847.2, VAL: 20263.2
+2024-12-22 21:57:39,280 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:39,727 - INFO - Volume Profile calculated - POC: 19797.2, VAH: 19690.8, VAL: 19883.4
+2024-12-22 21:57:39,731 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:40,193 - INFO - Volume Profile calculated - POC: 19786.5, VAH: 19705.6, VAL: 19873.8
+2024-12-22 21:57:40,197 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:40,671 - INFO - Volume Profile calculated - POC: 19733.7, VAH: 19674.3, VAL: 19843.3
+2024-12-22 21:57:40,675 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:41,421 - INFO - Volume Profile calculated - POC: 19908.1, VAH: 19240.7, VAL: 20180.0
+2024-12-22 21:57:41,426 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:41,932 - INFO - Volume Profile calculated - POC: 18768.8, VAH: 18612.8, VAL: 18976.0
+2024-12-22 21:57:41,937 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:42,314 - INFO - Volume Profile calculated - POC: 19300.0, VAH: 19168.9, VAL: 19330.2
+2024-12-22 21:57:42,318 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:43,141 - INFO - Volume Profile calculated - POC: 21253.2, VAH: 20666.4, VAL: 21437.9
+2024-12-22 21:57:43,146 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:43,617 - INFO - Volume Profile calculated - POC: 21302.0, VAH: 21185.0, VAL: 21482.8
+2024-12-22 21:57:43,621 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:44,140 - INFO - Volume Profile calculated - POC: 21613.5, VAH: 21543.3, VAL: 21675.5
+2024-12-22 21:57:44,144 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:44,817 - INFO - Volume Profile calculated - POC: 22319.7, VAH: 21980.6, VAL: 22458.7
+2024-12-22 21:57:44,823 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:46,247 - INFO - Volume Profile calculated - POC: 22208.0, VAH: 20888.9, VAL: 22790.7
+2024-12-22 21:57:46,254 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:46,669 - INFO - Volume Profile calculated - POC: 20297.7, VAH: 20158.5, VAL: 20386.3
+2024-12-22 21:57:46,674 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:47,244 - INFO - Volume Profile calculated - POC: 20139.3, VAH: 19833.1, VAL: 20314.0
+2024-12-22 21:57:47,249 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:47,624 - INFO - Volume Profile calculated - POC: 19738.8, VAH: 19612.8, VAL: 19825.3
+2024-12-22 21:57:47,628 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:47,973 - INFO - Volume Profile calculated - POC: 19861.1, VAH: 19800.3, VAL: 20022.1
+2024-12-22 21:57:47,976 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:48,434 - INFO - Volume Profile calculated - POC: 20001.7, VAH: 19703.1, VAL: 20095.7
+2024-12-22 21:57:48,437 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:49,221 - INFO - Volume Profile calculated - POC: 18465.0, VAH: 18367.9, VAL: 19227.6
+2024-12-22 21:57:49,226 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:49,803 - INFO - Volume Profile calculated - POC: 18954.0, VAH: 18807.5, VAL: 19298.7
+2024-12-22 21:57:49,807 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:50,449 - INFO - Volume Profile calculated - POC: 19003.4, VAH: 18833.5, VAL: 19351.2
+2024-12-22 21:57:50,456 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:51,148 - INFO - Volume Profile calculated - POC: 18995.6, VAH: 18727.9, VAL: 19318.3
+2024-12-22 21:57:51,154 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:51,852 - INFO - Volume Profile calculated - POC: 18722.7, VAH: 18556.3, VAL: 19226.9
+2024-12-22 21:57:51,857 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:52,181 - INFO - Volume Profile calculated - POC: 19095.8, VAH: 19024.5, VAL: 19176.8
+2024-12-22 21:57:52,185 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:52,526 - INFO - Volume Profile calculated - POC: 18951.0, VAH: 18882.5, VAL: 19088.4
+2024-12-22 21:57:52,529 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:53,138 - INFO - Volume Profile calculated - POC: 19124.0, VAH: 18898.7, VAL: 19280.0
+2024-12-22 21:57:53,143 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:54,303 - INFO - Volume Profile calculated - POC: 20199.4, VAH: 19222.4, VAL: 20363.4
+2024-12-22 21:57:54,310 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:55,183 - INFO - Volume Profile calculated - POC: 18732.7, VAH: 18485.0, VAL: 19411.7
+2024-12-22 21:57:55,190 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:55,644 - INFO - Volume Profile calculated - POC: 19452.8, VAH: 19272.7, VAL: 19539.0
+2024-12-22 21:57:55,649 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:55,656 - INFO - Volume Profile calculated - POC: 19587.5, VAH: 19587.5, VAL: 19607.1
+2024-12-22 21:57:55,657 - INFO - Successfully calculated 30 volume profiles for daily timeframe
+2024-12-22 21:57:55,662 - INFO - Detecting fractals for weekly timeframe
+2024-12-22 21:57:55,663 - INFO - Detected 0 up fractals and 0 down fractals for weekly timeframe.
+2024-12-22 21:57:55,663 - INFO - Calculating HTF levels for weekly timeframe
+2024-12-22 21:57:55,664 - INFO - Calculated 2 HTF levels for weekly timeframe.
+2024-12-22 21:57:55,665 - INFO - Calculating Fibonacci levels for weekly timeframe
+2024-12-22 21:57:55,668 - INFO - Calculated 0 support and 0 resistance Fibonacci patterns for weekly
+2024-12-22 21:57:55,668 - INFO - Calculating Volume Profile levels for weekly timeframe
+2024-12-22 21:57:55,686 - INFO - Calculating Volume Profile levels
+2024-12-22 21:57:56,875 - INFO - Volume Profile calculated - POC: 19797.0, VAH: 19716.0, VAL: 20077.6
+2024-12-22 21:57:56,889 - INFO - Calculating Volume Profile levels
+2024-12-22 21:58:00,166 - INFO - Volume Profile calculated - POC: 19777.4, VAH: 19364.3, VAL: 21850.0
+2024-12-22 21:58:00,194 - INFO - Calculating Volume Profile levels
+2024-12-22 21:58:04,047 - INFO - Volume Profile calculated - POC: 19735.3, VAH: 19335.4, VAL: 21170.6
+2024-12-22 21:58:04,083 - INFO - Calculating Volume Profile levels
+2024-12-22 21:58:06,579 - INFO - Volume Profile calculated - POC: 19093.0, VAH: 18671.1, VAL: 19274.9
+2024-12-22 21:58:06,612 - INFO - Calculating Volume Profile levels
+2024-12-22 21:58:08,503 - INFO - Volume Profile calculated - POC: 19124.0, VAH: 18824.8, VAL: 19617.2
+2024-12-22 21:58:08,525 - INFO - Successfully calculated 5 volume profiles for weekly timeframe
+2024-12-22 21:58:08,530 - INFO - Detecting fractals for monthly timeframe
+2024-12-22 21:58:08,531 - INFO - Detected 0 up fractals and 0 down fractals for monthly timeframe.
+2024-12-22 21:58:08,531 - INFO - Calculating HTF levels for monthly timeframe
+2024-12-22 21:58:08,532 - INFO - Calculated 0 HTF levels for monthly timeframe.
+2024-12-22 21:58:08,532 - INFO - Calculating Fibonacci levels for monthly timeframe
+2024-12-22 21:58:08,537 - INFO - Calculated 0 support and 0 resistance Fibonacci patterns for monthly
+2024-12-22 21:58:08,537 - INFO - Calculating Volume Profile levels for monthly timeframe
+2024-12-22 21:58:08,556 - INFO - Calculating Volume Profile levels
+2024-12-22 21:58:18,348 - INFO - Volume Profile calculated - POC: 19094.7, VAH: 18628.0, VAL: 20107.7
+2024-12-22 21:58:18,483 - INFO - Successfully calculated 1 volume profiles for monthly timeframe
+2024-12-22 21:58:18,490 - INFO - Generating ML datasets
+2024-12-22 21:58:18,490 - INFO - Detecting fractals for 1h timeframe
+2024-12-22 21:58:18,577 - INFO - Detected 106 up fractals and 102 down fractals for 1h timeframe.
+2024-12-22 21:58:18,626 - INFO - Added Volume Profile levels for daily timeframe
+2024-12-22 21:58:18,639 - INFO - Added Volume Profile levels for weekly timeframe
+2024-12-22 21:58:18,642 - INFO - Added Volume Profile levels for monthly timeframe
+2024-12-22 21:58:18,687 - INFO - ML Price Action dataset saved to ml_dataset.csv
+2024-12-22 21:58:18,687 - INFO - Levels dataset saved to levels_dataset.csv
+2024-12-22 21:58:18,688 - INFO - Plotting Daily timeframe levels
+2024-12-22 21:58:18,699 - INFO - Saving plot to BTCUSDT_daily_timeframe_with_levels.png
+2024-12-22 21:58:19,170 - INFO - Plot saved successfully to BTCUSDT_daily_timeframe_with_levels.png
+2024-12-22 21:58:19,170 - INFO - Plotting Volume Profile for daily timeframe
+2024-12-22 21:58:19,170 - ERROR - Error in main execution: 'volume_profile'
+2024-12-22 21:58:51,764 - INFO - Fetching 1d data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:58:52,096 - INFO - Fetched 30 records for 1d timeframe.
+2024-12-22 21:58:52,097 - INFO - Fetching 1w data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:58:52,415 - INFO - Fetched 4 records for 1w timeframe.
+2024-12-22 21:58:52,415 - INFO - Fetching 1M data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:58:52,727 - INFO - Fetched 1 records for 1M timeframe.
+2024-12-22 21:58:52,727 - INFO - Fetching 1m data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:59:09,523 - INFO - Fetched 41761 records for 1m timeframe.
+2024-12-22 21:59:09,529 - INFO - Fetching 1h data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 21:59:09,892 - INFO - Fetched 697 records for 1h timeframe.
+2024-12-22 21:59:09,892 - INFO - Detecting fractals for daily timeframe
+2024-12-22 21:59:09,896 - INFO - Detected 4 up fractals and 4 down fractals for daily timeframe.
+2024-12-22 21:59:09,896 - INFO - Calculating HTF levels for daily timeframe
+2024-12-22 21:59:09,902 - INFO - Calculated 17 HTF levels for daily timeframe.
+2024-12-22 21:59:09,902 - INFO - Calculating Fibonacci levels for daily timeframe
+2024-12-22 21:59:09,930 - INFO - Calculated 1 support and 3 resistance Fibonacci patterns for daily
+2024-12-22 21:59:09,930 - INFO - Calculating Volume Profile levels for daily timeframe
+2024-12-22 21:59:09,961 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:10,433 - INFO - Volume Profile calculated - POC: 20008.1, VAH: 19846.8, VAL: 20121.7
+2024-12-22 21:59:10,437 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:10,936 - INFO - Volume Profile calculated - POC: 20095.0, VAH: 19847.2, VAL: 20263.2
+2024-12-22 21:59:10,941 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:11,274 - INFO - Volume Profile calculated - POC: 19797.2, VAH: 19690.8, VAL: 19883.4
+2024-12-22 21:59:11,277 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:11,591 - INFO - Volume Profile calculated - POC: 19786.5, VAH: 19705.6, VAL: 19873.8
+2024-12-22 21:59:11,594 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:11,915 - INFO - Volume Profile calculated - POC: 19733.7, VAH: 19674.3, VAL: 19843.3
+2024-12-22 21:59:11,918 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:12,650 - INFO - Volume Profile calculated - POC: 19908.1, VAH: 19240.7, VAL: 20180.0
+2024-12-22 21:59:12,656 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:13,115 - INFO - Volume Profile calculated - POC: 18768.8, VAH: 18612.8, VAL: 18976.0
+2024-12-22 21:59:13,118 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:13,483 - INFO - Volume Profile calculated - POC: 19300.0, VAH: 19168.9, VAL: 19330.2
+2024-12-22 21:59:13,486 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:14,269 - INFO - Volume Profile calculated - POC: 21253.2, VAH: 20666.4, VAL: 21437.9
+2024-12-22 21:59:14,275 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:14,733 - INFO - Volume Profile calculated - POC: 21302.0, VAH: 21185.0, VAL: 21482.8
+2024-12-22 21:59:14,737 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:15,124 - INFO - Volume Profile calculated - POC: 21613.5, VAH: 21543.3, VAL: 21675.5
+2024-12-22 21:59:15,128 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:15,767 - INFO - Volume Profile calculated - POC: 22319.7, VAH: 21980.6, VAL: 22458.7
+2024-12-22 21:59:15,775 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:17,295 - INFO - Volume Profile calculated - POC: 22208.0, VAH: 20888.9, VAL: 22790.7
+2024-12-22 21:59:17,301 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:17,759 - INFO - Volume Profile calculated - POC: 20297.7, VAH: 20158.5, VAL: 20386.3
+2024-12-22 21:59:17,763 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:18,395 - INFO - Volume Profile calculated - POC: 20139.3, VAH: 19833.1, VAL: 20314.0
+2024-12-22 21:59:18,400 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:18,826 - INFO - Volume Profile calculated - POC: 19738.8, VAH: 19612.8, VAL: 19825.3
+2024-12-22 21:59:18,832 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:19,236 - INFO - Volume Profile calculated - POC: 19861.1, VAH: 19800.3, VAL: 20022.1
+2024-12-22 21:59:19,241 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:19,776 - INFO - Volume Profile calculated - POC: 20001.7, VAH: 19703.1, VAL: 20095.7
+2024-12-22 21:59:19,779 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:20,592 - INFO - Volume Profile calculated - POC: 18465.0, VAH: 18367.9, VAL: 19227.6
+2024-12-22 21:59:20,597 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:21,224 - INFO - Volume Profile calculated - POC: 18954.0, VAH: 18807.5, VAL: 19298.7
+2024-12-22 21:59:21,229 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:21,919 - INFO - Volume Profile calculated - POC: 19003.4, VAH: 18833.5, VAL: 19351.2
+2024-12-22 21:59:21,926 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:22,590 - INFO - Volume Profile calculated - POC: 18995.6, VAH: 18727.9, VAL: 19318.3
+2024-12-22 21:59:22,595 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:23,304 - INFO - Volume Profile calculated - POC: 18722.7, VAH: 18556.3, VAL: 19226.9
+2024-12-22 21:59:23,310 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:23,642 - INFO - Volume Profile calculated - POC: 19095.8, VAH: 19024.5, VAL: 19176.8
+2024-12-22 21:59:23,645 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:23,996 - INFO - Volume Profile calculated - POC: 18951.0, VAH: 18882.5, VAL: 19088.4
+2024-12-22 21:59:23,998 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:24,524 - INFO - Volume Profile calculated - POC: 19124.0, VAH: 18898.7, VAL: 19280.0
+2024-12-22 21:59:24,528 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:25,681 - INFO - Volume Profile calculated - POC: 20199.4, VAH: 19222.4, VAL: 20363.4
+2024-12-22 21:59:25,687 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:26,760 - INFO - Volume Profile calculated - POC: 18732.7, VAH: 18485.0, VAL: 19411.7
+2024-12-22 21:59:26,767 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:27,313 - INFO - Volume Profile calculated - POC: 19452.8, VAH: 19272.7, VAL: 19539.0
+2024-12-22 21:59:27,318 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:27,325 - INFO - Volume Profile calculated - POC: 19587.5, VAH: 19587.5, VAL: 19607.1
+2024-12-22 21:59:27,326 - INFO - Successfully calculated 30 volume profiles for daily timeframe
+2024-12-22 21:59:27,331 - INFO - Detecting fractals for weekly timeframe
+2024-12-22 21:59:27,332 - INFO - Detected 0 up fractals and 0 down fractals for weekly timeframe.
+2024-12-22 21:59:27,332 - INFO - Calculating HTF levels for weekly timeframe
+2024-12-22 21:59:27,333 - INFO - Calculated 2 HTF levels for weekly timeframe.
+2024-12-22 21:59:27,334 - INFO - Calculating Fibonacci levels for weekly timeframe
+2024-12-22 21:59:27,337 - INFO - Calculated 0 support and 0 resistance Fibonacci patterns for weekly
+2024-12-22 21:59:27,337 - INFO - Calculating Volume Profile levels for weekly timeframe
+2024-12-22 21:59:27,357 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:28,990 - INFO - Volume Profile calculated - POC: 19797.0, VAH: 19716.0, VAL: 20077.6
+2024-12-22 21:59:29,005 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:33,462 - INFO - Volume Profile calculated - POC: 19777.4, VAH: 19364.3, VAL: 21850.0
+2024-12-22 21:59:33,493 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:37,013 - INFO - Volume Profile calculated - POC: 19735.3, VAH: 19335.4, VAL: 21170.6
+2024-12-22 21:59:37,052 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:39,536 - INFO - Volume Profile calculated - POC: 19093.0, VAH: 18671.1, VAL: 19274.9
+2024-12-22 21:59:39,570 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:41,330 - INFO - Volume Profile calculated - POC: 19124.0, VAH: 18824.8, VAL: 19617.2
+2024-12-22 21:59:41,360 - INFO - Successfully calculated 5 volume profiles for weekly timeframe
+2024-12-22 21:59:41,366 - INFO - Detecting fractals for monthly timeframe
+2024-12-22 21:59:41,367 - INFO - Detected 0 up fractals and 0 down fractals for monthly timeframe.
+2024-12-22 21:59:41,367 - INFO - Calculating HTF levels for monthly timeframe
+2024-12-22 21:59:41,367 - INFO - Calculated 0 HTF levels for monthly timeframe.
+2024-12-22 21:59:41,367 - INFO - Calculating Fibonacci levels for monthly timeframe
+2024-12-22 21:59:41,370 - INFO - Calculated 0 support and 0 resistance Fibonacci patterns for monthly
+2024-12-22 21:59:41,371 - INFO - Calculating Volume Profile levels for monthly timeframe
+2024-12-22 21:59:41,392 - INFO - Calculating Volume Profile levels
+2024-12-22 21:59:50,857 - INFO - Volume Profile calculated - POC: 19094.7, VAH: 18628.0, VAL: 20107.7
+2024-12-22 21:59:50,986 - INFO - Successfully calculated 1 volume profiles for monthly timeframe
+2024-12-22 21:59:50,992 - INFO - Generating ML datasets
+2024-12-22 21:59:50,992 - INFO - Detecting fractals for 1h timeframe
+2024-12-22 21:59:51,095 - INFO - Detected 106 up fractals and 102 down fractals for 1h timeframe.
+2024-12-22 21:59:51,139 - INFO - Added Volume Profile levels for daily timeframe
+2024-12-22 21:59:51,150 - INFO - Added Volume Profile levels for weekly timeframe
+2024-12-22 21:59:51,152 - INFO - Added Volume Profile levels for monthly timeframe
+2024-12-22 21:59:51,193 - INFO - ML Price Action dataset saved to ml_dataset.csv
+2024-12-22 21:59:51,193 - INFO - Levels dataset saved to levels_dataset.csv
+2024-12-22 21:59:51,194 - INFO - Plotting Daily timeframe levels
+2024-12-22 21:59:51,203 - INFO - Saving plot to BTCUSDT_daily_timeframe_with_levels.png
+2024-12-22 21:59:51,623 - INFO - Plot saved successfully to BTCUSDT_daily_timeframe_with_levels.png
+2024-12-22 21:59:51,785 - ERROR - Error in main execution: 'volume'
+2024-12-22 22:00:24,391 - INFO - Fetching 1d data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 22:00:24,724 - INFO - Fetched 30 records for 1d timeframe.
+2024-12-22 22:00:24,724 - INFO - Fetching 1w data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 22:00:25,037 - INFO - Fetched 4 records for 1w timeframe.
+2024-12-22 22:00:25,038 - INFO - Fetching 1M data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 22:00:25,350 - INFO - Fetched 1 records for 1M timeframe.
+2024-12-22 22:00:25,350 - INFO - Fetching 1m data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 22:00:47,132 - INFO - Fetched 41761 records for 1m timeframe.
+2024-12-22 22:00:47,138 - INFO - Fetching 1h data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 22:00:47,517 - INFO - Fetched 697 records for 1h timeframe.
+2024-12-22 22:00:47,517 - INFO - Detecting fractals for daily timeframe
+2024-12-22 22:00:47,522 - INFO - Detected 4 up fractals and 4 down fractals for daily timeframe.
+2024-12-22 22:00:47,522 - INFO - Calculating HTF levels for daily timeframe
+2024-12-22 22:00:47,529 - INFO - Calculated 17 HTF levels for daily timeframe.
+2024-12-22 22:00:47,529 - INFO - Calculating Fibonacci levels for daily timeframe
+2024-12-22 22:00:47,561 - INFO - Calculated 1 support and 3 resistance Fibonacci patterns for daily
+2024-12-22 22:00:47,561 - INFO - Calculating Volume Profile levels for daily timeframe
+2024-12-22 22:00:47,597 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:48,122 - INFO - Volume Profile calculated - POC: 20008.1, VAH: 19846.8, VAL: 20121.7
+2024-12-22 22:00:48,128 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:48,660 - INFO - Volume Profile calculated - POC: 20095.0, VAH: 19847.2, VAL: 20263.2
+2024-12-22 22:00:48,664 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:48,995 - INFO - Volume Profile calculated - POC: 19797.2, VAH: 19690.8, VAL: 19883.4
+2024-12-22 22:00:48,998 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:49,319 - INFO - Volume Profile calculated - POC: 19786.5, VAH: 19705.6, VAL: 19873.8
+2024-12-22 22:00:49,322 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:49,651 - INFO - Volume Profile calculated - POC: 19733.7, VAH: 19674.3, VAL: 19843.3
+2024-12-22 22:00:49,654 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:50,402 - INFO - Volume Profile calculated - POC: 19908.1, VAH: 19240.7, VAL: 20180.0
+2024-12-22 22:00:50,407 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:50,895 - INFO - Volume Profile calculated - POC: 18768.8, VAH: 18612.8, VAL: 18976.0
+2024-12-22 22:00:50,899 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:51,249 - INFO - Volume Profile calculated - POC: 19300.0, VAH: 19168.9, VAL: 19330.2
+2024-12-22 22:00:51,252 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:52,036 - INFO - Volume Profile calculated - POC: 21253.2, VAH: 20666.4, VAL: 21437.9
+2024-12-22 22:00:52,041 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:52,486 - INFO - Volume Profile calculated - POC: 21302.0, VAH: 21185.0, VAL: 21482.8
+2024-12-22 22:00:52,490 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:52,862 - INFO - Volume Profile calculated - POC: 21613.5, VAH: 21543.3, VAL: 21675.5
+2024-12-22 22:00:52,866 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:53,499 - INFO - Volume Profile calculated - POC: 22319.7, VAH: 21980.6, VAL: 22458.7
+2024-12-22 22:00:53,504 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:55,022 - INFO - Volume Profile calculated - POC: 22208.0, VAH: 20888.9, VAL: 22790.7
+2024-12-22 22:00:55,029 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:55,464 - INFO - Volume Profile calculated - POC: 20297.7, VAH: 20158.5, VAL: 20386.3
+2024-12-22 22:00:55,469 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:56,053 - INFO - Volume Profile calculated - POC: 20139.3, VAH: 19833.1, VAL: 20314.0
+2024-12-22 22:00:56,057 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:56,488 - INFO - Volume Profile calculated - POC: 19738.8, VAH: 19612.8, VAL: 19825.3
+2024-12-22 22:00:56,494 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:56,872 - INFO - Volume Profile calculated - POC: 19861.1, VAH: 19800.3, VAL: 20022.1
+2024-12-22 22:00:56,876 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:57,354 - INFO - Volume Profile calculated - POC: 20001.7, VAH: 19703.1, VAL: 20095.7
+2024-12-22 22:00:57,357 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:58,191 - INFO - Volume Profile calculated - POC: 18465.0, VAH: 18367.9, VAL: 19227.6
+2024-12-22 22:00:58,197 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:58,815 - INFO - Volume Profile calculated - POC: 18954.0, VAH: 18807.5, VAL: 19298.7
+2024-12-22 22:00:58,820 - INFO - Calculating Volume Profile levels
+2024-12-22 22:00:59,496 - INFO - Volume Profile calculated - POC: 19003.4, VAH: 18833.5, VAL: 19351.2
+2024-12-22 22:00:59,503 - INFO - Calculating Volume Profile levels
+2024-12-22 22:01:00,194 - INFO - Volume Profile calculated - POC: 18995.6, VAH: 18727.9, VAL: 19318.3
+2024-12-22 22:01:00,199 - INFO - Calculating Volume Profile levels
+2024-12-22 22:01:00,903 - INFO - Volume Profile calculated - POC: 18722.7, VAH: 18556.3, VAL: 19226.9
+2024-12-22 22:01:00,908 - INFO - Calculating Volume Profile levels
+2024-12-22 22:01:01,244 - INFO - Volume Profile calculated - POC: 19095.8, VAH: 19024.5, VAL: 19176.8
+2024-12-22 22:01:01,247 - INFO - Calculating Volume Profile levels
+2024-12-22 22:01:01,612 - INFO - Volume Profile calculated - POC: 18951.0, VAH: 18882.5, VAL: 19088.4
+2024-12-22 22:01:01,615 - INFO - Calculating Volume Profile levels
+2024-12-22 22:01:02,123 - INFO - Volume Profile calculated - POC: 19124.0, VAH: 18898.7, VAL: 19280.0
+2024-12-22 22:01:02,129 - INFO - Calculating Volume Profile levels
+2024-12-22 22:01:03,161 - INFO - Volume Profile calculated - POC: 20199.4, VAH: 19222.4, VAL: 20363.4
+2024-12-22 22:01:03,168 - INFO - Calculating Volume Profile levels
+2024-12-22 22:01:04,053 - INFO - Volume Profile calculated - POC: 18732.7, VAH: 18485.0, VAL: 19411.7
+2024-12-22 22:01:04,058 - INFO - Calculating Volume Profile levels
+2024-12-22 22:01:04,533 - INFO - Volume Profile calculated - POC: 19452.8, VAH: 19272.7, VAL: 19539.0
+2024-12-22 22:01:04,538 - INFO - Calculating Volume Profile levels
+2024-12-22 22:01:04,546 - INFO - Volume Profile calculated - POC: 19587.5, VAH: 19587.5, VAL: 19607.1
+2024-12-22 22:01:04,547 - INFO - Successfully calculated 30 volume profiles for daily timeframe
+2024-12-22 22:01:04,552 - INFO - Detecting fractals for weekly timeframe
+2024-12-22 22:01:04,553 - INFO - Detected 0 up fractals and 0 down fractals for weekly timeframe.
+2024-12-22 22:01:04,553 - INFO - Calculating HTF levels for weekly timeframe
+2024-12-22 22:01:04,555 - INFO - Calculated 2 HTF levels for weekly timeframe.
+2024-12-22 22:01:04,555 - INFO - Calculating Fibonacci levels for weekly timeframe
+2024-12-22 22:01:04,558 - INFO - Calculated 0 support and 0 resistance Fibonacci patterns for weekly
+2024-12-22 22:01:04,558 - INFO - Calculating Volume Profile levels for weekly timeframe
+2024-12-22 22:01:04,579 - INFO - Calculating Volume Profile levels
+2024-12-22 22:01:05,790 - INFO - Volume Profile calculated - POC: 19797.0, VAH: 19716.0, VAL: 20077.6
+2024-12-22 22:01:05,805 - INFO - Calculating Volume Profile levels
+2024-12-22 22:01:09,218 - INFO - Volume Profile calculated - POC: 19777.4, VAH: 19364.3, VAL: 21850.0
+2024-12-22 22:01:09,246 - INFO - Calculating Volume Profile levels
+2024-12-22 22:01:12,560 - INFO - Volume Profile calculated - POC: 19735.3, VAH: 19335.4, VAL: 21170.6
+2024-12-22 22:01:12,591 - INFO - Calculating Volume Profile levels
+2024-12-22 22:01:15,108 - INFO - Volume Profile calculated - POC: 19093.0, VAH: 18671.1, VAL: 19274.9
+2024-12-22 22:01:15,143 - INFO - Calculating Volume Profile levels
+2024-12-22 22:01:17,331 - INFO - Volume Profile calculated - POC: 19124.0, VAH: 18824.8, VAL: 19617.2
+2024-12-22 22:01:17,353 - INFO - Successfully calculated 5 volume profiles for weekly timeframe
+2024-12-22 22:01:17,361 - INFO - Detecting fractals for monthly timeframe
+2024-12-22 22:01:17,362 - INFO - Detected 0 up fractals and 0 down fractals for monthly timeframe.
+2024-12-22 22:01:17,363 - INFO - Calculating HTF levels for monthly timeframe
+2024-12-22 22:01:17,363 - INFO - Calculated 0 HTF levels for monthly timeframe.
+2024-12-22 22:01:17,363 - INFO - Calculating Fibonacci levels for monthly timeframe
+2024-12-22 22:01:17,366 - INFO - Calculated 0 support and 0 resistance Fibonacci patterns for monthly
+2024-12-22 22:01:17,367 - INFO - Calculating Volume Profile levels for monthly timeframe
+2024-12-22 22:01:17,385 - INFO - Calculating Volume Profile levels
+2024-12-22 22:01:28,026 - INFO - Volume Profile calculated - POC: 19094.7, VAH: 18628.0, VAL: 20107.7
+2024-12-22 22:01:28,157 - INFO - Successfully calculated 1 volume profiles for monthly timeframe
+2024-12-22 22:01:28,170 - INFO - Generating ML datasets
+2024-12-22 22:01:28,170 - INFO - Detecting fractals for 1h timeframe
+2024-12-22 22:01:28,248 - INFO - Detected 106 up fractals and 102 down fractals for 1h timeframe.
+2024-12-22 22:01:28,296 - INFO - Added Volume Profile levels for daily timeframe
+2024-12-22 22:01:28,307 - INFO - Added Volume Profile levels for weekly timeframe
+2024-12-22 22:01:28,309 - INFO - Added Volume Profile levels for monthly timeframe
+2024-12-22 22:01:28,350 - INFO - ML Price Action dataset saved to ml_dataset.csv
+2024-12-22 22:01:28,350 - INFO - Levels dataset saved to levels_dataset.csv
+2024-12-22 22:01:28,351 - INFO - Plotting Daily timeframe levels
+2024-12-22 22:01:28,362 - INFO - Saving plot to BTCUSDT_daily_timeframe_with_levels.png
+2024-12-22 22:01:28,774 - INFO - Plot saved successfully to BTCUSDT_daily_timeframe_with_levels.png
+2024-12-22 22:01:28,908 - ERROR - Error in main execution: 'volume'
+2024-12-22 22:02:03,143 - INFO - Fetching 1d data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 22:02:03,473 - INFO - Fetched 30 records for 1d timeframe.
+2024-12-22 22:02:03,473 - INFO - Fetching 1w data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 22:02:03,789 - INFO - Fetched 4 records for 1w timeframe.
+2024-12-22 22:02:03,789 - INFO - Fetching 1M data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 22:02:04,105 - INFO - Fetched 1 records for 1M timeframe.
+2024-12-22 22:02:04,105 - INFO - Fetching 1m data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 22:02:22,315 - INFO - Fetched 41761 records for 1m timeframe.
+2024-12-22 22:02:22,331 - INFO - Fetching 1h data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-22 22:02:22,700 - INFO - Fetched 697 records for 1h timeframe.
+2024-12-22 22:02:22,700 - INFO - Detecting fractals for daily timeframe
+2024-12-22 22:02:22,704 - INFO - Detected 4 up fractals and 4 down fractals for daily timeframe.
+2024-12-22 22:02:22,704 - INFO - Calculating HTF levels for daily timeframe
+2024-12-22 22:02:22,710 - INFO - Calculated 17 HTF levels for daily timeframe.
+2024-12-22 22:02:22,710 - INFO - Calculating Fibonacci levels for daily timeframe
+2024-12-22 22:02:22,738 - INFO - Calculated 1 support and 3 resistance Fibonacci patterns for daily
+2024-12-22 22:02:22,738 - INFO - Calculating Volume Profile levels for daily timeframe
+2024-12-22 22:02:22,769 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:23,243 - INFO - Volume Profile calculated - POC: 20008.1, VAH: 19846.8, VAL: 20121.7
+2024-12-22 22:02:23,249 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:23,789 - INFO - Volume Profile calculated - POC: 20095.0, VAH: 19847.2, VAL: 20263.2
+2024-12-22 22:02:23,793 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:24,124 - INFO - Volume Profile calculated - POC: 19797.2, VAH: 19690.8, VAL: 19883.4
+2024-12-22 22:02:24,126 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:24,445 - INFO - Volume Profile calculated - POC: 19786.5, VAH: 19705.6, VAL: 19873.8
+2024-12-22 22:02:24,449 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:24,777 - INFO - Volume Profile calculated - POC: 19733.7, VAH: 19674.3, VAL: 19843.3
+2024-12-22 22:02:24,781 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:25,513 - INFO - Volume Profile calculated - POC: 19908.1, VAH: 19240.7, VAL: 20180.0
+2024-12-22 22:02:25,517 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:26,007 - INFO - Volume Profile calculated - POC: 18768.8, VAH: 18612.8, VAL: 18976.0
+2024-12-22 22:02:26,010 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:26,371 - INFO - Volume Profile calculated - POC: 19300.0, VAH: 19168.9, VAL: 19330.2
+2024-12-22 22:02:26,376 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:27,167 - INFO - Volume Profile calculated - POC: 21253.2, VAH: 20666.4, VAL: 21437.9
+2024-12-22 22:02:27,173 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:27,648 - INFO - Volume Profile calculated - POC: 21302.0, VAH: 21185.0, VAL: 21482.8
+2024-12-22 22:02:27,652 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:28,024 - INFO - Volume Profile calculated - POC: 21613.5, VAH: 21543.3, VAL: 21675.5
+2024-12-22 22:02:28,027 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:28,644 - INFO - Volume Profile calculated - POC: 22319.7, VAH: 21980.6, VAL: 22458.7
+2024-12-22 22:02:28,650 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:30,140 - INFO - Volume Profile calculated - POC: 22208.0, VAH: 20888.9, VAL: 22790.7
+2024-12-22 22:02:30,148 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:30,582 - INFO - Volume Profile calculated - POC: 20297.7, VAH: 20158.5, VAL: 20386.3
+2024-12-22 22:02:30,587 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:31,176 - INFO - Volume Profile calculated - POC: 20139.3, VAH: 19833.1, VAL: 20314.0
+2024-12-22 22:02:31,181 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:31,574 - INFO - Volume Profile calculated - POC: 19738.8, VAH: 19612.8, VAL: 19825.3
+2024-12-22 22:02:31,578 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:31,935 - INFO - Volume Profile calculated - POC: 19861.1, VAH: 19800.3, VAL: 20022.1
+2024-12-22 22:02:31,939 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:32,418 - INFO - Volume Profile calculated - POC: 20001.7, VAH: 19703.1, VAL: 20095.7
+2024-12-22 22:02:32,422 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:33,269 - INFO - Volume Profile calculated - POC: 18465.0, VAH: 18367.9, VAL: 19227.6
+2024-12-22 22:02:33,275 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:34,086 - INFO - Volume Profile calculated - POC: 18954.0, VAH: 18807.5, VAL: 19298.7
+2024-12-22 22:02:34,092 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:34,904 - INFO - Volume Profile calculated - POC: 19003.4, VAH: 18833.5, VAL: 19351.2
+2024-12-22 22:02:34,910 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:35,601 - INFO - Volume Profile calculated - POC: 18995.6, VAH: 18727.9, VAL: 19318.3
+2024-12-22 22:02:35,606 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:36,350 - INFO - Volume Profile calculated - POC: 18722.7, VAH: 18556.3, VAL: 19226.9
+2024-12-22 22:02:36,356 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:36,714 - INFO - Volume Profile calculated - POC: 19095.8, VAH: 19024.5, VAL: 19176.8
+2024-12-22 22:02:36,717 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:37,109 - INFO - Volume Profile calculated - POC: 18951.0, VAH: 18882.5, VAL: 19088.4
+2024-12-22 22:02:37,113 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:37,651 - INFO - Volume Profile calculated - POC: 19124.0, VAH: 18898.7, VAL: 19280.0
+2024-12-22 22:02:37,655 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:38,679 - INFO - Volume Profile calculated - POC: 20199.4, VAH: 19222.4, VAL: 20363.4
+2024-12-22 22:02:38,685 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:39,575 - INFO - Volume Profile calculated - POC: 18732.7, VAH: 18485.0, VAL: 19411.7
+2024-12-22 22:02:39,581 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:40,055 - INFO - Volume Profile calculated - POC: 19452.8, VAH: 19272.7, VAL: 19539.0
+2024-12-22 22:02:40,060 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:40,069 - INFO - Volume Profile calculated - POC: 19587.5, VAH: 19587.5, VAL: 19607.1
+2024-12-22 22:02:40,070 - INFO - Successfully calculated 30 volume profiles for daily timeframe
+2024-12-22 22:02:40,074 - INFO - Detecting fractals for weekly timeframe
+2024-12-22 22:02:40,076 - INFO - Detected 0 up fractals and 0 down fractals for weekly timeframe.
+2024-12-22 22:02:40,076 - INFO - Calculating HTF levels for weekly timeframe
+2024-12-22 22:02:40,077 - INFO - Calculated 2 HTF levels for weekly timeframe.
+2024-12-22 22:02:40,077 - INFO - Calculating Fibonacci levels for weekly timeframe
+2024-12-22 22:02:40,081 - INFO - Calculated 0 support and 0 resistance Fibonacci patterns for weekly
+2024-12-22 22:02:40,081 - INFO - Calculating Volume Profile levels for weekly timeframe
+2024-12-22 22:02:40,101 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:41,326 - INFO - Volume Profile calculated - POC: 19797.0, VAH: 19716.0, VAL: 20077.6
+2024-12-22 22:02:41,342 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:44,761 - INFO - Volume Profile calculated - POC: 19777.4, VAH: 19364.3, VAL: 21850.0
+2024-12-22 22:02:44,788 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:48,313 - INFO - Volume Profile calculated - POC: 19735.3, VAH: 19335.4, VAL: 21170.6
+2024-12-22 22:02:48,349 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:50,822 - INFO - Volume Profile calculated - POC: 19093.0, VAH: 18671.1, VAL: 19274.9
+2024-12-22 22:02:50,855 - INFO - Calculating Volume Profile levels
+2024-12-22 22:02:52,621 - INFO - Volume Profile calculated - POC: 19124.0, VAH: 18824.8, VAL: 19617.2
+2024-12-22 22:02:52,642 - INFO - Successfully calculated 5 volume profiles for weekly timeframe
+2024-12-22 22:02:52,646 - INFO - Detecting fractals for monthly timeframe
+2024-12-22 22:02:52,649 - INFO - Detected 0 up fractals and 0 down fractals for monthly timeframe.
+2024-12-22 22:02:52,649 - INFO - Calculating HTF levels for monthly timeframe
+2024-12-22 22:02:52,650 - INFO - Calculated 0 HTF levels for monthly timeframe.
+2024-12-22 22:02:52,650 - INFO - Calculating Fibonacci levels for monthly timeframe
+2024-12-22 22:02:52,653 - INFO - Calculated 0 support and 0 resistance Fibonacci patterns for monthly
+2024-12-22 22:02:52,653 - INFO - Calculating Volume Profile levels for monthly timeframe
+2024-12-22 22:02:52,671 - INFO - Calculating Volume Profile levels
+2024-12-22 22:03:02,476 - INFO - Volume Profile calculated - POC: 19094.7, VAH: 18628.0, VAL: 20107.7
+2024-12-22 22:03:02,605 - INFO - Successfully calculated 1 volume profiles for monthly timeframe
+2024-12-22 22:03:02,610 - INFO - Generating ML datasets
+2024-12-22 22:03:02,610 - INFO - Detecting fractals for 1h timeframe
+2024-12-22 22:03:02,685 - INFO - Detected 106 up fractals and 102 down fractals for 1h timeframe.
+2024-12-22 22:03:02,730 - INFO - Added Volume Profile levels for daily timeframe
+2024-12-22 22:03:02,741 - INFO - Added Volume Profile levels for weekly timeframe
+2024-12-22 22:03:02,743 - INFO - Added Volume Profile levels for monthly timeframe
+2024-12-22 22:03:02,856 - INFO - ML Price Action dataset saved to ml_dataset.csv
+2024-12-22 22:03:02,856 - INFO - Levels dataset saved to levels_dataset.csv
+2024-12-22 22:03:02,856 - INFO - Creating interactive chart for daily timeframe
+2024-12-22 22:03:03,911 - ERROR - Error creating interactive chart: 'level'
+2024-12-22 22:03:03,911 - INFO - Creating interactive chart for weekly timeframe
+2024-12-22 22:03:04,145 - INFO - Interactive chart saved to BTCUSDT_weekly_interactive.html
+2024-12-22 22:03:04,145 - INFO - Creating interactive chart for monthly timeframe
+2024-12-22 22:03:04,269 - INFO - Interactive chart saved to BTCUSDT_monthly_interactive.html
+2024-12-22 22:03:04,270 - INFO - Trading bot execution completed successfully
+2024-12-23 18:48:35,474 - INFO - Fetching 1d data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-23 18:48:35,936 - INFO - Fetched 30 records for 1d timeframe.
+2024-12-23 18:48:35,936 - INFO - Fetching 1w data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-23 18:48:36,245 - INFO - Fetched 4 records for 1w timeframe.
+2024-12-23 18:48:36,245 - INFO - Fetching 1M data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-23 18:48:36,561 - INFO - Fetched 1 records for 1M timeframe.
+2024-12-23 18:48:36,561 - INFO - Fetching 1m data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-23 18:49:06,077 - INFO - Fetched 41761 records for 1m timeframe.
+2024-12-23 18:49:06,084 - INFO - Fetching 1h data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-23 18:49:06,454 - INFO - Fetched 697 records for 1h timeframe.
+2024-12-23 18:49:06,454 - INFO - Detecting fractals for daily timeframe
+2024-12-23 18:49:06,463 - INFO - Detected 4 up fractals and 4 down fractals for daily timeframe.
+2024-12-23 18:49:06,463 - INFO - Calculating HTF levels for daily timeframe
+2024-12-23 18:49:06,470 - INFO - Calculated 17 HTF levels for daily timeframe.
+2024-12-23 18:49:06,470 - INFO - Calculating Fibonacci levels for daily timeframe
+2024-12-23 18:49:06,500 - INFO - Calculated 1 support and 3 resistance Fibonacci patterns for daily
+2024-12-23 18:49:06,500 - INFO - Calculating Volume Profile levels for daily timeframe
+2024-12-23 18:49:06,529 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:06,985 - INFO - Volume Profile calculated - POC: 20008.1, VAH: 19846.8, VAL: 20121.7
+2024-12-23 18:49:06,989 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:07,492 - INFO - Volume Profile calculated - POC: 20095.0, VAH: 19847.2, VAL: 20263.2
+2024-12-23 18:49:07,496 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:07,836 - INFO - Volume Profile calculated - POC: 19797.2, VAH: 19690.8, VAL: 19883.4
+2024-12-23 18:49:07,838 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:08,145 - INFO - Volume Profile calculated - POC: 19786.5, VAH: 19705.6, VAL: 19873.8
+2024-12-23 18:49:08,148 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:08,470 - INFO - Volume Profile calculated - POC: 19733.7, VAH: 19674.3, VAL: 19843.3
+2024-12-23 18:49:08,473 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:09,183 - INFO - Volume Profile calculated - POC: 19908.1, VAH: 19240.7, VAL: 20180.0
+2024-12-23 18:49:09,187 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:09,638 - INFO - Volume Profile calculated - POC: 18768.8, VAH: 18612.8, VAL: 18976.0
+2024-12-23 18:49:09,641 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:09,975 - INFO - Volume Profile calculated - POC: 19300.0, VAH: 19168.9, VAL: 19330.2
+2024-12-23 18:49:09,979 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:10,738 - INFO - Volume Profile calculated - POC: 21253.2, VAH: 20666.4, VAL: 21437.9
+2024-12-23 18:49:10,743 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:11,175 - INFO - Volume Profile calculated - POC: 21302.0, VAH: 21185.0, VAL: 21482.8
+2024-12-23 18:49:11,179 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:11,536 - INFO - Volume Profile calculated - POC: 21613.5, VAH: 21543.3, VAL: 21675.5
+2024-12-23 18:49:11,540 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:12,132 - INFO - Volume Profile calculated - POC: 22319.7, VAH: 21980.6, VAL: 22458.7
+2024-12-23 18:49:12,138 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:13,579 - INFO - Volume Profile calculated - POC: 22208.0, VAH: 20888.9, VAL: 22790.7
+2024-12-23 18:49:13,587 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:14,007 - INFO - Volume Profile calculated - POC: 20297.7, VAH: 20158.5, VAL: 20386.3
+2024-12-23 18:49:14,012 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:14,594 - INFO - Volume Profile calculated - POC: 20139.3, VAH: 19833.1, VAL: 20314.0
+2024-12-23 18:49:14,602 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:14,972 - INFO - Volume Profile calculated - POC: 19738.8, VAH: 19612.8, VAL: 19825.3
+2024-12-23 18:49:14,977 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:15,323 - INFO - Volume Profile calculated - POC: 19861.1, VAH: 19800.3, VAL: 20022.1
+2024-12-23 18:49:15,327 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:15,787 - INFO - Volume Profile calculated - POC: 20001.7, VAH: 19703.1, VAL: 20095.7
+2024-12-23 18:49:15,790 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:16,683 - INFO - Volume Profile calculated - POC: 18465.0, VAH: 18367.9, VAL: 19227.6
+2024-12-23 18:49:16,688 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:17,336 - INFO - Volume Profile calculated - POC: 18954.0, VAH: 18807.5, VAL: 19298.7
+2024-12-23 18:49:17,341 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:18,027 - INFO - Volume Profile calculated - POC: 19003.4, VAH: 18833.5, VAL: 19351.2
+2024-12-23 18:49:18,054 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:18,847 - INFO - Volume Profile calculated - POC: 18995.6, VAH: 18727.9, VAL: 19318.3
+2024-12-23 18:49:18,886 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:19,590 - INFO - Volume Profile calculated - POC: 18722.7, VAH: 18556.3, VAL: 19226.9
+2024-12-23 18:49:19,596 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:19,926 - INFO - Volume Profile calculated - POC: 19095.8, VAH: 19024.5, VAL: 19176.8
+2024-12-23 18:49:19,930 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:20,276 - INFO - Volume Profile calculated - POC: 18951.0, VAH: 18882.5, VAL: 19088.4
+2024-12-23 18:49:20,279 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:20,786 - INFO - Volume Profile calculated - POC: 19124.0, VAH: 18898.7, VAL: 19280.0
+2024-12-23 18:49:20,790 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:21,774 - INFO - Volume Profile calculated - POC: 20199.4, VAH: 19222.4, VAL: 20363.4
+2024-12-23 18:49:21,780 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:22,730 - INFO - Volume Profile calculated - POC: 18732.7, VAH: 18485.0, VAL: 19411.7
+2024-12-23 18:49:22,738 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:23,468 - INFO - Volume Profile calculated - POC: 19452.8, VAH: 19272.7, VAL: 19539.0
+2024-12-23 18:49:23,475 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:23,485 - INFO - Volume Profile calculated - POC: 19587.5, VAH: 19587.5, VAL: 19607.1
+2024-12-23 18:49:23,486 - INFO - Successfully calculated 30 volume profiles for daily timeframe
+2024-12-23 18:49:23,496 - INFO - Detecting fractals for weekly timeframe
+2024-12-23 18:49:23,498 - INFO - Detected 0 up fractals and 0 down fractals for weekly timeframe.
+2024-12-23 18:49:23,498 - INFO - Calculating HTF levels for weekly timeframe
+2024-12-23 18:49:23,499 - INFO - Calculated 2 HTF levels for weekly timeframe.
+2024-12-23 18:49:23,499 - INFO - Calculating Fibonacci levels for weekly timeframe
+2024-12-23 18:49:23,503 - INFO - Calculated 0 support and 0 resistance Fibonacci patterns for weekly
+2024-12-23 18:49:23,503 - INFO - Calculating Volume Profile levels for weekly timeframe
+2024-12-23 18:49:23,533 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:24,780 - INFO - Volume Profile calculated - POC: 19797.0, VAH: 19716.0, VAL: 20077.6
+2024-12-23 18:49:24,794 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:28,183 - INFO - Volume Profile calculated - POC: 19777.4, VAH: 19364.3, VAL: 21850.0
+2024-12-23 18:49:28,210 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:31,443 - INFO - Volume Profile calculated - POC: 19735.3, VAH: 19335.4, VAL: 21170.6
+2024-12-23 18:49:31,474 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:33,885 - INFO - Volume Profile calculated - POC: 19093.0, VAH: 18671.1, VAL: 19274.9
+2024-12-23 18:49:33,916 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:35,658 - INFO - Volume Profile calculated - POC: 19124.0, VAH: 18824.8, VAL: 19617.2
+2024-12-23 18:49:35,680 - INFO - Successfully calculated 5 volume profiles for weekly timeframe
+2024-12-23 18:49:35,685 - INFO - Detecting fractals for monthly timeframe
+2024-12-23 18:49:35,686 - INFO - Detected 0 up fractals and 0 down fractals for monthly timeframe.
+2024-12-23 18:49:35,686 - INFO - Calculating HTF levels for monthly timeframe
+2024-12-23 18:49:35,687 - INFO - Calculated 0 HTF levels for monthly timeframe.
+2024-12-23 18:49:35,687 - INFO - Calculating Fibonacci levels for monthly timeframe
+2024-12-23 18:49:35,690 - INFO - Calculated 0 support and 0 resistance Fibonacci patterns for monthly
+2024-12-23 18:49:35,690 - INFO - Calculating Volume Profile levels for monthly timeframe
+2024-12-23 18:49:35,709 - INFO - Calculating Volume Profile levels
+2024-12-23 18:49:45,320 - INFO - Volume Profile calculated - POC: 19094.7, VAH: 18628.0, VAL: 20107.7
+2024-12-23 18:49:45,454 - INFO - Successfully calculated 1 volume profiles for monthly timeframe
+2024-12-23 18:49:45,460 - INFO - Generating ML datasets
+2024-12-23 18:49:45,460 - INFO - Detecting fractals for 1h timeframe
+2024-12-23 18:49:45,536 - INFO - Detected 106 up fractals and 102 down fractals for 1h timeframe.
+2024-12-23 18:49:45,608 - INFO - Added Volume Profile levels for daily timeframe
+2024-12-23 18:49:45,620 - INFO - Added Volume Profile levels for weekly timeframe
+2024-12-23 18:49:45,623 - INFO - Added Volume Profile levels for monthly timeframe
+2024-12-23 18:49:45,783 - INFO - ML Price Action dataset saved to ml_dataset.csv
+2024-12-23 18:49:45,783 - INFO - Levels dataset saved to levels_dataset.csv
+2024-12-23 18:49:45,784 - INFO - Creating interactive chart for daily timeframe
+2024-12-23 18:49:46,732 - ERROR - Error creating interactive chart: 'ratio'
+2024-12-23 18:49:46,732 - INFO - Creating interactive chart for weekly timeframe
+2024-12-23 18:49:47,770 - INFO - Interactive chart saved to BTCUSDT_weekly_interactive.html
+2024-12-23 18:49:47,771 - INFO - Creating interactive chart for monthly timeframe
+2024-12-23 18:49:47,919 - INFO - Interactive chart saved to BTCUSDT_monthly_interactive.html
+2024-12-23 18:49:47,919 - INFO - Trading bot execution completed successfully
+2024-12-23 19:06:41,292 - INFO - Fetching 1d data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-23 19:06:41,713 - INFO - Fetched 30 records for 1d timeframe.
+2024-12-23 19:06:41,713 - INFO - Fetched daily data: 30 rows
+2024-12-23 19:06:41,713 - INFO - Fetching 1w data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-23 19:06:42,024 - INFO - Fetched 4 records for 1w timeframe.
+2024-12-23 19:06:42,024 - INFO - Fetched weekly data: 4 rows
+2024-12-23 19:06:42,024 - INFO - Fetching 1M data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-23 19:06:42,337 - INFO - Fetched 1 records for 1M timeframe.
+2024-12-23 19:06:42,338 - INFO - Fetched monthly data: 1 rows
+2024-12-23 19:06:42,338 - INFO - Fetching 1m data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-23 19:06:58,999 - INFO - Fetched 41761 records for 1m timeframe.
+2024-12-23 19:06:59,005 - INFO - Fetched 1min data: 41761 rows
+2024-12-23 19:06:59,005 - INFO - Fetching 1h data for BTCUSDT from 1 Sep 2022 to 30 Sep 2022
+2024-12-23 19:06:59,369 - INFO - Fetched 697 records for 1h timeframe.
+2024-12-23 19:06:59,369 - INFO - Detecting fractals for daily timeframe
+2024-12-23 19:06:59,385 - INFO - Detected 4 up fractals and 4 down fractals for daily timeframe.
+2024-12-23 19:06:59,385 - INFO - Calculating HTF levels for daily timeframe
+2024-12-23 19:06:59,385 - ERROR - Error calculating HTF levels for daily: 'open_time'
+2024-12-23 19:06:59,386 - INFO - Calculating Fibonacci levels for daily timeframe
+2024-12-23 19:06:59,389 - ERROR - Error calculating Fibonacci levels for daily: "['open_time'] not in index"
+2024-12-23 19:06:59,389 - INFO - Calculating Volume Profile levels for daily timeframe
+2024-12-23 19:06:59,406 - ERROR - Error calculating volume profile levels for daily: 'open_time'
+2024-12-23 19:06:59,411 - INFO - Detecting fractals for weekly timeframe
+2024-12-23 19:06:59,412 - INFO - Detected 0 up fractals and 0 down fractals for weekly timeframe.
+2024-12-23 19:06:59,412 - INFO - Calculating HTF levels for weekly timeframe
+2024-12-23 19:06:59,412 - ERROR - Error calculating HTF levels for weekly: 'open_time'
+2024-12-23 19:06:59,413 - INFO - Calculating Fibonacci levels for weekly timeframe
+2024-12-23 19:06:59,414 - ERROR - Error calculating Fibonacci levels for weekly: "['open_time'] not in index"
+2024-12-23 19:06:59,414 - INFO - Calculating Volume Profile levels for weekly timeframe
+2024-12-23 19:06:59,431 - ERROR - Error calculating volume profile levels for weekly: 'open_time'
+2024-12-23 19:06:59,434 - INFO - Detecting fractals for monthly timeframe
+2024-12-23 19:06:59,435 - INFO - Detected 0 up fractals and 0 down fractals for monthly timeframe.
+2024-12-23 19:06:59,435 - INFO - Calculating HTF levels for monthly timeframe
+2024-12-23 19:06:59,436 - INFO - Calculated 0 HTF levels for monthly timeframe.
+2024-12-23 19:06:59,436 - INFO - Calculating Fibonacci levels for monthly timeframe
+2024-12-23 19:06:59,437 - ERROR - Error calculating Fibonacci levels for monthly: "['open_time'] not in index"
+2024-12-23 19:06:59,467 - INFO - Calculating Volume Profile levels for monthly timeframe
+2024-12-23 19:06:59,485 - ERROR - Error calculating volume profile levels for monthly: 'open_time'
+2024-12-23 19:06:59,489 - INFO - Generating ML datasets
+2024-12-23 19:06:59,489 - INFO - Detecting fractals for 1h timeframe
+2024-12-23 19:06:59,610 - INFO - Detected 106 up fractals and 102 down fractals for 1h timeframe.
+2024-12-23 19:06:59,613 - ERROR - Error in main execution: 'price_level'
+2024-12-23 19:07:26,290 - INFO - Fetching 1d data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:07:26,617 - INFO - Fetched 23 records for 1d timeframe.
+2024-12-23 19:07:26,617 - INFO - Fetched daily data: 23 rows
+2024-12-23 19:07:26,617 - INFO - Fetching 1w data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:07:26,936 - INFO - Fetched 3 records for 1w timeframe.
+2024-12-23 19:07:26,936 - INFO - Fetched weekly data: 3 rows
+2024-12-23 19:07:26,936 - INFO - Fetching 1M data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:07:27,259 - INFO - Fetched 1 records for 1M timeframe.
+2024-12-23 19:07:27,260 - INFO - Fetched monthly data: 1 rows
+2024-12-23 19:07:27,260 - INFO - Fetching 1m data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:07:42,109 - INFO - Fetched 31681 records for 1m timeframe.
+2024-12-23 19:07:42,114 - INFO - Fetched 1min data: 31681 rows
+2024-12-23 19:07:42,115 - INFO - Fetching 1h data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:07:42,469 - INFO - Fetched 529 records for 1h timeframe.
+2024-12-23 19:07:42,469 - INFO - Detecting fractals for daily timeframe
+2024-12-23 19:07:42,473 - INFO - Detected 2 up fractals and 2 down fractals for daily timeframe.
+2024-12-23 19:07:42,473 - INFO - Calculating HTF levels for daily timeframe
+2024-12-23 19:07:42,474 - ERROR - Error calculating HTF levels for daily: 'open_time'
+2024-12-23 19:07:42,475 - INFO - Calculating Fibonacci levels for daily timeframe
+2024-12-23 19:07:42,476 - ERROR - Error calculating Fibonacci levels for daily: "['open_time'] not in index"
+2024-12-23 19:07:42,476 - INFO - Calculating Volume Profile levels for daily timeframe
+2024-12-23 19:07:42,488 - ERROR - Error calculating volume profile levels for daily: 'open_time'
+2024-12-23 19:07:42,490 - INFO - Detecting fractals for weekly timeframe
+2024-12-23 19:07:42,491 - INFO - Detected 0 up fractals and 0 down fractals for weekly timeframe.
+2024-12-23 19:07:42,491 - INFO - Calculating HTF levels for weekly timeframe
+2024-12-23 19:07:42,492 - ERROR - Error calculating HTF levels for weekly: 'open_time'
+2024-12-23 19:07:42,492 - INFO - Calculating Fibonacci levels for weekly timeframe
+2024-12-23 19:07:42,493 - ERROR - Error calculating Fibonacci levels for weekly: "['open_time'] not in index"
+2024-12-23 19:07:42,493 - INFO - Calculating Volume Profile levels for weekly timeframe
+2024-12-23 19:07:42,507 - ERROR - Error calculating volume profile levels for weekly: 'open_time'
+2024-12-23 19:07:42,509 - INFO - Detecting fractals for monthly timeframe
+2024-12-23 19:07:42,511 - INFO - Detected 0 up fractals and 0 down fractals for monthly timeframe.
+2024-12-23 19:07:42,511 - INFO - Calculating HTF levels for monthly timeframe
+2024-12-23 19:07:42,511 - INFO - Calculated 0 HTF levels for monthly timeframe.
+2024-12-23 19:07:42,511 - INFO - Calculating Fibonacci levels for monthly timeframe
+2024-12-23 19:07:42,512 - ERROR - Error calculating Fibonacci levels for monthly: "['open_time'] not in index"
+2024-12-23 19:07:42,513 - INFO - Calculating Volume Profile levels for monthly timeframe
+2024-12-23 19:07:42,528 - ERROR - Error calculating volume profile levels for monthly: 'open_time'
+2024-12-23 19:07:42,530 - INFO - Generating ML datasets
+2024-12-23 19:07:42,530 - INFO - Detecting fractals for 1h timeframe
+2024-12-23 19:07:42,629 - INFO - Detected 73 up fractals and 69 down fractals for 1h timeframe.
+2024-12-23 19:07:42,631 - ERROR - Error in main execution: 'price_level'
+2024-12-23 19:11:10,447 - INFO - Fetching 1d data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:11:10,814 - INFO - Fetched 23 records for 1d timeframe.
+2024-12-23 19:11:10,814 - INFO - Fetched daily data: 23 rows
+2024-12-23 19:11:10,814 - INFO - daily data range: 2023-12-01 00:00:00 to 2023-12-23 00:00:00
+2024-12-23 19:11:10,815 - INFO - Fetching 1w data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:11:11,129 - INFO - Fetched 3 records for 1w timeframe.
+2024-12-23 19:11:11,129 - INFO - Fetched weekly data: 3 rows
+2024-12-23 19:11:11,129 - INFO - weekly data range: 2023-12-04 00:00:00 to 2023-12-18 00:00:00
+2024-12-23 19:11:11,129 - INFO - Fetching 1M data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:11:11,441 - INFO - Fetched 1 records for 1M timeframe.
+2024-12-23 19:11:11,442 - INFO - Fetched monthly data: 1 rows
+2024-12-23 19:11:11,442 - INFO - monthly data range: 2023-12-01 00:00:00 to 2023-12-01 00:00:00
+2024-12-23 19:11:11,442 - INFO - Fetching 1m data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:11:23,875 - INFO - Fetched 31681 records for 1m timeframe.
+2024-12-23 19:11:23,881 - INFO - Fetched 1min data: 31681 rows
+2024-12-23 19:11:23,881 - INFO - 1min data range: 2023-12-01 00:00:00 to 2023-12-23 00:00:00
+2024-12-23 19:11:23,881 - INFO - Fetching 1h data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:11:24,234 - INFO - Fetched 529 records for 1h timeframe.
+2024-12-23 19:11:24,235 - INFO - Detecting fractals for daily timeframe
+2024-12-23 19:11:24,252 - INFO - Detected 2 up fractals and 2 down fractals for daily timeframe.
+2024-12-23 19:11:24,252 - INFO - Calculating HTF levels for daily timeframe
+2024-12-23 19:11:24,253 - ERROR - Error calculating HTF levels for daily: 'open_time'
+2024-12-23 19:11:24,254 - INFO - Calculating Fibonacci levels for daily timeframe
+2024-12-23 19:11:24,258 - ERROR - Error calculating Fibonacci levels for daily: "['open_time'] not in index"
+2024-12-23 19:11:24,259 - INFO - Calculating Volume Profile levels for daily timeframe
+2024-12-23 19:11:24,274 - ERROR - Error calculating volume profile levels for daily: 'open_time'
+2024-12-23 19:11:24,276 - INFO - Detecting fractals for weekly timeframe
+2024-12-23 19:11:24,278 - INFO - Detected 0 up fractals and 0 down fractals for weekly timeframe.
+2024-12-23 19:11:24,278 - INFO - Calculating HTF levels for weekly timeframe
+2024-12-23 19:11:24,278 - ERROR - Error calculating HTF levels for weekly: 'open_time'
+2024-12-23 19:11:24,279 - INFO - Calculating Fibonacci levels for weekly timeframe
+2024-12-23 19:11:24,280 - ERROR - Error calculating Fibonacci levels for weekly: "['open_time'] not in index"
+2024-12-23 19:11:24,280 - INFO - Calculating Volume Profile levels for weekly timeframe
+2024-12-23 19:11:24,294 - ERROR - Error calculating volume profile levels for weekly: 'open_time'
+2024-12-23 19:11:24,297 - INFO - Detecting fractals for monthly timeframe
+2024-12-23 19:11:24,298 - INFO - Detected 0 up fractals and 0 down fractals for monthly timeframe.
+2024-12-23 19:11:24,298 - INFO - Calculating HTF levels for monthly timeframe
+2024-12-23 19:11:24,299 - INFO - Calculated 0 HTF levels for monthly timeframe.
+2024-12-23 19:11:24,299 - INFO - Calculating Fibonacci levels for monthly timeframe
+2024-12-23 19:11:24,301 - ERROR - Error calculating Fibonacci levels for monthly: "['open_time'] not in index"
+2024-12-23 19:11:24,301 - INFO - Calculating Volume Profile levels for monthly timeframe
+2024-12-23 19:11:24,316 - ERROR - Error calculating volume profile levels for monthly: 'open_time'
+2024-12-23 19:11:24,318 - INFO - Generating ML datasets
+2024-12-23 19:11:24,318 - INFO - Detecting fractals for 1h timeframe
+2024-12-23 19:11:24,424 - INFO - Detected 73 up fractals and 69 down fractals for 1h timeframe.
+2024-12-23 19:11:24,427 - ERROR - Error in main execution: 'price_level'
+2024-12-23 19:22:10,413 - INFO - Fetching 1d data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:22:10,930 - INFO - Fetched 23 records for 1d timeframe.
+2024-12-23 19:22:10,930 - INFO - Fetched daily data: 23 rows
+2024-12-23 19:22:10,930 - INFO - daily data range: 2023-12-01 00:00:00 to 2023-12-23 00:00:00
+2024-12-23 19:22:10,930 - INFO - daily data columns: ['open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore']
+2024-12-23 19:22:10,930 - INFO - Fetching 1w data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:22:11,301 - INFO - Fetched 3 records for 1w timeframe.
+2024-12-23 19:22:11,301 - INFO - Fetched weekly data: 3 rows
+2024-12-23 19:22:11,302 - INFO - weekly data range: 2023-12-04 00:00:00 to 2023-12-18 00:00:00
+2024-12-23 19:22:11,302 - INFO - weekly data columns: ['open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore']
+2024-12-23 19:22:11,302 - INFO - Fetching 1M data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:22:11,711 - INFO - Fetched 1 records for 1M timeframe.
+2024-12-23 19:22:11,711 - INFO - Fetched monthly data: 1 rows
+2024-12-23 19:22:11,711 - INFO - monthly data range: 2023-12-01 00:00:00 to 2023-12-01 00:00:00
+2024-12-23 19:22:11,711 - INFO - monthly data columns: ['open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore']
+2024-12-23 19:22:11,711 - INFO - Fetching 1m data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:22:25,768 - INFO - Fetched 31681 records for 1m timeframe.
+2024-12-23 19:22:25,774 - INFO - Fetched 1min data: 31681 rows
+2024-12-23 19:22:25,774 - INFO - 1min data range: 2023-12-01 00:00:00 to 2023-12-23 00:00:00
+2024-12-23 19:22:25,774 - INFO - 1min data columns: ['open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore']
+2024-12-23 19:22:25,775 - INFO - Data timeframes available: daily, weekly, monthly, 1min
+2024-12-23 19:22:25,775 - INFO - Fetching 1h data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:22:26,153 - INFO - Fetched 529 records for 1h timeframe.
+2024-12-23 19:22:26,154 - INFO - Detecting fractals for daily timeframe
+2024-12-23 19:22:26,169 - INFO - Detected 2 up fractals and 2 down fractals for daily timeframe.
+2024-12-23 19:22:26,169 - INFO - Calculating HTF levels for daily timeframe
+2024-12-23 19:22:26,171 - ERROR - Error calculating HTF levels for daily: 'open_time'
+2024-12-23 19:22:26,172 - INFO - Calculating Fibonacci levels for daily timeframe
+2024-12-23 19:22:26,179 - ERROR - Error calculating Fibonacci levels for daily: "['open_time'] not in index"
+2024-12-23 19:22:26,179 - INFO - Calculating Volume Profile levels for daily timeframe
+2024-12-23 19:22:26,207 - ERROR - Error calculating volume profile levels for daily: 'open_time'
+2024-12-23 19:22:26,211 - INFO - Detecting fractals for weekly timeframe
+2024-12-23 19:22:26,213 - INFO - Detected 0 up fractals and 0 down fractals for weekly timeframe.
+2024-12-23 19:22:26,213 - INFO - Calculating HTF levels for weekly timeframe
+2024-12-23 19:22:26,215 - ERROR - Error calculating HTF levels for weekly: 'open_time'
+2024-12-23 19:22:26,215 - INFO - Calculating Fibonacci levels for weekly timeframe
+2024-12-23 19:22:26,221 - ERROR - Error calculating Fibonacci levels for weekly: "['open_time'] not in index"
+2024-12-23 19:22:26,222 - INFO - Calculating Volume Profile levels for weekly timeframe
+2024-12-23 19:22:26,264 - ERROR - Error calculating volume profile levels for weekly: 'open_time'
+2024-12-23 19:22:26,272 - INFO - Detecting fractals for monthly timeframe
+2024-12-23 19:22:26,280 - INFO - Detected 0 up fractals and 0 down fractals for monthly timeframe.
+2024-12-23 19:22:26,281 - INFO - Calculating HTF levels for monthly timeframe
+2024-12-23 19:22:26,288 - INFO - Calculated 0 HTF levels for monthly timeframe.
+2024-12-23 19:22:26,289 - INFO - Calculating Fibonacci levels for monthly timeframe
+2024-12-23 19:22:26,292 - ERROR - Error calculating Fibonacci levels for monthly: "['open_time'] not in index"
+2024-12-23 19:22:26,292 - INFO - Calculating Volume Profile levels for monthly timeframe
+2024-12-23 19:22:26,346 - ERROR - Error calculating volume profile levels for monthly: 'open_time'
+2024-12-23 19:22:26,353 - INFO - Generating ML datasets
+2024-12-23 19:22:26,353 - INFO - Detecting fractals for 1h timeframe
+2024-12-23 19:22:26,489 - INFO - Detected 73 up fractals and 69 down fractals for 1h timeframe.
+2024-12-23 19:22:26,491 - ERROR - Error in main execution: 'price_level'
+2024-12-23 19:25:00,474 - INFO - Fetching 1d data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:25:00,868 - INFO - Fetched 23 records for 1d timeframe.
+2024-12-23 19:25:00,869 - INFO - Fetching 1w data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:25:01,181 - INFO - Fetched 3 records for 1w timeframe.
+2024-12-23 19:25:01,181 - INFO - Fetching 1M data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:25:01,503 - INFO - Fetched 1 records for 1M timeframe.
+2024-12-23 19:25:01,503 - INFO - Fetching 1m data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:25:14,174 - INFO - Fetched 31681 records for 1m timeframe.
+2024-12-23 19:25:14,179 - INFO - Fetching 1h data for BTCUSDT from 1 Dec 2023 to 23 Dec 2023
+2024-12-23 19:25:14,527 - INFO - Fetched 529 records for 1h timeframe.
+2024-12-23 19:25:14,527 - INFO - Detecting fractals for daily timeframe
+2024-12-23 19:25:14,539 - INFO - Detected 2 up fractals and 2 down fractals for daily timeframe.
+2024-12-23 19:25:14,539 - INFO - Calculating HTF levels for daily timeframe
+2024-12-23 19:25:14,541 - ERROR - Error calculating HTF levels for daily: 'open_time'
+2024-12-23 19:25:14,542 - INFO - Calculating Fibonacci levels for daily timeframe
+2024-12-23 19:25:14,548 - ERROR - Error calculating Fibonacci levels for daily: "['open_time'] not in index"
+2024-12-23 19:25:14,548 - INFO - Calculating Volume Profile levels for daily timeframe
+2024-12-23 19:25:14,564 - ERROR - Error calculating volume profile levels for daily: 'open_time'
+2024-12-23 19:25:14,566 - INFO - Detecting fractals for weekly timeframe
+2024-12-23 19:25:14,568 - INFO - Detected 0 up fractals and 0 down fractals for weekly timeframe.
+2024-12-23 19:25:14,568 - INFO - Calculating HTF levels for weekly timeframe
+2024-12-23 19:25:14,568 - ERROR - Error calculating HTF levels for weekly: 'open_time'
+2024-12-23 19:25:14,568 - INFO - Calculating Fibonacci levels for weekly timeframe
+2024-12-23 19:25:14,569 - ERROR - Error calculating Fibonacci levels for weekly: "['open_time'] not in index"
+2024-12-23 19:25:14,570 - INFO - Calculating Volume Profile levels for weekly timeframe
+2024-12-23 19:25:14,586 - ERROR - Error calculating volume profile levels for weekly: 'open_time'
+2024-12-23 19:25:14,588 - INFO - Detecting fractals for monthly timeframe
+2024-12-23 19:25:14,590 - INFO - Detected 0 up fractals and 0 down fractals for monthly timeframe.
+2024-12-23 19:25:14,590 - INFO - Calculating HTF levels for monthly timeframe
+2024-12-23 19:25:14,590 - INFO - Calculated 0 HTF levels for monthly timeframe.
+2024-12-23 19:25:14,590 - INFO - Calculating Fibonacci levels for monthly timeframe
+2024-12-23 19:25:14,593 - ERROR - Error calculating Fibonacci levels for monthly: "['open_time'] not in index"
+2024-12-23 19:25:14,593 - INFO - Calculating Volume Profile levels for monthly timeframe
+2024-12-23 19:25:14,613 - ERROR - Error calculating volume profile levels for monthly: 'open_time'
+2024-12-23 19:25:14,615 - INFO - Generating ML datasets
+2024-12-23 19:25:14,615 - INFO - Detecting fractals for 1h timeframe
+2024-12-23 19:25:14,715 - INFO - Detected 73 up fractals and 69 down fractals for 1h timeframe.
+2024-12-23 19:25:14,717 - ERROR - Error in main execution: 'price_level'

@@ -1,0 +1,77 @@
+TRADING BOT FEATURE ENGINEERING PLAN
+
+1. LEVEL CONFLUENCE FEATURES
+- Define nearby range for confluence detection (starting with 200 USD)
+- For each price level:
+  * Count of nearby levels
+  * Types of nearby levels
+  * Distance to nearest level (up/down)
+  * Distance to nearest confluence zone
+  * Number of levels in nearest confluence
+  * Types of levels in confluence
+
+2. LEVEL HISTORY FEATURES
+- For each level:
+  * Number of times touched as support
+  * Number of times touched as resistance
+  * Success rate as support (bounces vs breaks)
+  * Success rate as resistance (bounces vs breaks)
+  * Days since level creation
+  * Days since last touch
+  * Level strength score with decay based on:
+    - Time since creation
+    - Number of touches (max relevance at 4 touches)
+    - Previous failures
+    - Support/Resistance flip history
+
+3. PRICE ACTION FEATURES
+- Distance to nearest levels (up and down)
+- Rate of price approach to level (momentum)
+- Volume profile around the level historically
+- Current timeframe's candle properties:
+  * Size relative to previous candles
+  * Position within recent range
+  * Volume relative to average
+
+4. VOLUME ANALYSIS FEATURES
+- Volume at previous touches of the level
+- Current volume vs average volume at this price range
+- Volume distribution above/below current price
+- Volume profile node strength (distance to POC, within value area?)
+
+5. MULTI-TIMEFRAME FEATURES
+- Level relevance across timeframes
+- Price action alignment across timeframes
+- Volume alignment across timeframes
+
+IMPLEMENTATION PHASES:
+
+Phase 1 - Basic Features:
+- Implement distance calculations to levels
+- Basic confluence detection (200 USD threshold)
+- Simple level history tracking
+- Support/Resistance touch counting
+
+Phase 2 - Advanced Features:
+- Complex confluence analysis
+- Level strength decay implementation
+- Volume analysis integration
+- Support/Resistance flip detection
+
+Phase 3 - ML Model:
+- Binary classification (fractal prediction)
+- Feature importance analysis
+- Performance-based feature refinement
+
+NOTES:
+- Don't make assumptions about confluence strength - let data guide us
+- Track support/resistance touches separately
+- Level relevance decays significantly after 4 touches
+- Consider support/resistance flips as important events
+- 200 USD initial confluence threshold (subject to optimization)
+
+Questions to address as we progress:
+1. How to determine if a level acted as support or resistance?
+2. What constitutes a "touch" of a level?
+3. How to measure success/failure of a level?
+4. How to quantify support/resistance flip impact?

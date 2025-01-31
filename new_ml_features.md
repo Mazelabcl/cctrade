@@ -1,11 +1,13 @@
 # New ML Features Implementation Plan
 
 ## Project Overview
+
 This project is a cryptocurrency trading bot that uses machine learning to predict potential swing points (fractals) in Bitcoin price action. The bot analyzes multiple timeframes (1-hour, daily, weekly, monthly) and various technical levels to make predictions. The main goal is to identify high-probability turning points in the market by combining multiple types of technical analysis with machine learning.
 
 ## Key Concepts
 
 ### Technical Levels
+
 The bot tracks several types of significant price levels:
 
 1. **HTF (Higher Timeframe) Levels**
@@ -31,6 +33,7 @@ The bot tracks several types of significant price levels:
    - Used to identify key reversal points
 
 ## Level Validity Rules
+
 - Each level starts as "naked" (untouched)
 - Support touches and resistance touches are counted separately
 - A level becomes invalid after:
@@ -44,6 +47,7 @@ The bot tracks several types of significant price levels:
 ## New Feature Engineering Approach
 
 ### 1. Finding Nearest Naked Levels
+
 For each 1-hour candle (n), we look at candle n-2's close price and:
 
 1. **Search Strategy**:
@@ -56,6 +60,7 @@ For each 1-hour candle (n), we look at candle n-2's close price and:
    - Resistance levels must be above price
 
 ### 2. Zone Analysis
+
 Once nearest naked support and resistance are found:
 
 1. **Zone Definition**:
@@ -71,6 +76,7 @@ Once nearest naked support and resistance are found:
    - `zone_X_naked_fibs_golden_pocket`: Number of untouched 0.618 fib levels across all timeframes (daily, weekly, monthly)
 
 ### 3. Zone Interaction Features
+
 Counts the number of levels present in a zone and which levels were touched by the candle's high/low:
 
 ```python
@@ -108,7 +114,8 @@ touched_levels = {
 }
 ```
 
-### Important Notes:
+### Important Notes
+
 1. Support/resistance touches are tracked separately
    - A level can have 4+ touches as support but still be valid as resistance
    - Touch counts reset when price breaks through
@@ -126,30 +133,38 @@ touched_levels = {
 ### Support and Resistance Interaction Features
 
 #### Zone Levels
+
 Tracks which support and resistance levels are currently active in the trading zone.
+
 - A level is considered "valid" if it has less than 4 touches
 - Returns 1 for each valid level, 0 otherwise
 - Feature format: `{timeframe}_{level_type}` (e.g., `monthly_htf`, `weekly_poc`, `daily_fib_618`)
 
 #### Touched Levels
+
 Tracks which support and resistance levels have been touched by the current price action.
 
 ##### Support Level Touch Logic
+
 - A support level is considered touched if price goes down to or below the level
 - Mathematically: `candle_low <= support_level`
 - Example: If support is at 39500 and candle low reaches 39500 or goes below it, the level is touched
 
 ##### Resistance Level Touch Logic
+
 - A resistance level is considered touched if price goes up to or above the level
 - Mathematically: `candle_high >= resistance_level`
 - Example: If resistance is at 40500 and candle high reaches 40500 or goes above it, the level is touched
 
 ### Feature Names
+
 All features follow the format: `{timeframe}_{level_type}`
+
 - Timeframes: monthly, weekly, daily
 - Level types: htf, poc, fib_618
 
 ### 4. Swing Pattern Features
+
 Detects potential swing points by comparing candle n-1 with previous candles:
 
 ```python
@@ -159,12 +174,14 @@ swing_patterns = {
 }
 ```
 
-### Important Notes:
+### Important Notes
+
 1. Swing detection uses 3 candles (n-1, n-2, n-3)
 2. A candle can be both a swing high and swing low
 3. This is a "potential" swing as it may change when new candles form
 
 ### 5. Candle Structure Analysis
+
 For candle n-1:
 
 1. **Candle Ratios**:
@@ -181,6 +198,7 @@ For candle n-1:
      - Around 0.5 = Indecision
 
 ### 6. Volume Analysis
+
 For candle n-1:
 
 1. **Volume Ratios**:
@@ -190,7 +208,9 @@ For candle n-1:
    - `volume_long_ratio = current_volume / MA(volume, 168)`
 
 ### 7. Time Block Feature
+
 Divide 24 hours into 6 blocks of 4 hours each:
+
 - Block 0: 00:00-03:59 UTC
 - Block 1: 04:00-07:59 UTC
 - Block 2: 08:00-11:59 UTC
@@ -201,7 +221,9 @@ Divide 24 hours into 6 blocks of 4 hours each:
 This captures trading session information (Asia, London, New York).
 
 ### 8. Fractal Timing Features
+
 For each candle:
+
 - `candles_since_last_up`: Number of candles since last swing low
 - `candles_since_last_down`: Number of candles since last swing high
 - `last_up_time`: Timestamp of last swing low
@@ -209,6 +231,7 @@ For each candle:
 - `fractal_type`: Type of fractal (0=None, 1=Up/SwingLow, 2=Down/SwingHigh)
 
 #### Fractal Detection Logic
+
 - Uses 5 candles [N-5, N-4, N-3, N-2, N-1]
 - Evaluates N-3 as potential fractal
 - Fractal Down (Swing High): N-3 high > all other highs
@@ -216,44 +239,52 @@ For each candle:
 - Counts reset to 0 when new fractal is detected
 - Maintains independent counts for up/down fractals
 
-## Implementation Status (create_ml_features.py):
+## Implementation Status (create_ml_features.py)
 
-### 1. Finding Nearest Naked Levels 
+### 1. Finding Nearest Naked Levels
+
 - [x] Implemented expanding range search
 - [x] Added pristine naked level filtering (no touches in either direction)
 - [x] Proper support/resistance separation (strictly below/above price)
 - [x] Tested with synthetic data
 
-### 2. Zone Analysis 
+### 2. Zone Analysis
+
 - [x] 1.5% zone calculation
 - [x] Level counting by type and timeframe
 - [x] Naked level detection in zones
 - [x] Golden pocket fib detection
 - [x] Tested with synthetic data
 
-### 3. Zone Interaction Features 
+### 3. Zone Interaction Features
+
 - [x] Level presence vector
 - [x] Level touch vector
 - [x] Support/resistance touch counting
 - [x] Example scenarios
 
-### 4. Swing Pattern Features 
+### 4. Swing Pattern Features
+
 - [x] Potential swing high/low detection
 - [x] Swing detection logic
 
 ### 5. Candle Structure Analysis [DCP: CHECK, OK. ORDER 3]
+
 - [x] Ratio calculations
 - [x] Fractal pre-check logic
 
 ### 6. Volume Analysis  [DCP: CHECK, corregido. ORDER 2]
+
 - [x] Volume ratio calculations
 - [x] Time block features
 
-### 7. Time Block Feature 
+### 7. Time Block Feature
+
 - [x] Implemented time block feature
 - Note: match contra periodos apertura bolsas internacionales
 
 ### 8. Fractal Timing Features [DCP: CHECK, OK. ORDER 1]
+
 - [ ] Implemented fractal timing features
 - [ ] Added fractal type detection
 - [ ] Tested with synthetic data
@@ -285,6 +316,7 @@ For each candle:
    - Add progress tracking and logging
 
 ## Output Format
+
 Final dataset will have these columns for each 1-hour candle:
 
 1. **Base Data**
@@ -309,11 +341,13 @@ Final dataset will have these columns for each 1-hour candle:
 This dataset will be used by DataRobot to predict potential fractal formation in future candles.
 
 ## Candle Naming Convention
+
 - N-1: Current candle (just closed)
 - N-2: Previous candle
 - N-3: Two candles back
 
 ## Example
+
 ```python
 # Input Data
 candle_n1 = {'low': 39500, 'high': 40100}  # Current candle
@@ -325,7 +359,7 @@ if candle_n1['low'] <= support_level:
     touched_levels['monthly_htf'] = 1
 ```
 
-## DCP Revision
+## DCP Review
 
 ### Exec scripts
 
@@ -339,13 +373,13 @@ main -> data_fetching -> dataset_generation -> create_ml_features.
 ### Notes
 
 main
-dataset_generation (no hizo algo)
+dataset_generation (llamado desde main)
 create_ml_features
 
 ### Dentro de create_ml_features.py
 
 1. load data candles y levels (csv's creados en dataset gen).
-2. calculate fractal timing para todas las velas. 
+2. calculate fractal timing para todas las velas.
     - Llama a update_fractal_timing() contenido en fractal_timing.py.
     - update_fractal_timing() itera por todo el dataset de candles_df y toma grupos de a 5 velas para revisar si hay fractal.
     - analiza los grupos de 5 velas con detect_fractal() para chequear y guardar si hay fractal (swing low o swing high).
@@ -360,4 +394,3 @@ create_ml_features
     5. asigna fractales a la vela actual [i] segun el calculo de fractales que se hizo previamente (para todo el dataset). "update fractal timing" ml_features.loc[i, 'fractal_timing_high'] y [i, 'fractal_timing_low'].
     6. interaction_features: analiza interaccion vela n-1 contra zona/niveles n-2.
       - llama analyze_candle_interaction() de test_candle_interaction.py.
-   7. 

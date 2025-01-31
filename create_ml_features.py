@@ -15,11 +15,23 @@ def create_feature_dataset(candles_file: str, levels_file: str, output_file: str
     candles_df = pd.read_csv(candles_file)
     levels_df = pd.read_csv(levels_file)
     
+    # Create a backup of the levels dataframe before saving changes
+    levels_backup_file = f"levels_dataset_bak_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    print(f"Creating backup: {levels_backup_file}")
+    levels_df.to_csv(levels_backup_file, index=False)
+    
+    # Create a backup of the candles file before overwriting it
+    candles_backup_file = f"candles_dataset_bak_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    print(f"Creating backup: {candles_backup_file}")
+    candles_df.to_csv(candles_backup_file, index=False)
+    
     # Convert time columns
+    print("Convert time columns...")
     candles_df['open_time'] = pd.to_datetime(candles_df['open_time'])
     levels_df['created_at'] = pd.to_datetime(levels_df['created_at'])
     
     # Initialize level tracking columns
+    print("Initialize level tracking columns...")
     levels_df['support_touches'] = 0
     levels_df['resistance_touches'] = 0
     
@@ -28,9 +40,11 @@ def create_feature_dataset(candles_file: str, levels_file: str, output_file: str
     fractal_timing_df = update_fractal_timing(candles_df)
     
     # Create empty DataFrame for ML features
+    print("Creating empty DataFrame for ML features...")
     ml_features = pd.DataFrame()
     
     # Add basic candle data
+    print("Add basic candle data...")
     ml_features['timestamp'] = candles_df['open_time']
     ml_features['open'] = candles_df['open']
     ml_features['high'] = candles_df['high']
@@ -39,6 +53,7 @@ def create_feature_dataset(candles_file: str, levels_file: str, output_file: str
     ml_features['volume'] = candles_df['volume']
     
     # Initialize level features
+    print("Initialize level features...")
     ml_features['support_distance_pct'] = None
     ml_features['resistance_distance_pct'] = None
     ml_features['support_zone_start'] = None
@@ -59,14 +74,17 @@ def create_feature_dataset(candles_file: str, levels_file: str, output_file: str
     ml_features['resistance_naked_count'] = 0
     
     # Initialize fractal timing features
+    print("Initialize fractal timing features...")
     ml_features['fractal_timing_high'] = None
     ml_features['fractal_timing_low'] = None
     
     # Initialize vectors as lists of zeros
+    print("Initialize vectors as lists of zeros...")
     ml_features['support_level_vector'] = [get_level_vector_template() for _ in range(len(candles_df))]
     ml_features['resistance_level_vector'] = [get_level_vector_template() for _ in range(len(candles_df))]
     
     # Initialize interaction features
+    print("Initialize interaction features...")
     ml_features['support_touched_vector'] = [get_level_vector_template() for _ in range(len(candles_df))]
     ml_features['resistance_touched_vector'] = [get_level_vector_template() for _ in range(len(candles_df))]
     ml_features['total_support_touches'] = 0
@@ -74,7 +92,7 @@ def create_feature_dataset(candles_file: str, levels_file: str, output_file: str
     
     print("Processing features...")
     # Process each candle
-    for i in range(0, len(candles_df)):
+    for i in range(2, len(candles_df)):
         if i % 100 == 0:
             print(f"Processing candle {i} of {len(candles_df)}")
             
@@ -139,23 +157,31 @@ def create_feature_dataset(candles_file: str, levels_file: str, output_file: str
         ml_features.loc[i, 'fractal_timing_low'] = fractal_timing_df.loc[i, 'last_up_time']  # Swing low = fractal up
         
         # Check how N-1 candle interacted with zones from N-2
-        interaction_features = analyze_candle_interaction(
-            candle_n1={
-                'open': row_n1['open'],
-                'high': row_n1['high'],
-                'low': row_n1['low'],
-                'close': row_n1['close']
-            } if row_n1 is not None else None,
-            support_zone=support_zone,
-            resistance_zone=resistance_zone
-        )
+        if row_n1 is not None:
+            interaction_features = analyze_candle_interaction(
+                candle_n1={
+                    'open': row_n1['open'],
+                    'high': row_n1['high'],
+                    'low': row_n1['low'],
+                    'close': row_n1['close']
+                },
+                support_zone=support_zone,
+                resistance_zone=resistance_zone
+            )
         
-        # Update interaction features
-        ml_features.loc[i, 'support_touched_vector'] = str(interaction_features['support_touched_vector'])
-        ml_features.loc[i, 'resistance_touched_vector'] = str(interaction_features['resistance_touched_vector'])
-        ml_features.loc[i, 'total_support_touches'] = interaction_features['total_support_touches']
-        ml_features.loc[i, 'total_resistance_touches'] = interaction_features['total_resistance_touches']
+            # Update interaction features
+            ml_features.loc[i, 'support_touched_vector'] = str(interaction_features['support_touched_vector'])
+            ml_features.loc[i, 'resistance_touched_vector'] = str(interaction_features['resistance_touched_vector'])
+            ml_features.loc[i, 'total_support_touches'] = interaction_features['total_support_touches']
+            ml_features.loc[i, 'total_resistance_touches'] = interaction_features['total_resistance_touches']
+        else:
+            # Manejar el caso cuando no hay vela anterior
+            ml_features.loc[i, 'support_touched_vector'] = str(get_level_vector_template())
+            ml_features.loc[i, 'resistance_touched_vector'] = str(get_level_vector_template())
+            ml_features.loc[i, 'total_support_touches'] = 0
+            ml_features.loc[i, 'total_resistance_touches'] = 0
         
+        # ==== TOUCHED LEVELS ====
         # Update level touches in levels_df when zones are touched
         if support_zone and interaction_features['total_support_touches'] > 0:
             # Get all levels in the support zone
@@ -182,6 +208,11 @@ def create_feature_dataset(candles_file: str, levels_file: str, output_file: str
             ].index
             # Increment resistance touches only for actually touched levels
             levels_df.loc[touched_levels, 'resistance_touches'] += 1
+
+
+    # Save the updated levels to the original file
+    print(f"Updating levels file: {levels_file}")
+    levels_df.to_csv(levels_file, index=False)
     
     # Save features
     print("Saving results...")

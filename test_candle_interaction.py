@@ -28,37 +28,45 @@ def analyze_candle_interaction(candle_n1: dict, support_zone: dict, resistance_z
         'total_resistance_touches': 0
     }
     
-    # Check support zone touches
-    if support_zone and candle_n1['low'] <= support_zone['zone_end']:
-        # Get the touched levels and their indices
-        touched_levels = [
-            (idx, price) for idx, price in enumerate(support_zone['level_prices'])
-            if price >= candle_n1['low']  # Level was touched if price went below or equal to it
-        ]
-        
-        # Create vector counting only touched levels
-        touched_vector = get_level_vector_template()
-        for idx, _ in touched_levels:
-            touched_vector[idx] = 1  # Count each touched level once
-            
-        result['support_touched_vector'] = touched_vector
-        result['total_support_touches'] = len(touched_levels)
+    # Check if candle_n1 is None
+    if candle_n1 is None:
+        return result
     
-    # Check resistance zone touches
-    if resistance_zone and candle_n1['high'] >= resistance_zone['zone_start']:
-        # Get the touched levels and their indices
-        touched_levels = [
-            (idx, price) for idx, price in enumerate(resistance_zone['level_prices'])
-            if price <= candle_n1['high']  # Level was touched if price went above or equal to it
-        ]
-        
-        # Create vector counting only touched levels
-        touched_vector = get_level_vector_template()
-        for idx, _ in touched_levels:
-            touched_vector[idx] = 1  # Count each touched level once
+    # Process support zone
+    if support_zone and 'low' in candle_n1 and 'zone_end' in support_zone and 'level_vector' in support_zone:
+        if candle_n1['low'] <= support_zone['zone_end']:
+            # Create touched vector based on the original level_vector
+            touched_vector = get_level_vector_template()
+            original_vector = support_zone['level_vector']
             
-        result['resistance_touched_vector'] = touched_vector
-        result['total_resistance_touches'] = len(touched_levels)
+            # Only mark as touched the levels that exist in the original vector
+            for i in range(len(touched_vector)):
+                if i < len(original_vector) and original_vector[i] > 0:
+                    touched_vector[i] = 1
+            
+            touched_count = sum(1 for i in range(len(touched_vector)) 
+                              if i < len(original_vector) and original_vector[i] > 0)
+            
+            result['support_touched_vector'] = touched_vector
+            result['total_support_touches'] = touched_count
+    
+    # Process resistance zone
+    if resistance_zone and 'high' in candle_n1 and 'zone_start' in resistance_zone and 'level_vector' in resistance_zone:
+        if candle_n1['high'] >= resistance_zone['zone_start']:
+            # Create touched vector based on the original level_vector
+            touched_vector = get_level_vector_template()
+            original_vector = resistance_zone['level_vector']
+            
+            # Only mark as touched the levels that exist in the original vector
+            for i in range(len(touched_vector)):
+                if i < len(original_vector) and original_vector[i] > 0:
+                    touched_vector[i] = 1
+            
+            touched_count = sum(1 for i in range(len(touched_vector)) 
+                              if i < len(original_vector) and original_vector[i] > 0)
+            
+            result['resistance_touched_vector'] = touched_vector
+            result['total_resistance_touches'] = touched_count
     
     return result
 

@@ -52,6 +52,11 @@ def create_feature_dataset(candles_file: str, levels_file: str, output_file: str
     ml_features['close'] = candles_df['close']
     ml_features['volume'] = candles_df['volume']
     
+    # Initialize fractal binary columns
+    print("Initialize fractal binary columns...")
+    ml_features['is_fractal_up'] = 0   # Para swing lows
+    ml_features['is_fractal_down'] = 0  # Para swing highs
+    
     # Initialize level features
     print("Initialize level features...")
     ml_features['support_distance_pct'] = None
@@ -156,6 +161,12 @@ def create_feature_dataset(candles_file: str, levels_file: str, output_file: str
         ml_features.loc[i, 'fractal_timing_high'] = fractal_timing_df.loc[i, 'last_down_time']  # Swing high = fractal down
         ml_features.loc[i, 'fractal_timing_low'] = fractal_timing_df.loc[i, 'last_up_time']  # Swing low = fractal up
         
+        # Update fractal binary columns
+        if fractal_timing_df.loc[i, 'fractal_type'] == 1:  # FractalType.UP (Swing Low)
+            ml_features.loc[i, 'is_fractal_up'] = 1
+        elif fractal_timing_df.loc[i, 'fractal_type'] == 2:  # FractalType.DOWN (Swing High)
+            ml_features.loc[i, 'is_fractal_down'] = 1
+        
         # Check how N-1 candle interacted with zones from N-2
         if row_n1 is not None:
             interaction_features = analyze_candle_interaction(
@@ -208,7 +219,6 @@ def create_feature_dataset(candles_file: str, levels_file: str, output_file: str
             ].index
             # Increment resistance touches only for actually touched levels
             levels_df.loc[touched_levels, 'resistance_touches'] += 1
-
 
     # Save the updated levels to the original file
     print(f"Updating levels file: {levels_file}")

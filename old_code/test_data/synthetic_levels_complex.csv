@@ -1,0 +1,21 @@
+price_level,level_type,timeframe,created_at,source,support_touches,resistance_touches
+40000,HTF_Level,daily,2024-01-01 00:00:00,htf,0,0
+40500,Fib_0.618,daily,2024-01-01 00:00:00,fibonacci,1,0
+41000,VP_poc,daily,2024-01-01 00:00:00,volume_profile,0,1
+39500,HTF_Level,weekly,2024-01-01 00:00:00,htf,0,0
+39000,Fib_0.5,weekly,2024-01-01 00:00:00,fibonacci,1,1
+42000,VP_vah,monthly,2024-01-01 00:00:00,volume_profile,0,0
+41500,Fib_0.618,monthly,2024-01-01 00:00:00,fibonacci,0,0
+38500,VP_val,daily,2024-01-01 00:00:00,volume_profile,1,1
+43000,HTF_Level,monthly,2024-01-01 00:00:00,htf,0,0
+38000,Fractal_Low,weekly,2024-01-01 00:00:00,fractal,0,0
+37500,HTF_Level,daily,2024-01-01 12:00:00,htf,0,0
+42500,Fib_0.618,weekly,2024-01-01 12:00:00,fibonacci,0,0
+39750,VP_poc,daily,2024-01-01 12:00:00,volume_profile,0,0
+40250,HTF_Level,monthly,2024-01-01 12:00:00,htf,1,1
+41250,Fractal_High,weekly,2024-01-01 12:00:00,fractal,1,0
+37000,VP_val,monthly,2024-01-01 12:00:00,volume_profile,0,1
+43500,Fib_0.75,daily,2024-01-02 00:00:00,fibonacci,0,0
+38250,HTF_Level,weekly,2024-01-02 00:00:00,htf,1,1
+40750,VP_vah,daily,2024-01-02 00:00:00,volume_profile,2,2
+39250,Fractal_Low,monthly,2024-01-02 00:00:00,fractal,0,0

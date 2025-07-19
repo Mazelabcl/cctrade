@@ -15,6 +15,7 @@ def fetch_data(client, symbol, interval, start_str, end_str):
         interval_milliseconds = {
             Client.KLINE_INTERVAL_1MINUTE: 60 * 1000,
             Client.KLINE_INTERVAL_1HOUR: 60 * 60 * 1000,
+            Client.KLINE_INTERVAL_12HOUR: 12 * 60 * 60 * 1000,
             Client.KLINE_INTERVAL_1DAY: 24 * 60 * 60 * 1000,
             Client.KLINE_INTERVAL_1WEEK: 7 * 24 * 60 * 60 * 1000,
             Client.KLINE_INTERVAL_1MONTH: 30 * 24 * 60 * 60 * 1000,

@@ -14,15 +14,19 @@ def generate_datasets(prepared_data):
     2. Levels Dataset: All technical levels with timeframe information
     """
     try:
-        # 1. Generate ML Dataset (1-hour timeframe with fractal labels)
-        hourly_data = prepared_data['data_timeframes']['hour']
-        if not hourly_data.empty:
-            # Add fractal labels
-            ml_dataset = detect_fractals(hourly_data.copy(), 'hour')
-            
-            # Save ML dataset with all OHLCV data and fractal labels
-            ml_dataset.to_csv('ml_dataset.csv')
-            print("ML dataset saved successfully")
+        # 1. Generate ML Datasets for both timeframes
+        timeframes = {'hour': '1h', '12hour': '12h'}
+        
+        for tf_key, tf_label in timeframes.items():
+            data = prepared_data['data_timeframes'].get(tf_key)
+            if data is not None and not data.empty:
+                # Add fractal labels
+                ml_dataset = detect_fractals(data.copy(), tf_key)
+                
+                # Save ML dataset with all OHLCV data and fractal labels
+                filename = f'ml_dataset_{tf_label}.csv'
+                ml_dataset.to_csv(filename)
+                print(f"ML dataset for {tf_label} timeframe saved successfully as {filename}")
         
         # 2. Generate Levels Dataset
         levels = []

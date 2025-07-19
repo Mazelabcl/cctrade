@@ -368,7 +368,8 @@ main -> data_fetching -> dataset_generation -> create_ml_features.
 1. data_fetching.py - Gets the raw candle data from the exchange (trae de binance, no se ejecuta ahora porque tiene dataset local)
 2. dataset_generation.py - Processes raw data and detects naked levels
 3. create_ml_features.py - Creates features including zone detection and interactions
-4. visualize_zones.py - Visualizes how zones evolve and interact
+4. target_variable.py - Creates column with the target variable for training
+5. (optional)visualize_zones.py - Visualizes how zones evolve and interact
 
 ### Notes
 

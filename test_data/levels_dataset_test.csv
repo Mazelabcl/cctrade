@@ -1,0 +1,9 @@
+price_level,level_type,timeframe,created_at,source,anchor_time,completion_time,direction,period
+40000.0,Fractal_Low,daily,2024-01-01 00:00:00,fractal,,,,
+40200.0,HTF_Level_daily,daily,2024-01-01 00:00:00,htf,,,,
+40500.0,VP_poc,daily,2024-01-01 00:00:00,volume_profile,,,,2024-01-01
+40800.0,Fractal_High,daily,2024-01-01 12:00:00,fractal,,,,
+41000.0,Fib_0.5_daily,daily,2024-01-01 12:00:00,fibonacci,2024-01-01 00:00:00,2024-01-01 12:00:00,low_to_high,
+41200.0,VP_vah,daily,2024-01-02 00:00:00,volume_profile,,,,2024-01-02
+41500.0,Fractal_High,daily,2024-01-02 12:00:00,fractal,,,,
+42000.0,HTF_Level_daily,daily,2024-01-03 00:00:00,htf,,,,

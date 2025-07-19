@@ -24,7 +24,8 @@ def fetch_and_prepare_data(client):
     # Additional intervals for ML dataset and Volume Profile
     additional_intervals = {
         'minute': Client.KLINE_INTERVAL_1MINUTE,
-        'hour': Client.KLINE_INTERVAL_1HOUR
+        'hour': Client.KLINE_INTERVAL_1HOUR,
+        '12hour': Client.KLINE_INTERVAL_12HOUR
     }
     
     # Fetch data for all timeframes

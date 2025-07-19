@@ -1,0 +1,4 @@
+price_level,level_type,timeframe,touch_count_support,touch_count_resistance,created_at
+41000,HTF,monthly,0,1,2024-01-01
+41200,POC,weekly,0,2,2024-01-01
+41400,FIB_618,daily,0,0,2024-01-01

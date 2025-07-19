@@ -1,0 +1,8 @@
+price_level,level_type,timeframe,created_at,source,touch_count
+38050,HTF_Level,daily,2024-01-01 00:00:00,htf,0
+38075,VP_poc,daily,2024-01-01 00:00:00,volume_profile,2
+38150,HTF_Level,weekly,2024-01-01 00:00:00,htf,1
+38180,VP_poc,daily,2024-01-01 00:00:00,volume_profile,0
+38220,HTF_Level,monthly,2024-01-01 00:00:00,htf,3
+38250,VP_poc,weekly,2024-01-01 00:00:00,volume_profile,1
+38280,HTF_Level,daily,2024-01-01 00:00:00,htf,0

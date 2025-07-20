@@ -1,8 +1,0 @@
-open_time,price_level,level_type,timeframe,support_touches,resistance_touches
-2024-01-10 00:00:00,43000,HTF_Level,daily,0,0
-2024-01-10 00:00:00,42500,POC,daily,0,0
-2024-01-10 00:00:00,42000,VAH,daily,0,0
-2024-01-10 00:00:00,41500,VAL,daily,0,0
-2024-01-10 00:00:00,41000,Fib_0.618,daily,0,0
-2024-01-09 00:00:00,43500,HTF_Level,weekly,0,0
-2024-01-09 00:00:00,40500,VAL,weekly,0,0

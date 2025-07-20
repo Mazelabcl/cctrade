@@ -10,7 +10,8 @@
       "Bash(mkdir:*)",
       "Bash(mv:*)",
       "Bash(echo:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }

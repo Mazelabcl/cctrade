@@ -26,4 +26,4 @@ LOG_FILE = 'trading_bot.log'
 # Data Fetching Parameters
 SYMBOL = 'BTCUSDT'
 START_DATE = '1 Jan 2017'
-END_DATE = '31 Dec 2024'
+END_DATE = '30 Jun 2025'

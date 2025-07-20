@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import os
+import shutil
 from datetime import datetime
 from typing import Dict, List
 
@@ -10,20 +12,33 @@ from test_candle_interaction import analyze_candle_interaction
 from fractal_timing import update_fractal_timing
 
 def create_feature_dataset(candles_file: str, levels_file: str, output_file: str) -> pd.DataFrame:
-    """Create ML feature dataset from candles and levels data."""
-    print("Loading datasets...")
-    candles_df = pd.read_csv(candles_file)
-    levels_df = pd.read_csv(levels_file)
+    """Create ML feature dataset from candles and levels data using working directory."""
     
-    # Create a backup of the levels dataframe before saving changes
-    levels_backup_file = f"levels_dataset_bak_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-    print(f"Creating backup: {levels_backup_file}")
-    levels_df.to_csv(levels_backup_file, index=False)
+    # Ensure working directory exists
+    working_dir = "working"
+    if not os.path.exists(working_dir):
+        os.makedirs(working_dir)
     
-    # Create a backup of the candles file before overwriting it
-    candles_backup_file = f"candles_dataset_bak_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-    print(f"Creating backup: {candles_backup_file}")
-    candles_df.to_csv(candles_backup_file, index=False)
+    # Ensure features directory exists
+    features_dir = "features"
+    if not os.path.exists(features_dir):
+        os.makedirs(features_dir)
+    
+    print(f"Creating working copies of datasets...")
+    
+    # Create working copies (never modify original datasets)
+    working_candles_file = os.path.join(working_dir, os.path.basename(candles_file))
+    working_levels_file = os.path.join(working_dir, os.path.basename(levels_file))
+    
+    shutil.copy2(candles_file, working_candles_file)
+    shutil.copy2(levels_file, working_levels_file)
+    
+    print(f"  ✓ Copied {candles_file} → {working_candles_file}")
+    print(f"  ✓ Copied {levels_file} → {working_levels_file}")
+    
+    print("Loading working datasets...")
+    candles_df = pd.read_csv(working_candles_file)
+    levels_df = pd.read_csv(working_levels_file)
     
     # Convert time columns
     print("Convert time columns...")
@@ -220,22 +235,37 @@ def create_feature_dataset(candles_file: str, levels_file: str, output_file: str
             # Increment resistance touches only for actually touched levels
             levels_df.loc[touched_levels, 'resistance_touches'] += 1
 
-    # Save the updated levels to the original file
-    print(f"Updating levels file: {levels_file}")
-    levels_df.to_csv(levels_file, index=False)
+    # Update working levels file (not original)
+    print(f"Updating working levels file: {working_levels_file}")
+    levels_df.to_csv(working_levels_file, index=False)
     
-    # Save features
+    # Save results to features directory
     print("Saving results...")
+    # Ensure output file goes to features directory
+    if not output_file.startswith("features/"):
+        output_file = os.path.join(features_dir, os.path.basename(output_file))
+    
     ml_features.to_csv(output_file, index=False)
     print(f"Features saved to {output_file}")
+    
+    # Clean up working files
+    print("Cleaning up working files...")
+    try:
+        os.remove(working_candles_file)
+        os.remove(working_levels_file)
+        print(f"  ✓ Cleaned up working directory")
+    except Exception as e:
+        print(f"  ⚠ Warning: Could not clean working files: {e}")
     
     return ml_features
 
 if __name__ == "__main__":
-    # Input files
-    candles_file = "ml_dataset.csv"  # Main candles dataset
-    levels_file = "levels_dataset.csv"  # Levels dataset
-    output_file = "ml_features_dataset.csv"  # Output features
+    # File paths (using legacy files for standalone execution)
+    candles_file = "legacy/ml_dataset.csv"  # Input candles
+    levels_file = "legacy/levels_dataset.csv"  # Input levels
+    output_file = "ml_features_dataset_legacy.csv"  # Output features
     
-    # Create feature dataset
+    print("Running standalone feature engineering on legacy data...")
+    # Run feature engineering
     features_df = create_feature_dataset(candles_file, levels_file, output_file)
+    print("Standalone execution completed!")

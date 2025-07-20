@@ -1,0 +1,99 @@
+{
+  "datasets": [
+    {
+      "period": "2017_01_01-2020_12_31",
+      "start_date": "2017-01-01",
+      "end_date": "2020-12-31",
+      "files": {
+        "ml_dataset": {
+          "path": "datasets/ml_dataset_2017_01_01-2020_12_31.csv",
+          "size": 4574758
+        },
+        "levels_dataset": {
+          "path": "datasets/levels_dataset_2017_01_01-2020_12_31.csv",
+          "size": 658952
+        }
+      },
+      "rows": 29451,
+      "last_updated": "2025-01-31T11:12:00.185251",
+      "status": "complete"
+    },
+    {
+      "period": "2021_01_01-2024_12_31",
+      "start_date": "2021-01-01",
+      "end_date": "2024-12-31",
+      "files": {
+        "levels_dataset": {
+          "path": "datasets/levels_dataset_2021_01_01-2024_12_31.csv",
+          "size": 757933
+        },
+        "ml_dataset": {
+          "path": "datasets/ml_dataset_2021_01_01-2024_12_31.csv",
+          "size": 5639010
+        }
+      },
+      "rows": 35027,
+      "last_updated": "2025-01-31T10:47:09.228619",
+      "status": "complete"
+    },
+    {
+      "period": "2025_01_01-2025_06_30",
+      "start_date": "2025-01-01",
+      "end_date": "2025-06-30",
+      "files": {
+        "ml_dataset": {
+          "path": "datasets/ml_dataset_2025_01_01-2025_06_30.csv",
+          "size": 693886
+        },
+        "levels_dataset": {
+          "path": "datasets/levels_dataset_2025_01_01-2025_06_30.csv",
+          "size": 78280
+        }
+      },
+      "rows": 4321,
+      "last_updated": "2025-07-19T20:07:26.912112",
+      "status": "complete"
+    },
+    {
+      "period": "2025_01_01-2025_06_30_sample_50",
+      "start_date": "2025-01-01",
+      "end_date": "2025-01-03",
+      "files": {
+        "ml_dataset": {
+          "path": "datasets/ml_dataset_2025_01_01-2025_06_30_sample_50.csv",
+          "size": 7813
+        },
+        "levels_dataset": {
+          "path": "datasets/levels_dataset_2025_01_01-2025_06_30_sample_50.csv",
+          "size": 3614
+        }
+      },
+      "rows": 50,
+      "last_updated": "2025-07-19T20:18:30.569314",
+      "status": "sample",
+      "source_period": "2025_01_01-2025_06_30"
+    },
+    {
+      "period": "2025_01_01-2025_06_30_sample_25",
+      "start_date": "2025-01-01",
+      "end_date": "2025-01-02",
+      "files": {
+        "ml_dataset": {
+          "path": "datasets/ml_dataset_2025_01_01-2025_06_30_sample_25.csv",
+          "size": 3989
+        },
+        "levels_dataset": {
+          "path": "datasets/levels_dataset_2025_01_01-2025_06_30_sample_25.csv",
+          "size": 1751
+        }
+      },
+      "rows": 25,
+      "last_updated": "2025-07-19T21:01:54.961380",
+      "status": "sample",
+      "source_period": "2025_01_01-2025_06_30"
+    }
+  ],
+  "default_period": "2025_01_01-2025_06_30",
+  "last_updated": "2025-07-19T21:01:54.961391",
+  "base_data_dir": "datasets"
+}

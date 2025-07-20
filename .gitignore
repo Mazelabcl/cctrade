@@ -23,3 +23,18 @@ __pycache__/
 
 # Data files
 features/
+
+# ML generated datasets
+ml_ready_dataset_*.csv
+ml_dataset_*.csv
+
+# ML models and artifacts
+ml_models/models/
+*.pkl
+*.joblib
+*.model
+
+# ML outputs
+predictions_*.csv
+evaluation_*.json
+feature_importance_*.png

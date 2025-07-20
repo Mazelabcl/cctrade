@@ -1,16 +1,18 @@
 # 🤖 Trading Bot - Bitcoin Fractal Prediction System
 
-A sophisticated cryptocurrency trading bot that uses machine learning to predict Bitcoin price fractals (potential reversal points). The system combines multi-timeframe technical analysis with advanced feature engineering to identify high-probability turning points in the market.
+A sophisticated cryptocurrency trading bot that uses machine learning to predict Bitcoin price fractals (potential reversal points). The system simulates what a trader would do in a graphical interface by setting levels on candle charts and tracking their interactions to generate comprehensive ML datasets.
 
 ## 🎯 Project Overview
 
 This project analyzes Bitcoin (BTCUSDT) price action across multiple timeframes to predict swing points using:
 
-- **Fractal Detection**: 5-candle swing high/low patterns
-- **Multi-Timeframe Analysis**: Daily, weekly, and monthly levels
-- **Technical Level Tracking**: HTF levels, Fibonacci retracements, Volume Profile
-- **Advanced Feature Engineering**: 80+ features combining candle patterns, volume analysis, and level interactions
+- **Machine Learning Ready**: Multi-class fractal prediction with configurable horizons (hour, day, week, month)
+- **Fractal Detection**: 5-candle swing high/low patterns with timing analysis
+- **Level Simulation**: Automated level setting mimicking trader behavior on charts
+- **Technical Level Tracking**: HTF levels, Fibonacci retracements, Volume Profile, fractals
+- **Advanced Feature Engineering**: 75+ interpretable features for ML models
 - **Time-Chunked Data Management**: Efficient processing of large historical datasets
+- **DataRobot Integration**: Ready-to-use CSV exports for immediate ML model training
 
 ## 🚀 Quick Start
 
@@ -43,6 +45,25 @@ python main.py --period 2021_01_01-2024_12_31 --features-only
 
 # Full pipeline (data + features)
 python main.py --full
+```
+
+### 🧠 ML Dataset Generation (New!)
+
+```bash
+# Create ML-ready dataset for DataRobot
+python create_ml_dataset.py --candles "datasets/ml_dataset_2025_01_01-2025_06_30.csv" \
+                            --levels "datasets/levels_dataset_2025_01_01-2025_06_30.csv" \
+                            --output "ml_ready_dataset.csv" \
+                            --horizon "day"
+
+# Different prediction horizons
+python create_ml_dataset.py --candles [INPUT] --levels [INPUT] --output [OUTPUT] --horizon "hour"   # Next 1 hour
+python create_ml_dataset.py --candles [INPUT] --levels [INPUT] --output [OUTPUT] --horizon "day"    # Next 24 hours  
+python create_ml_dataset.py --candles [INPUT] --levels [INPUT] --output [OUTPUT] --horizon "week"   # Next 7 days
+python create_ml_dataset.py --candles [INPUT] --levels [INPUT] --output [OUTPUT] --horizon "month"  # Next 30 days
+
+# Test with limited samples
+python create_ml_dataset.py --candles [INPUT] --levels [INPUT] --output [OUTPUT] --max-samples 500
 ```
 
 ## 🛠️ Command Line Interface
@@ -84,8 +105,11 @@ python main.py --quick-test                      # Auto-select small dataset
 |------|---------|
 | `main.py` | Enhanced pipeline orchestration with CLI |
 | `data_manager.py` | Time-chunked data management and validation |
-| `create_ml_features.py` | Feature engineering pipeline |
-| `config.py` | Global configuration and API credentials |
+| `create_ml_features.py` | Legacy feature engineering pipeline |
+| `create_ml_dataset.py` | **New ML dataset generation pipeline** |
+| `target_variable.py` | **Multi-class fractal target generation** |
+| `ml_feature_engineering.py` | **Enhanced ML-optimized feature engineering** |
+| `config.py` | Global configuration and ML prediction settings |
 | `CLAUDE.md` | Detailed guidance for Claude Code assistant |
 
 ### Core Modules
@@ -112,8 +136,12 @@ base_data/
 └── data_manifest.json                        # Auto-generated metadata
 
 Generated Features:
-├── ml_features_dataset_[period].csv          # Full feature datasets
-└── ml_features_dataset_[period]_sample_N.csv # Sample datasets
+├── ml_features_dataset_[period].csv          # Legacy feature datasets
+├── ml_features_dataset_[period]_sample_N.csv # Legacy sample datasets
+└── features/
+    ├── ml_ready_dataset_full_2025.csv        # **New ML-ready datasets**
+    ├── ml_ready_dataset_hour.csv             # Hourly prediction horizon
+    └── ml_ready_dataset_day.csv              # Daily prediction horizon
 ```
 
 ## 🧠 Technical Analysis Features
@@ -124,27 +152,40 @@ Generated Features:
 - **Fibonacci**: 0.5, 0.618, 0.75 retracement levels between swing points
 - **Fractals**: Swing highs/lows from daily/weekly/monthly timeframes
 
-### Feature Categories
+### ML Feature Categories (75 Features)
 
-1. **Zone Analysis** (40+ features)
-   - Support/resistance zone detection
-   - Level confluence counting by timeframe and type
-   - Naked (untouched) level identification
+1. **Level Proximity Features** (4 features)
+   - `nearest_support_distance_pct`: % distance to closest support
+   - `nearest_resistance_distance_pct`: % distance to closest resistance  
+   - `nearest_support_strength`: Weighted strength score of nearest support
+   - `nearest_resistance_strength`: Weighted strength score of nearest resistance
 
-2. **Candle Interaction** (20+ features)
-   - Level touch detection for current candle
-   - Support vs resistance interaction tracking
-   - Pattern strength analysis
+2. **Confluence Zone Analysis** (36 features)
+   - Level counting in 0.5%, 1.0%, 1.5%, 2.0% price zones
+   - Breakdown by timeframe (daily, weekly, monthly)
+   - Breakdown by level type (HTF, Volume Profile, Fibonacci, Fractals)
+   - Weighted confluence strength scores
 
-3. **Technical Patterns** (10+ features)
-   - Candlestick ratios (body, wick, position)
-   - Swing pattern detection
-   - Volume spike analysis
+3. **Volume Analysis** (5 features)
+   - Volume ratios vs 20/50 period moving averages
+   - Volume spike detection (>2x average)
+   - Volume percentile in recent history
+   - Volume trend analysis
 
-4. **Timing Features** (10+ features)
-   - Fractal timing and cycles
-   - Trading session blocks
-   - Time-based patterns
+4. **Price Action Features** (11 features)
+   - Candlestick ratios (body, upper/lower wick)
+   - Price changes and gaps
+   - Moving average relationships
+   - Volatility measures
+
+5. **Temporal Features** (8 features)
+   - Hour of day, day of week (normalized)
+   - Trading session detection (Asian/European/American)
+   - Hours since last bullish/bearish fractal
+
+6. **Target Variable** (Multi-class)
+   - `fractal_direction`: 0=no_fractal, 1=bullish_fractal, 2=bearish_fractal
+   - Configurable prediction horizons (1 hour to 30 days)
 
 ## 📊 Data Management
 
@@ -219,19 +260,52 @@ python main.py --features-only
 
 ## 📈 ML Pipeline Output
 
-The feature engineering generates comprehensive datasets ready for machine learning:
+The new ML pipeline generates DataRobot-ready datasets with enhanced features:
 
-- **Target Variable**: Fractal formation prediction (bullish/bearish swings)
-- **Features**: 80+ engineered features combining technical analysis
-- **Format**: CSV files ready for DataRobot or other ML platforms
-- **Validation**: Proper time-series split avoiding look-ahead bias
+### Target Variable Design
+- **Multi-class Classification**: 0=no_fractal, 1=bullish_fractal, 2=bearish_fractal
+- **Configurable Horizons**: Predict fractal formation in next N candles
+  - `hour`: Next 1 candle (1 hour) - 75% no fractal, 12.5% each fractal type
+  - `day`: Next 24 candles (1 day) - Balanced ~50% bullish, 50% bearish
+  - `week`: Next 168 candles (7 days) - Longer-term swing prediction
+  - `month`: Next 720 candles (30 days) - Major trend changes
+
+### Dataset Quality
+- **4,295+ samples** in full 2025 dataset
+- **75 interpretable features** (no sparse vectors)
+- **Zero missing values** with proper data validation
+- **Time-aware splits** preventing look-ahead bias
+- **Feature name cleaning** for ML platform compatibility
+
+### Export Formats
+- **CSV for DataRobot**: `timestamp,features...,fractal_direction`
+- **Metadata included**: Time ranges, target distribution, quality metrics
+- **Ready-to-upload**: No preprocessing required
+
+### Example Output
+```
+features/ml_ready_dataset_full_2025.csv
+- 4,295 samples × 76 columns (75 features + target)
+- Time range: 2025-01-01 to 2025-06-29
+- Target: 49.5% bullish, 50.5% bearish fractals (daily horizon)
+- Quality: 0% missing values, minimal constant features
+```
+
+## 📖 Documentation
+
+- **`README.md`**: This overview and quick start guide
+- **`ML_USAGE_GUIDE.md`**: Comprehensive guide for ML dataset generation and model training
+- **`CLAUDE.md`**: Detailed guidance for Claude Code assistant development
+- **`project_documentation.md`**: Technical specifications and architecture
+- **`new_ml_features.md`**: Feature engineering implementation details
 
 ## 🤝 Contributing
 
-This project uses Claude Code assistant for development. See `CLAUDE.md` for detailed guidance on:
+This project uses Claude Code assistant for development. Key documentation:
 - Code architecture and patterns
-- Development commands and workflows
+- Development commands and workflows  
 - Feature engineering concepts
+- ML pipeline design
 - Testing strategies
 
 ## 📝 License

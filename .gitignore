@@ -20,3 +20,6 @@ __pycache__/
 # Add any additional files or folders you want to ignore
 .venv
 *.venv
+
+# Data files
+features/

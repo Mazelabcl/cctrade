@@ -57,6 +57,7 @@ class Config:
 
     # Scheduler
     SCHEDULER_API_ENABLED = False
+    SCHEDULER_ENABLED = os.getenv('SCHEDULER_ENABLED', 'false').lower() == 'true'
 
     # Logging
     LOG_FILE = 'trading_bot.log'

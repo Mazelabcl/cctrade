@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentTf = '1h';
     let currentCount = 500;
     let showFractals = true;
+    let showPredictions = true;
     let enabledLevels = { Fractal: true, HTF: true, Fib: true, VP: true };
     let levelLines = [];
 
@@ -67,9 +68,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }));
                 candleSeries.setData(chartData);
 
+                // Build markers from fractals and predictions
+                const markers = [];
+
                 // Fractal markers
                 if (showFractals) {
-                    const markers = [];
                     data.forEach(c => {
                         const t = Math.floor(new Date(c.open_time).getTime() / 1000);
                         if (c.bullish_fractal) {
@@ -85,15 +88,48 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                         }
                     });
-                    candleSeries.setMarkers(markers.sort((a, b) => a.time - b.time));
+                }
+
+                // Load prediction overlay
+                if (showPredictions) {
+                    loadPredictions(markers);
                 } else {
-                    candleSeries.setMarkers([]);
+                    candleSeries.setMarkers(markers.sort((a, b) => a.time - b.time));
                 }
 
                 chart.timeScale().fitContent();
                 loadLevels(data);
             })
             .catch(err => console.error('Failed to load candles:', err));
+    }
+
+    function loadPredictions(existingMarkers) {
+        fetch(`/api/predictions/overlay?limit=${currentCount}`)
+            .then(r => r.json())
+            .then(preds => {
+                const markers = [...existingMarkers];
+                preds.forEach(p => {
+                    const t = Math.floor(new Date(p.time).getTime() / 1000);
+                    if (p.predicted_class === 1) {
+                        markers.push({
+                            time: t, position: 'belowBar',
+                            color: 'rgba(38, 166, 154, 0.5)',
+                            shape: 'circle', text: 'P',
+                        });
+                    } else if (p.predicted_class === 2) {
+                        markers.push({
+                            time: t, position: 'aboveBar',
+                            color: 'rgba(239, 83, 80, 0.5)',
+                            shape: 'circle', text: 'P',
+                        });
+                    }
+                });
+                candleSeries.setMarkers(markers.sort((a, b) => a.time - b.time));
+            })
+            .catch(err => {
+                console.error('Failed to load predictions:', err);
+                candleSeries.setMarkers(existingMarkers.sort((a, b) => a.time - b.time));
+            });
     }
 
     function loadLevels(candleData) {
@@ -172,12 +208,26 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Fractal marker toggle
-    document.getElementById('btn-fractals').addEventListener('click', function() {
-        showFractals = !showFractals;
-        this.classList.toggle('active', showFractals);
-        loadData();
-    });
-    document.getElementById('btn-fractals').classList.add('active');
+    const fractalBtn = document.getElementById('btn-fractals');
+    if (fractalBtn) {
+        fractalBtn.addEventListener('click', function() {
+            showFractals = !showFractals;
+            this.classList.toggle('active', showFractals);
+            loadData();
+        });
+        fractalBtn.classList.add('active');
+    }
+
+    // Prediction marker toggle
+    const predBtn = document.getElementById('btn-predictions');
+    if (predBtn) {
+        predBtn.addEventListener('click', function() {
+            showPredictions = !showPredictions;
+            this.classList.toggle('active', showPredictions);
+            loadData();
+        });
+        predBtn.classList.add('active');
+    }
 
     // Responsive resize
     new ResizeObserver(entries => {

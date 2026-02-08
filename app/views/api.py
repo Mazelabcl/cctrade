@@ -4,7 +4,7 @@ import threading
 from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, Response, current_app
 from ..extensions import db
-from ..models import Candle, Level, Feature, MLModel, PipelineRun
+from ..models import Candle, Level, Feature, MLModel, Prediction, PipelineRun
 
 api_bp = Blueprint('api', __name__)
 
@@ -29,7 +29,18 @@ def publish_sse(event: str, data: dict):
 
 @api_bp.route('/health')
 def health():
-    return jsonify({'status': 'ok'})
+    candle_count = db.session.query(Candle).filter_by(timeframe='1h').count()
+    model_count = db.session.query(MLModel).count()
+    latest_candle = (
+        Candle.query.filter_by(timeframe='1h')
+        .order_by(Candle.open_time.desc()).first()
+    )
+    return jsonify({
+        'status': 'ok',
+        'candles': candle_count,
+        'models': model_count,
+        'latest_candle': latest_candle.open_time.isoformat() if latest_candle else None,
+    })
 
 
 @api_bp.route('/stream')
@@ -97,6 +108,45 @@ def levels():
     return jsonify([l.to_dict() for l in rows])
 
 
+@api_bp.route('/predictions')
+def predictions_api():
+    """Get predictions with optional filters."""
+    model_id = request.args.get('model_id', type=int)
+    limit = request.args.get('limit', 100, type=int)
+
+    query = Prediction.query
+    if model_id:
+        query = query.filter_by(model_id=model_id)
+    rows = query.order_by(Prediction.created_at.desc()).limit(limit).all()
+    return jsonify([p.to_dict() for p in rows])
+
+
+@api_bp.route('/predictions/overlay')
+def predictions_overlay():
+    """Get predictions formatted for chart overlay markers."""
+    model_id = request.args.get('model_id', type=int)
+    limit = request.args.get('limit', 500, type=int)
+
+    query = db.session.query(Prediction, Candle).join(
+        Candle, Prediction.candle_id == Candle.id
+    )
+    if model_id:
+        query = query.filter(Prediction.model_id == model_id)
+
+    rows = query.order_by(Candle.open_time.desc()).limit(limit).all()
+    markers = []
+    for pred, candle in reversed(rows):
+        if pred.predicted_class == 0:
+            continue
+        markers.append({
+            'time': candle.open_time.isoformat(),
+            'predicted_class': pred.predicted_class,
+            'confidence': pred.confidence,
+            'actual_class': pred.actual_class,
+        })
+    return jsonify(markers)
+
+
 @api_bp.route('/stats')
 def stats():
     candle_count = db.session.query(Candle).filter_by(timeframe='1h').count()
@@ -104,6 +154,7 @@ def stats():
     active_level_count = db.session.query(Level).filter(Level.invalidated_at.is_(None)).count()
     feature_count = db.session.query(Feature).count()
     model_count = db.session.query(MLModel).count()
+    prediction_count = db.session.query(Prediction).count()
 
     latest_candle = (
         Candle.query.filter_by(timeframe='1h')
@@ -140,6 +191,7 @@ def stats():
         'active_level_count': active_level_count,
         'feature_count': feature_count,
         'model_count': model_count,
+        'prediction_count': prediction_count,
         'latest_candle': latest_candle.open_time.isoformat() if latest_candle else None,
         'earliest_candle': earliest_candle.open_time.isoformat() if earliest_candle else None,
         'latest_run': latest_run.to_dict() if latest_run else None,
@@ -237,6 +289,34 @@ def predict_endpoint():
     try:
         results = _predict(db.session, model_id=model_id)
         return jsonify({'status': 'ok', 'predictions': len(results)})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 400
+
+
+@api_bp.route('/run-pipeline', methods=['POST'])
+def run_pipeline():
+    """Trigger the full automated pipeline in background."""
+    from ..tasks.pipeline_runner import run_full_pipeline
+
+    app = current_app._get_current_object()
+
+    def _work():
+        with app.app_context():
+            run_full_pipeline(app)
+
+    thread = threading.Thread(target=_work, daemon=True)
+    thread.start()
+    return jsonify({'status': 'started', 'message': 'Full pipeline started'})
+
+
+@api_bp.route('/backfill-actuals', methods=['POST'])
+def backfill_actuals():
+    """Backfill actual_class for predictions where outcome is known."""
+    from ..tasks.accuracy_tracker import backfill_actuals as _backfill
+
+    try:
+        count = _backfill(db.session)
+        return jsonify({'status': 'ok', 'updated': count})
     except Exception as e:
         return jsonify({'status': 'error', 'error': str(e)}), 400
 

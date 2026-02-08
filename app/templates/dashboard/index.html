@@ -15,6 +15,29 @@
     <span id="pipeline-msg"></span>
 </div>
 
+<!-- Latest Prediction banner -->
+{% if latest_prediction %}
+<div class="card bg-dark border-{{ 'success' if latest_prediction.predicted_class == 1 else 'danger' if latest_prediction.predicted_class == 2 else 'secondary' }} mb-3">
+    <div class="card-body d-flex align-items-center justify-content-between py-2">
+        <div>
+            <i class="bi bi-lightning-fill me-2"></i>
+            <strong>Latest Prediction:</strong>
+            {% if latest_prediction.predicted_class == 0 %}
+                <span class="badge bg-secondary ms-2">No Fractal</span>
+            {% elif latest_prediction.predicted_class == 1 %}
+                <span class="badge bg-success ms-2">Bullish Fractal</span>
+            {% else %}
+                <span class="badge bg-danger ms-2">Bearish Fractal</span>
+            {% endif %}
+            {% if latest_prediction.confidence %}
+                <span class="text-muted ms-2">{{ "%.0f"|format(latest_prediction.confidence * 100) }}% confidence</span>
+            {% endif %}
+        </div>
+        <small class="text-muted">{{ latest_prediction.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+    </div>
+</div>
+{% endif %}
+
 <!-- Summary cards row 1 -->
 <div class="row g-3 mb-3">
     <div class="col-md-3">
@@ -71,7 +94,7 @@
     </div>
 </div>
 
-<!-- Summary cards row 2: fractals + features -->
+<!-- Summary cards row 2: fractals + features + predictions -->
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="card bg-dark border-secondary">
@@ -100,8 +123,11 @@
     <div class="col-md-3">
         <div class="card bg-dark border-secondary">
             <div class="card-body">
-                <h6 class="card-subtitle text-muted mb-1">Timeframes</h6>
-                <h4 class="mb-0">{{ timeframes|length }}</h4>
+                <h6 class="card-subtitle text-muted mb-1">Predictions</h6>
+                <h4 class="mb-0">{{ "{:,}".format(total_preds) }}</h4>
+                {% if verified_preds > 0 %}
+                <small class="text-muted">{{ "%.1f"|format(correct_preds / verified_preds * 100) }}% accuracy ({{ verified_preds }} verified)</small>
+                {% endif %}
             </div>
         </div>
     </div>

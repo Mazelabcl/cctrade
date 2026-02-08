@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from ..extensions import db
 
 
@@ -14,7 +14,10 @@ class Prediction(db.Model):
     prob_bearish = db.Column(db.Float)
     confidence = db.Column(db.Float)
     actual_class = db.Column(db.Integer)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False,
+                           default=lambda: datetime.now(timezone.utc))
+
+    # relationship defined on MLModel side via backref='model'
 
     def __repr__(self):
         return f'<Prediction model={self.model_id} candle={self.candle_id} class={self.predicted_class}>'

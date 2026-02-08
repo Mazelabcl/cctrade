@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from ..extensions import db
 
 
@@ -8,7 +8,8 @@ class PipelineRun(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pipeline_type = db.Column(db.String(50), nullable=False)
     status = db.Column(db.String(20), nullable=False, default='running')
-    started_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    started_at = db.Column(db.DateTime, nullable=False,
+                           default=lambda: datetime.now(timezone.utc))
     finished_at = db.Column(db.DateTime)
     period_start = db.Column(db.DateTime)
     period_end = db.Column(db.DateTime)

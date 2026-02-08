@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from ..extensions import db
 
 
@@ -26,7 +26,8 @@ class MLModel(db.Model):
     hyperparameters = db.Column(db.JSON)
     training_duration_sec = db.Column(db.Float)
     notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False,
+                           default=lambda: datetime.now(timezone.utc))
     is_active = db.Column(db.Boolean, default=False)
 
     predictions = db.relationship('Prediction', backref='model', lazy='dynamic')

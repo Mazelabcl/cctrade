@@ -1,3 +1,4 @@
+import logging
 import os
 from flask import Flask
 from .config import config_by_name
@@ -12,6 +13,12 @@ def create_app(config_name=None):
     app.config.from_object(config_by_name[config_name])
 
     os.makedirs(app.instance_path, exist_ok=True)
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(name)s %(levelname)s %(message)s',
+    )
 
     db.init_app(app)
     scheduler.init_app(app)
@@ -34,5 +41,9 @@ def create_app(config_name=None):
 
     with app.app_context():
         db.create_all()
+
+    # Initialize scheduler (skipped in testing)
+    from .tasks.scheduler import init_scheduler
+    init_scheduler(app)
 
     return app

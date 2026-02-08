@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template
 from ..extensions import db
-from ..models import Candle, Level, Feature, MLModel, PipelineRun
+from ..models import Candle, Level, Feature, MLModel, Prediction, PipelineRun
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -46,6 +46,20 @@ def index():
         .first()
     )
 
+    # Latest prediction
+    latest_prediction = (
+        Prediction.query
+        .order_by(Prediction.created_at.desc())
+        .first()
+    )
+
+    # Prediction accuracy stats
+    total_preds = db.session.query(Prediction).count()
+    verified_preds = db.session.query(Prediction).filter(
+        Prediction.actual_class.isnot(None)).count()
+    correct_preds = db.session.query(Prediction).filter(
+        Prediction.actual_class == Prediction.predicted_class).count()
+
     return render_template(
         'dashboard/index.html',
         candle_count=candle_count,
@@ -59,4 +73,8 @@ def index():
         timeframes=timeframes,
         level_by_source=level_by_source,
         latest_candle=latest_candle,
+        latest_prediction=latest_prediction,
+        total_preds=total_preds,
+        verified_preds=verified_preds,
+        correct_preds=correct_preds,
     )

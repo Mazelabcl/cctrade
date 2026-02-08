@@ -2,10 +2,21 @@
 {% block title %}Dashboard - Tradebot{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">Dashboard</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Dashboard</h2>
+    {% if latest_candle %}
+    <small class="text-muted">Latest: {{ latest_candle.open_time.strftime('%Y-%m-%d %H:%M') }} UTC
+        &mdash; ${{ "{:,.0f}".format(latest_candle.close) }}</small>
+    {% endif %}
+</div>
 
-<!-- Summary cards -->
-<div class="row g-3 mb-4">
+<!-- Pipeline status banner (updated via SSE) -->
+<div id="pipeline-status" class="alert alert-info d-none mb-3" role="alert">
+    <span id="pipeline-msg"></span>
+</div>
+
+<!-- Summary cards row 1 -->
+<div class="row g-3 mb-3">
     <div class="col-md-3">
         <div class="card bg-dark border-primary">
             <div class="card-body">
@@ -50,46 +61,118 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="card-subtitle text-muted mb-1">Timeframes</h6>
-                        <h3 class="card-title mb-0">{{ timeframes|length }}</h3>
+                        <h6 class="card-subtitle text-muted mb-1">ML Models</h6>
+                        <h3 class="card-title mb-0">{{ model_count }}</h3>
                     </div>
-                    <i class="bi bi-clock-history fs-1 text-info opacity-50"></i>
+                    <i class="bi bi-cpu fs-1 text-info opacity-50"></i>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Data coverage table -->
-<div class="card bg-dark mb-4">
-    <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-table me-2"></i>Data Coverage</h5>
+<!-- Summary cards row 2: fractals + features -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-dark border-secondary">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted mb-1">Bullish Fractals</h6>
+                <h4 class="mb-0 text-success">{{ "{:,}".format(bullish_count) }}</h4>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        {% if timeframes %}
-        <table class="table table-dark table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>Timeframe</th>
-                    <th>Candles</th>
-                    <th>From</th>
-                    <th>To</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for tf, count, min_time, max_time in timeframes %}
-                <tr>
-                    <td><span class="badge bg-secondary">{{ tf }}</span></td>
-                    <td>{{ "{:,}".format(count) }}</td>
-                    <td>{{ min_time.strftime('%Y-%m-%d') if min_time else '-' }}</td>
-                    <td>{{ max_time.strftime('%Y-%m-%d') if max_time else '-' }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="text-muted mb-0">No data loaded. Import CSV data to get started.</p>
-        {% endif %}
+    <div class="col-md-3">
+        <div class="card bg-dark border-secondary">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted mb-1">Bearish Fractals</h6>
+                <h4 class="mb-0 text-danger">{{ "{:,}".format(bearish_count) }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-dark border-secondary">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted mb-1">Computed Features</h6>
+                <h4 class="mb-0">{{ "{:,}".format(feature_count) }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-dark border-secondary">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted mb-1">Timeframes</h6>
+                <h4 class="mb-0">{{ timeframes|length }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Data coverage -->
+    <div class="col-lg-8">
+        <div class="card bg-dark">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-table me-2"></i>Data Coverage</h5>
+            </div>
+            <div class="card-body">
+                {% if timeframes %}
+                <table class="table table-dark table-hover table-sm mb-0">
+                    <thead>
+                        <tr><th>Timeframe</th><th>Candles</th><th>From</th><th>To</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for tf, count, min_time, max_time in timeframes %}
+                        <tr>
+                            <td><span class="badge bg-secondary">{{ tf }}</span></td>
+                            <td>{{ "{:,}".format(count) }}</td>
+                            <td>{{ min_time.strftime('%Y-%m-%d') if min_time else '-' }}</td>
+                            <td>{{ max_time.strftime('%Y-%m-%d') if max_time else '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted mb-0">No data loaded yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Level breakdown -->
+    <div class="col-lg-4">
+        <div class="card bg-dark">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-layers me-2"></i>Levels by Source</h5>
+            </div>
+            <div class="card-body">
+                {% if level_by_source %}
+                <table class="table table-dark table-sm mb-0">
+                    <tbody>
+                        {% for source, count in level_by_source %}
+                        <tr>
+                            <td>
+                                {% if source == 'fractal' %}
+                                    <span class="badge" style="background:#ef5350">{{ source }}</span>
+                                {% elif source == 'htf' %}
+                                    <span class="badge" style="background:#42a5f5">{{ source }}</span>
+                                {% elif source == 'fibonacci' %}
+                                    <span class="badge" style="background:#ffd54f;color:#000">{{ source }}</span>
+                                {% elif source == 'volume_profile' %}
+                                    <span class="badge" style="background:#ab47bc">{{ source }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ source }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">{{ "{:,}".format(count) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted mb-0">No levels loaded.</p>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 
@@ -100,15 +183,9 @@
     </div>
     <div class="card-body">
         {% if recent_runs %}
-        <table class="table table-dark table-hover mb-0">
+        <table class="table table-dark table-hover table-sm mb-0">
             <thead>
-                <tr>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Started</th>
-                    <th>Rows</th>
-                    <th>Error</th>
-                </tr>
+                <tr><th>Type</th><th>Status</th><th>Started</th><th>Duration</th><th>Rows</th><th>Error</th></tr>
             </thead>
             <tbody>
                 {% for run in recent_runs %}
@@ -118,14 +195,21 @@
                         {% if run.status == 'completed' %}
                             <span class="badge bg-success">{{ run.status }}</span>
                         {% elif run.status == 'running' %}
-                            <span class="badge bg-primary">{{ run.status }}</span>
+                            <span class="badge bg-primary"><span class="spinner-border spinner-border-sm me-1"></span>{{ run.status }}</span>
                         {% else %}
                             <span class="badge bg-danger">{{ run.status }}</span>
                         {% endif %}
                     </td>
                     <td>{{ run.started_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                        {% if run.finished_at %}
+                            {{ (run.finished_at - run.started_at).total_seconds()|round(1) }}s
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
                     <td>{{ "{:,}".format(run.rows_processed) if run.rows_processed else '-' }}</td>
-                    <td>{{ run.error_message[:50] + '...' if run.error_message and run.error_message|length > 50 else run.error_message or '-' }}</td>
+                    <td class="text-truncate" style="max-width:200px">{{ run.error_message or '-' }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -135,4 +219,8 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}

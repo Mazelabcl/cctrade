@@ -1,16 +1,66 @@
 {% extends "base.html" %}
 {% block title %}Charts - Tradebot{% endblock %}
 
+{% block extra_head %}
+<style>
+    #chart-container { height: calc(100vh - 200px); min-height: 500px; }
+    .chart-controls { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .chart-controls .btn { font-size: 0.8rem; padding: 0.25rem 0.5rem; }
+    .chart-controls .btn.active { box-shadow: 0 0 0 2px rgba(255,255,255,0.3); }
+    .level-legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; }
+    .level-legend span { display: flex; align-items: center; gap: 0.25rem; }
+    .level-legend .dot { width: 10px; height: 3px; display: inline-block; border-radius: 1px; }
+</style>
+{% endblock %}
+
 {% block content %}
-<h2 class="mb-4">Price Chart</h2>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Price Chart</h2>
+    <div class="chart-controls">
+        <!-- Timeframe selector -->
+        <div class="btn-group" id="tf-selector">
+            <button class="btn btn-outline-secondary active" data-tf="1h">1H</button>
+            <button class="btn btn-outline-secondary" data-tf="4h">4H</button>
+            <button class="btn btn-outline-secondary" data-tf="1d">1D</button>
+        </div>
+        <!-- Candle count -->
+        <div class="btn-group" id="count-selector">
+            <button class="btn btn-outline-secondary" data-count="200">200</button>
+            <button class="btn btn-outline-secondary active" data-count="500">500</button>
+            <button class="btn btn-outline-secondary" data-count="1000">1000</button>
+            <button class="btn btn-outline-secondary" data-count="5000">5000</button>
+        </div>
+        <!-- Level toggles -->
+        <div class="btn-group" id="level-toggles">
+            <button class="btn btn-outline-danger btn-sm active" data-level="Fractal" title="Fractal levels">Frac</button>
+            <button class="btn btn-outline-primary btn-sm active" data-level="HTF" title="HTF levels">HTF</button>
+            <button class="btn btn-outline-warning btn-sm active" data-level="Fib" title="Fibonacci levels">Fib</button>
+            <button class="btn btn-outline-info btn-sm active" data-level="VP" title="Volume Profile">VP</button>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" id="btn-fractals" title="Toggle fractal markers">
+            <i class="bi bi-diamond-fill"></i> Fractals
+        </button>
+    </div>
+</div>
+
+<!-- Level legend -->
+<div class="level-legend mb-2">
+    <span><span class="dot" style="background:#ef5350"></span> Fractal</span>
+    <span><span class="dot" style="background:#42a5f5"></span> HTF</span>
+    <span><span class="dot" style="background:#ffd54f"></span> Fibonacci</span>
+    <span><span class="dot" style="background:#ab47bc"></span> Volume Profile</span>
+    <span><i class="bi bi-caret-up-fill text-success"></i> Bullish fractal</span>
+    <span><i class="bi bi-caret-down-fill text-danger"></i> Bearish fractal</span>
+</div>
+
 <div class="card bg-dark">
-    <div class="card-body">
-        <div id="chart-container" style="height: 600px;"></div>
+    <div class="card-body p-0">
+        <div id="chart-container"></div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
 {% endblock %}

@@ -2,49 +2,158 @@
 {% block title %}Models - Tradebot{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">ML Models</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">ML Models</h2>
+    <a href="{{ url_for('models.predictions') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-lightning me-1"></i> Predictions
+    </a>
+</div>
 
+<!-- Train new model card -->
+<div class="card bg-dark mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Train New Model</h5>
+    </div>
+    <div class="card-body">
+        <div id="train-status" class="alert alert-info d-none mb-3">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            <span id="train-msg">Training...</span>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Algorithm</label>
+                <select id="sel-algorithm" class="form-select bg-dark text-light">
+                    <option value="random_forest">Random Forest</option>
+                    <option value="xgboost">XGBoost</option>
+                    <option value="lightgbm">LightGBM</option>
+                    <option value="logistic_regression">Logistic Regression</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Prediction Horizon</label>
+                <select id="sel-horizon" class="form-select bg-dark text-light">
+                    <option value="hour">Hour (1 candle)</option>
+                    <option value="day" selected>Day (24 candles)</option>
+                    <option value="week">Week (168 candles)</option>
+                    <option value="month">Month (720 candles)</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button id="btn-train" class="btn btn-success w-100" onclick="trainModel()">
+                    <i class="bi bi-play-fill me-1"></i> Train Model
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Model registry -->
 <div class="card bg-dark">
     <div class="card-header">
-        <h5 class="mb-0">Model Registry</h5>
+        <h5 class="mb-0"><i class="bi bi-collection me-2"></i>Model Registry</h5>
     </div>
     <div class="card-body">
         {% if models %}
-        <table class="table table-dark table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Algorithm</th>
-                    <th>Version</th>
-                    <th>Horizon</th>
-                    <th>F1</th>
-                    <th>Active</th>
-                    <th>Created</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for model in models %}
-                <tr>
-                    <td>{{ model.name }}</td>
-                    <td><span class="badge bg-secondary">{{ model.algorithm }}</span></td>
-                    <td>v{{ model.version }}</td>
-                    <td>{{ model.prediction_horizon }}</td>
-                    <td>{{ "%.3f"|format(model.f1_macro) if model.f1_macro else '-' }}</td>
-                    <td>
-                        {% if model.is_active %}
-                            <span class="badge bg-success">Active</span>
-                        {% else %}
-                            <span class="badge bg-secondary">-</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ model.created_at.strftime('%Y-%m-%d') }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Algorithm</th>
+                        <th>Version</th>
+                        <th>Horizon</th>
+                        <th>Accuracy</th>
+                        <th>F1 Macro</th>
+                        <th>ROC AUC</th>
+                        <th>Train Rows</th>
+                        <th>Duration</th>
+                        <th>Active</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for model in models %}
+                    <tr>
+                        <td><a href="{{ url_for('models.detail', model_id=model.id) }}" class="text-light">{{ model.name }}</a></td>
+                        <td><span class="badge bg-secondary">{{ model.algorithm }}</span></td>
+                        <td>v{{ model.version }}</td>
+                        <td>{{ model.prediction_horizon }}</td>
+                        <td>{{ "%.3f"|format(model.accuracy) if model.accuracy else '-' }}</td>
+                        <td>{{ "%.3f"|format(model.f1_macro) if model.f1_macro else '-' }}</td>
+                        <td>{{ "%.3f"|format(model.roc_auc) if model.roc_auc else '-' }}</td>
+                        <td>{{ "{:,}".format(model.train_rows) if model.train_rows else '-' }}</td>
+                        <td>{{ "%.1f"|format(model.training_duration_sec) if model.training_duration_sec else '-' }}s</td>
+                        <td>
+                            {% if model.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ model.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
-        <p class="text-muted mb-0">No models trained yet. Model training will be available after feature pipeline is integrated.</p>
+        <p class="text-muted mb-0">No models trained yet. Compute features first, then train a model.</p>
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function trainModel() {
+    const btn = document.getElementById('btn-train');
+    const status = document.getElementById('train-status');
+    const msg = document.getElementById('train-msg');
+    const algorithm = document.getElementById('sel-algorithm').value;
+    const horizon = document.getElementById('sel-horizon').value;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Training...';
+    status.classList.remove('d-none', 'alert-success', 'alert-danger');
+    status.classList.add('alert-info');
+    msg.textContent = 'Training ' + algorithm + ' model...';
+
+    fetch('/api/train-model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ algorithm, horizon }),
+    })
+    .then(r => r.json())
+    .then(data => { msg.textContent = data.message; })
+    .catch(err => {
+        status.classList.replace('alert-info', 'alert-danger');
+        msg.textContent = 'Error: ' + err.message;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Train Model';
+    });
+
+    const es = new EventSource('/api/stream');
+    es.addEventListener('pipeline', function(e) {
+        const d = JSON.parse(e.data);
+        if (d.type === 'training') {
+            if (d.status === 'completed') {
+                status.classList.replace('alert-info', 'alert-success');
+                msg.textContent = 'Training complete! Accuracy: ' +
+                    (d.accuracy ? d.accuracy.toFixed(3) : '-') +
+                    ', F1: ' + (d.f1 ? d.f1.toFixed(3) : '-');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Train Model';
+                es.close();
+                setTimeout(() => location.reload(), 2000);
+            } else if (d.status === 'failed') {
+                status.classList.replace('alert-info', 'alert-danger');
+                msg.textContent = 'Failed: ' + (d.error || 'Unknown');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Train Model';
+                es.close();
+            }
+        }
+    });
+}
+</script>
 {% endblock %}

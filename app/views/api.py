@@ -170,6 +170,77 @@ def run_indicators():
     return jsonify({'status': 'started', 'message': 'Indicator pipeline started'})
 
 
+@api_bp.route('/compute-features', methods=['POST'])
+def compute_features():
+    """Trigger feature computation in background."""
+    from ..services.feature_engine import compute_features as _compute
+
+    app = current_app._get_current_object()
+
+    def _work():
+        with app.app_context():
+            publish_sse('pipeline', {'status': 'running', 'type': 'features'})
+            try:
+                count = _compute(db.session)
+                publish_sse('pipeline', {'status': 'completed', 'type': 'features',
+                                         'features_computed': count})
+            except Exception as e:
+                publish_sse('pipeline', {'status': 'failed', 'type': 'features',
+                                         'error': str(e)})
+
+    thread = threading.Thread(target=_work, daemon=True)
+    thread.start()
+    return jsonify({'status': 'started', 'message': 'Feature computation started'})
+
+
+@api_bp.route('/train-model', methods=['POST'])
+def train_model_endpoint():
+    """Trigger model training in background."""
+    from ..services.ml_trainer import train_model as _train
+
+    data = request.get_json() or {}
+    algorithm = data.get('algorithm', 'random_forest')
+    horizon = data.get('horizon', 'day')
+    name = data.get('name')
+
+    app = current_app._get_current_object()
+
+    def _work():
+        with app.app_context():
+            publish_sse('pipeline', {'status': 'running', 'type': 'training',
+                                     'algorithm': algorithm})
+            try:
+                model = _train(db.session, algorithm=algorithm,
+                               prediction_horizon=horizon, name=name)
+                publish_sse('pipeline', {
+                    'status': 'completed', 'type': 'training',
+                    'model_id': model.id, 'accuracy': model.accuracy,
+                    'f1': model.f1_macro,
+                })
+            except Exception as e:
+                publish_sse('pipeline', {'status': 'failed', 'type': 'training',
+                                         'error': str(e)})
+
+    thread = threading.Thread(target=_work, daemon=True)
+    thread.start()
+    return jsonify({'status': 'started', 'message': f'Training {algorithm} model...'})
+
+
+@api_bp.route('/predict', methods=['POST'])
+def predict_endpoint():
+    """Run predictions with a trained model."""
+    from ..services.ml_predictor import predict as _predict
+
+    data = request.get_json() or {}
+    model_id = data.get('model_id')
+
+    try:
+        results = _predict(db.session, model_id=model_id)
+        return jsonify({'status': 'ok', 'predictions': len(results)})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 400
+
+
 @api_bp.route('/pipeline-runs')
 def pipeline_runs():
     limit = request.args.get('limit', 20, type=int)

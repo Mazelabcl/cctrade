@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Features - Tradebot{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Feature Engineering</h2>
+    <div>
+        <button id="btn-compute" class="btn btn-primary" onclick="computeFeatures()">
+            <i class="bi bi-gear-fill me-1"></i> Compute Features
+        </button>
+        <a href="{{ url_for('features.explore') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-search me-1"></i> Explore
+        </a>
+    </div>
+</div>
+
+<div id="pipeline-status" class="alert alert-info d-none mb-3">
+    <span class="spinner-border spinner-border-sm me-2"></span>
+    <span id="pipeline-msg">Computing...</span>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card bg-dark border-primary">
+            <div class="card-body">
+                <h6 class="text-muted">Computed Features</h6>
+                <h3>{{ "{:,}".format(feature_count) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-dark border-secondary">
+            <div class="card-body">
+                <h6 class="text-muted">Total Candles</h6>
+                <h3>{{ "{:,}".format(candle_count) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-dark border-{{ 'success' if feature_count >= candle_count - 2 else 'warning' }}">
+            <div class="card-body">
+                <h6 class="text-muted">Coverage</h6>
+                <h3>{{ "%.1f"|format(feature_count / (candle_count - 2) * 100 if candle_count > 2 else 0) }}%</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if recent %}
+<div class="card bg-dark">
+    <div class="card-header">
+        <h5 class="mb-0">Recent Features</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-dark table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Upper Wick</th>
+                        <th>Lower Wick</th>
+                        <th>Body Ratio</th>
+                        <th>Vol Short</th>
+                        <th>Vol Long</th>
+                        <th>Sup Dist%</th>
+                        <th>Res Dist%</th>
+                        <th>UTC Block</th>
+                        <th>Since Up</th>
+                        <th>Since Down</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in recent %}
+                    <tr>
+                        <td>{{ f.candle_id }}</td>
+                        <td>{{ "%.3f"|format(f.upper_wick_ratio or 0) }}</td>
+                        <td>{{ "%.3f"|format(f.lower_wick_ratio or 0) }}</td>
+                        <td>{{ "%.3f"|format(f.body_total_ratio or 0) }}</td>
+                        <td>{{ "%.2f"|format(f.volume_short_ratio or 0) }}</td>
+                        <td>{{ "%.2f"|format(f.volume_long_ratio or 0) }}</td>
+                        <td>{{ "%.4f"|format(f.support_distance_pct or 0) }}</td>
+                        <td>{{ "%.4f"|format(f.resistance_distance_pct or 0) }}</td>
+                        <td>{{ f.utc_block or 0 }}</td>
+                        <td>{{ f.candles_since_last_up or 0 }}</td>
+                        <td>{{ f.candles_since_last_down or 0 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function computeFeatures() {
+    const btn = document.getElementById('btn-compute');
+    const status = document.getElementById('pipeline-status');
+    const msg = document.getElementById('pipeline-msg');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Computing...';
+    status.classList.remove('d-none', 'alert-success', 'alert-danger');
+    status.classList.add('alert-info');
+    msg.textContent = 'Feature computation running...';
+
+    fetch('/api/compute-features', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => { msg.textContent = data.message; })
+        .catch(err => {
+            status.classList.replace('alert-info', 'alert-danger');
+            msg.textContent = 'Error: ' + err.message;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-gear-fill me-1"></i> Compute Features';
+        });
+
+    const es = new EventSource('/api/stream');
+    es.addEventListener('pipeline', function(e) {
+        const d = JSON.parse(e.data);
+        if (d.type === 'features') {
+            if (d.status === 'completed') {
+                status.classList.replace('alert-info', 'alert-success');
+                msg.textContent = 'Complete: ' + (d.features_computed || 0) + ' features computed';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-gear-fill me-1"></i> Compute Features';
+                es.close();
+                setTimeout(() => location.reload(), 2000);
+            } else if (d.status === 'failed') {
+                status.classList.replace('alert-info', 'alert-danger');
+                msg.textContent = 'Failed: ' + (d.error || 'Unknown');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-gear-fill me-1"></i> Compute Features';
+                es.close();
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

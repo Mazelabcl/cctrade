@@ -2,6 +2,73 @@
 {% block title %}Predictions - Tradebot{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">Predictions</h2>
-<p class="text-muted">Prediction interface will be available after model training is implemented.</p>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Predictions</h2>
+    <a href="{{ url_for('models.index') }}" class="btn btn-outline-secondary btn-sm">Back to Models</a>
+</div>
+
+{% if predictions %}
+<div class="card bg-dark">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Model</th>
+                        <th>Candle</th>
+                        <th>Predicted</th>
+                        <th>No Frac</th>
+                        <th>Bullish</th>
+                        <th>Bearish</th>
+                        <th>Confidence</th>
+                        <th>Actual</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in predictions %}
+                    <tr>
+                        <td>{{ p.id }}</td>
+                        <td>{{ p.model_id }}</td>
+                        <td>{{ p.candle_id }}</td>
+                        <td>
+                            {% if p.predicted_class == 0 %}
+                                <span class="badge bg-secondary">None</span>
+                            {% elif p.predicted_class == 1 %}
+                                <span class="badge bg-success">Bullish</span>
+                            {% else %}
+                                <span class="badge bg-danger">Bearish</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ "%.2f"|format(p.prob_no_fractal) if p.prob_no_fractal else '-' }}</td>
+                        <td>{{ "%.2f"|format(p.prob_bullish) if p.prob_bullish else '-' }}</td>
+                        <td>{{ "%.2f"|format(p.prob_bearish) if p.prob_bearish else '-' }}</td>
+                        <td>{{ "%.2f"|format(p.confidence) if p.confidence else '-' }}</td>
+                        <td>
+                            {% if p.actual_class is not none %}
+                                {% if p.actual_class == p.predicted_class %}
+                                    <span class="badge bg-success">{{ p.actual_class }}</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{{ p.actual_class }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card bg-dark">
+    <div class="card-body">
+        <p class="text-muted mb-0">No predictions yet. Train a model and run predictions.</p>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

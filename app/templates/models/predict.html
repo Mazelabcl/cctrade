@@ -4,7 +4,20 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">Predictions</h2>
-    <a href="{{ url_for('models.index') }}" class="btn btn-outline-secondary btn-sm">Back to Models</a>
+    <div>
+        <button id="btn-predict" class="btn btn-success" onclick="runPredictions()">
+            <i class="bi bi-lightning-fill me-1"></i> Run Predictions
+        </button>
+        <button id="btn-backfill" class="btn btn-outline-secondary" onclick="backfillActuals()">
+            <i class="bi bi-check2-all me-1"></i> Backfill Actuals
+        </button>
+        <a href="{{ url_for('models.index') }}" class="btn btn-outline-secondary btn-sm">Back to Models</a>
+    </div>
+</div>
+
+<div id="pred-status" class="alert alert-info d-none mb-3">
+    <span class="spinner-border spinner-border-sm me-2"></span>
+    <span id="pred-msg">Running...</span>
 </div>
 
 {% if predictions %}
@@ -44,7 +57,17 @@
                         <td>{{ "%.2f"|format(p.prob_no_fractal) if p.prob_no_fractal else '-' }}</td>
                         <td>{{ "%.2f"|format(p.prob_bullish) if p.prob_bullish else '-' }}</td>
                         <td>{{ "%.2f"|format(p.prob_bearish) if p.prob_bearish else '-' }}</td>
-                        <td>{{ "%.2f"|format(p.confidence) if p.confidence else '-' }}</td>
+                        <td>
+                            {% if p.confidence %}
+                                {% if p.confidence >= 0.7 %}
+                                    <span class="badge bg-success">{{ "%.0f"|format(p.confidence * 100) }}%</span>
+                                {% elif p.confidence >= 0.5 %}
+                                    <span class="badge bg-warning text-dark">{{ "%.0f"|format(p.confidence * 100) }}%</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ "%.0f"|format(p.confidence * 100) }}%</span>
+                                {% endif %}
+                            {% else %}-{% endif %}
+                        </td>
                         <td>
                             {% if p.actual_class is not none %}
                                 {% if p.actual_class == p.predicted_class %}
@@ -67,8 +90,79 @@
 {% else %}
 <div class="card bg-dark">
     <div class="card-body">
-        <p class="text-muted mb-0">No predictions yet. Train a model and run predictions.</p>
+        <p class="text-muted mb-0">No predictions yet. Train a model first, then click "Run Predictions".</p>
     </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function runPredictions() {
+    const btn = document.getElementById('btn-predict');
+    const status = document.getElementById('pred-status');
+    const msg = document.getElementById('pred-msg');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Predicting...';
+    status.classList.remove('d-none', 'alert-success', 'alert-danger');
+    status.classList.add('alert-info');
+    msg.textContent = 'Running predictions...';
+
+    fetch('/api/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            status.classList.replace('alert-info', 'alert-success');
+            msg.textContent = 'Generated ' + data.predictions + ' predictions';
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            status.classList.replace('alert-info', 'alert-danger');
+            msg.textContent = 'Error: ' + (data.error || 'Unknown');
+        }
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-lightning-fill me-1"></i> Run Predictions';
+    })
+    .catch(err => {
+        status.classList.replace('alert-info', 'alert-danger');
+        msg.textContent = 'Error: ' + err.message;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-lightning-fill me-1"></i> Run Predictions';
+    });
+}
+
+function backfillActuals() {
+    const btn = document.getElementById('btn-backfill');
+    const status = document.getElementById('pred-status');
+    const msg = document.getElementById('pred-msg');
+
+    btn.disabled = true;
+    status.classList.remove('d-none', 'alert-success', 'alert-danger');
+    status.classList.add('alert-info');
+    msg.textContent = 'Backfilling actual results...';
+
+    fetch('/api/backfill-actuals', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            status.classList.replace('alert-info', 'alert-success');
+            msg.textContent = 'Updated ' + data.updated + ' predictions with actual results';
+            if (data.updated > 0) setTimeout(() => location.reload(), 1500);
+        } else {
+            status.classList.replace('alert-info', 'alert-danger');
+            msg.textContent = 'Error: ' + (data.error || 'Unknown');
+        }
+        btn.disabled = false;
+    })
+    .catch(err => {
+        status.classList.replace('alert-info', 'alert-danger');
+        msg.textContent = 'Error: ' + err.message;
+        btn.disabled = false;
+    });
+}
+</script>
 {% endblock %}

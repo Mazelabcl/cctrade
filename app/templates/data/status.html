@@ -4,9 +4,14 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">Data Status</h2>
-    <button id="btn-run-indicators" class="btn btn-primary" onclick="runIndicators()">
-        <i class="bi bi-play-fill me-1"></i> Run Indicators
-    </button>
+    <div>
+        <button id="btn-fetch" class="btn btn-success" onclick="fetchData()">
+            <i class="bi bi-cloud-download me-1"></i> Fetch Latest
+        </button>
+        <button id="btn-run-indicators" class="btn btn-primary" onclick="runIndicators()">
+            <i class="bi bi-play-fill me-1"></i> Run Indicators
+        </button>
+    </div>
 </div>
 
 <!-- Pipeline status -->
@@ -135,8 +140,8 @@
 
 {% block extra_js %}
 <script>
-function runIndicators() {
-    const btn = document.getElementById('btn-run-indicators');
+function _pipelineAction(url, btnId, btnLabel, sseType, onComplete) {
+    const btn = document.getElementById(btnId);
     const status = document.getElementById('pipeline-status');
     const msg = document.getElementById('pipeline-msg');
 
@@ -144,42 +149,54 @@ function runIndicators() {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Running...';
     status.classList.remove('d-none', 'alert-success', 'alert-danger');
     status.classList.add('alert-info');
-    msg.textContent = 'Indicator pipeline running...';
+    msg.textContent = 'Starting...';
 
-    fetch('/api/run-indicators', { method: 'POST' })
+    fetch(url, { method: 'POST' })
         .then(r => r.json())
-        .then(data => {
-            msg.textContent = data.message || 'Pipeline started';
-        })
+        .then(data => { msg.textContent = data.message || 'Pipeline started'; })
         .catch(err => {
             status.classList.replace('alert-info', 'alert-danger');
             msg.textContent = 'Error: ' + err.message;
             btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Run Indicators';
+            btn.innerHTML = btnLabel;
         });
 
-    // Listen for completion via SSE
     const es = new EventSource('/api/stream');
     es.addEventListener('pipeline', function(e) {
         const d = JSON.parse(e.data);
-        if (d.type === 'indicators') {
+        if (d.type === sseType) {
             if (d.status === 'completed') {
                 status.classList.replace('alert-info', 'alert-success');
-                msg.textContent = 'Indicators complete: ' + (d.fractals_updated || 0) +
-                    ' fractals, ' + (d.new_levels || 0) + ' new levels';
+                msg.textContent = onComplete ? onComplete(d) : 'Complete!';
                 btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Run Indicators';
+                btn.innerHTML = btnLabel;
                 es.close();
                 setTimeout(() => location.reload(), 2000);
             } else if (d.status === 'failed') {
                 status.classList.replace('alert-info', 'alert-danger');
                 msg.textContent = 'Failed: ' + (d.error || 'Unknown error');
                 btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Run Indicators';
+                btn.innerHTML = btnLabel;
                 es.close();
             }
         }
     });
+}
+
+function fetchData() {
+    _pipelineAction('/api/fetch-data', 'btn-fetch',
+        '<i class="bi bi-cloud-download me-1"></i> Fetch Latest',
+        'data_fetch',
+        d => 'Fetched ' + (d.new_candles || 0) + ' new candles'
+    );
+}
+
+function runIndicators() {
+    _pipelineAction('/api/run-indicators', 'btn-run-indicators',
+        '<i class="bi bi-play-fill me-1"></i> Run Indicators',
+        'indicators',
+        d => 'Indicators complete: ' + (d.fractals_updated || 0) + ' fractals, ' + (d.new_levels || 0) + ' levels'
+    );
 }
 </script>
 {% endblock %}

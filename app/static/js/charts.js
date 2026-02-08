@@ -1,4 +1,4 @@
-// TradingView Lightweight Charts — full implementation
+// TradingView Lightweight Charts v4.1.3
 document.addEventListener('DOMContentLoaded', function() {
     const container = document.getElementById('chart-container');
     if (!container || typeof LightweightCharts === 'undefined') return;
@@ -18,12 +18,13 @@ document.addEventListener('DOMContentLoaded', function() {
             vertLines: { color: 'rgba(42, 46, 57, 0.3)' },
             horzLines: { color: 'rgba(42, 46, 57, 0.3)' },
         },
-        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        crosshair: { mode: 0 },  // Normal
         timeScale: { borderColor: '#2a2e39', timeVisible: true, secondsVisible: false },
         rightPriceScale: { borderColor: '#2a2e39' },
     });
 
-    const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
+    // v4.1.3 API: addCandlestickSeries
+    const candleSeries = chart.addCandlestickSeries({
         upColor: '#26a69a', downColor: '#ef5350',
         borderVisible: false,
         wickUpColor: '#26a69a', wickDownColor: '#ef5350',
@@ -71,7 +72,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Build markers from fractals and predictions
                 const markers = [];
 
-                // Fractal markers
                 if (showFractals) {
                     data.forEach(c => {
                         const t = Math.floor(new Date(c.open_time).getTime() / 1000);
@@ -90,7 +90,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 }
 
-                // Load prediction overlay
                 if (showPredictions) {
                     loadPredictions(markers);
                 } else {
@@ -135,7 +134,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadLevels(candleData) {
         clearLevelLines();
 
-        // Get price range from visible candles to filter levels
         if (!candleData.length) return;
         const prices = candleData.flatMap(c => [c.high, c.low]);
         const minPrice = Math.min(...prices);
@@ -145,7 +143,6 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`/api/levels?active_only=true`)
             .then(r => r.json())
             .then(levels => {
-                // Filter to visible price range and deduplicate by rounding
                 const seen = new Set();
                 const roundTo = maxPrice > 10000 ? 10 : 1;
 
@@ -160,15 +157,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (seen.has(key)) return;
                     seen.add(key);
 
-                    const totalTouches = (l.support_touches || 0) + (l.resistance_touches || 0);
-                    const opacity = Math.max(0.2, 1 - totalTouches * 0.15);
-
-                    const color = levelColors[cat] || '#888';
                     const line = candleSeries.createPriceLine({
                         price: l.price_level,
-                        color: color,
+                        color: levelColors[cat] || '#888',
                         lineWidth: 1,
-                        lineStyle: LightweightCharts.LineStyle.Dotted,
+                        lineStyle: 2,  // Dotted
                         axisLabelVisible: false,
                         title: '',
                     });

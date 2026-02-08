@@ -158,3 +158,11 @@ def test_api_health_enhanced(client, sample_candles):
     assert data['status'] == 'ok'
     assert data['candles'] == 10
     assert data['models'] == 0
+
+
+def test_api_fetch_data(client):
+    """POST /api/fetch-data returns started."""
+    response = client.post('/api/fetch-data')
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data['status'] == 'started'

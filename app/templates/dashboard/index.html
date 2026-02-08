@@ -4,36 +4,72 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">Dashboard</h2>
-    {% if latest_candle %}
-    <small class="text-muted">Latest: {{ latest_candle.open_time.strftime('%Y-%m-%d %H:%M') }} UTC
-        &mdash; ${{ "{:,.0f}".format(latest_candle.close) }}</small>
-    {% endif %}
+    <div>
+        {% if latest_candle %}
+        <small class="text-muted me-3">Latest: {{ latest_candle.open_time.strftime('%Y-%m-%d %H:%M') }} UTC
+            &mdash; ${{ "{:,.0f}".format(latest_candle.close) }}</small>
+        {% endif %}
+        <button id="btn-pipeline" class="btn btn-success" onclick="runFullPipeline()">
+            <i class="bi bi-arrow-repeat me-1"></i> Run Full Pipeline
+        </button>
+    </div>
 </div>
 
 <!-- Pipeline status banner (updated via SSE) -->
 <div id="pipeline-status" class="alert alert-info d-none mb-3" role="alert">
+    <span class="spinner-border spinner-border-sm me-2"></span>
     <span id="pipeline-msg"></span>
 </div>
 
-<!-- Latest Prediction banner -->
-{% if latest_prediction %}
-<div class="card bg-dark border-{{ 'success' if latest_prediction.predicted_class == 1 else 'danger' if latest_prediction.predicted_class == 2 else 'secondary' }} mb-3">
-    <div class="card-body d-flex align-items-center justify-content-between py-2">
-        <div>
-            <i class="bi bi-lightning-fill me-2"></i>
-            <strong>Latest Prediction:</strong>
-            {% if latest_prediction.predicted_class == 0 %}
-                <span class="badge bg-secondary ms-2">No Fractal</span>
-            {% elif latest_prediction.predicted_class == 1 %}
-                <span class="badge bg-success ms-2">Bullish Fractal</span>
-            {% else %}
-                <span class="badge bg-danger ms-2">Bearish Fractal</span>
-            {% endif %}
-            {% if latest_prediction.confidence %}
-                <span class="text-muted ms-2">{{ "%.0f"|format(latest_prediction.confidence * 100) }}% confidence</span>
+<!-- Latest Prediction signal — prominent -->
+{% if latest_prediction and latest_prediction.predicted_class != 0 %}
+<div class="card mb-3 border-{{ 'success' if latest_prediction.predicted_class == 1 else 'danger' }}"
+     style="background: {{ 'rgba(38,166,154,0.1)' if latest_prediction.predicted_class == 1 else 'rgba(239,83,80,0.1)' }}">
+    <div class="card-body py-3">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                {% if latest_prediction.predicted_class == 1 %}
+                    <i class="bi bi-arrow-up-circle-fill text-success" style="font-size:2.5rem"></i>
+                {% else %}
+                    <i class="bi bi-arrow-down-circle-fill text-danger" style="font-size:2.5rem"></i>
+                {% endif %}
+            </div>
+            <div class="col">
+                <h4 class="mb-0">
+                    {% if latest_prediction.predicted_class == 1 %}
+                        <span class="text-success">Bullish Fractal Predicted</span>
+                    {% else %}
+                        <span class="text-danger">Bearish Fractal Predicted</span>
+                    {% endif %}
+                </h4>
+                <small class="text-muted">{{ latest_prediction.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</small>
+            </div>
+            <div class="col-auto text-end">
+                {% if latest_prediction.confidence %}
+                <div>
+                    <span class="fs-2 fw-bold {% if latest_prediction.confidence >= 0.7 %}text-success{% elif latest_prediction.confidence >= 0.5 %}text-warning{% else %}text-secondary{% endif %}">
+                        {{ "%.0f"|format(latest_prediction.confidence * 100) }}%
+                    </span>
+                    <br><small class="text-muted">confidence</small>
+                </div>
+                {% endif %}
+            </div>
+            {% if latest_prediction.prob_bullish and latest_prediction.prob_bearish %}
+            <div class="col-auto text-end">
+                <small class="text-muted d-block">Bull: {{ "%.0f"|format(latest_prediction.prob_bullish * 100) }}%</small>
+                <small class="text-muted d-block">Bear: {{ "%.0f"|format(latest_prediction.prob_bearish * 100) }}%</small>
+                <small class="text-muted d-block">None: {{ "%.0f"|format(latest_prediction.prob_no_fractal * 100) }}%</small>
+            </div>
             {% endif %}
         </div>
-        <small class="text-muted">{{ latest_prediction.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+    </div>
+</div>
+{% elif latest_prediction %}
+<div class="card bg-dark border-secondary mb-3">
+    <div class="card-body py-2 d-flex align-items-center">
+        <i class="bi bi-dash-circle text-secondary me-2" style="font-size:1.5rem"></i>
+        <span>Latest Prediction: <span class="badge bg-secondary">No Fractal</span></span>
+        <small class="text-muted ms-auto">{{ latest_prediction.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
     </div>
 </div>
 {% endif %}
@@ -94,7 +130,7 @@
     </div>
 </div>
 
-<!-- Summary cards row 2: fractals + features + predictions -->
+<!-- Summary cards row 2 -->
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="card bg-dark border-secondary">
@@ -137,7 +173,7 @@
     <!-- Data coverage -->
     <div class="col-lg-8">
         <div class="card bg-dark">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header">
                 <h5 class="mb-0"><i class="bi bi-table me-2"></i>Data Coverage</h5>
             </div>
             <div class="card-body">
@@ -249,4 +285,54 @@
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+function runFullPipeline() {
+    const btn = document.getElementById('btn-pipeline');
+    const status = document.getElementById('pipeline-status');
+    const msg = document.getElementById('pipeline-msg');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Running...';
+    status.classList.remove('d-none', 'alert-success', 'alert-danger');
+    status.classList.add('alert-info');
+    msg.textContent = 'Full pipeline starting: indicators → features → predictions...';
+
+    fetch('/api/run-pipeline', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => { msg.textContent = data.message; })
+        .catch(err => {
+            status.classList.replace('alert-info', 'alert-danger');
+            msg.textContent = 'Error: ' + err.message;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Run Full Pipeline';
+        });
+
+    const es = new EventSource('/api/stream');
+    es.addEventListener('pipeline', function(e) {
+        const d = JSON.parse(e.data);
+        if (d.type === 'auto_pipeline') {
+            if (d.status === 'completed') {
+                status.classList.replace('alert-info', 'alert-success');
+                msg.textContent = 'Pipeline complete! ' +
+                    (d.features_computed || 0) + ' features, ' +
+                    (d.predictions || 0) + ' predictions, ' +
+                    (d.actuals_backfilled || 0) + ' actuals verified';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Run Full Pipeline';
+                es.close();
+                setTimeout(() => location.reload(), 2000);
+            } else if (d.status === 'failed') {
+                status.classList.replace('alert-info', 'alert-danger');
+                msg.textContent = 'Failed: ' + (d.error || 'Unknown');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Run Full Pipeline';
+                es.close();
+            }
+        }
+        // Also show intermediate steps
+        if (d.type === 'indicators' && d.status === 'running') msg.textContent = 'Running indicators...';
+        if (d.type === 'features' && d.status === 'running') msg.textContent = 'Computing features...';
+    });
+}
+</script>
 {% endblock %}

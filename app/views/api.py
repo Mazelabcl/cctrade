@@ -201,6 +201,29 @@ def stats():
     })
 
 
+@api_bp.route('/fetch-data', methods=['POST'])
+def fetch_data():
+    """Trigger data fetching from Binance in a background thread."""
+    from ..tasks.data_sync import sync_candle_data
+
+    app = current_app._get_current_object()
+
+    def _work():
+        with app.app_context():
+            publish_sse('pipeline', {'status': 'running', 'type': 'data_fetch'})
+            try:
+                count = sync_candle_data()
+                publish_sse('pipeline', {'status': 'completed', 'type': 'data_fetch',
+                                         'new_candles': count})
+            except Exception as e:
+                publish_sse('pipeline', {'status': 'failed', 'type': 'data_fetch',
+                                         'error': str(e)})
+
+    thread = threading.Thread(target=_work, daemon=True)
+    thread.start()
+    return jsonify({'status': 'started', 'message': 'Data fetch started'})
+
+
 @api_bp.route('/run-indicators', methods=['POST'])
 def run_indicators():
     """Trigger indicator computation in a background thread."""

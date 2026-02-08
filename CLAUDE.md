@@ -4,165 +4,121 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Common Development Commands
 
-### Enhanced Pipeline System
-
-The project now uses an enhanced pipeline with period management and rapid development features:
+### Web Application
 
 ```bash
-# Install dependencies (to virtual environment)
+# Install dependencies
 source .venv/bin/activate && pip install -r requirements.txt
 
-# Show available data periods and status
-python main.py --list-periods
+# Run Flask development server
+python run.py
 
-# Check data integrity
-python main.py --check-data
+# Import CSV data into SQLite
+python scripts/import_csv.py
+python scripts/import_csv.py --period 2021_01_01-2024_12_31
+python scripts/import_csv.py --dry-run
 
-# Rapid development - process small sample for testing changes
-python main.py --sample 100 --features-only
+# Run tests
+python -m pytest tests/ -v
 
-# Process specific time period
-python main.py --period 2021_01_01-2024_12_31 --features-only
-
-# Full pipeline (data fetching + feature engineering)
-python main.py --full
-
-# Data pipeline only (fetch and generate basic datasets)
-python main.py --data-only
-
-# Feature engineering only (use existing datasets)
-python main.py --features-only
-
-# Process all available periods
-python main.py --all-periods --features-only
-```
-
-### Legacy Commands (still supported)
-```bash
-# Run all tests
-python test_all.py
-
-# Run specific test modules
-python test_features.py
-python test_integration.py
-python test_fractal_timing.py
-python test_level_touches.py
-python test_nearest_levels.py
-python test_candle_interaction.py
-
-# Manual testing with synthetic data
-python manual_test.py
+# Database migrations
+alembic revision --autogenerate -m "description"
+alembic upgrade head
 ```
 
 ### Configuration
 - Environment variables: Set `BINANCE_API_KEY` and `BINANCE_API_SECRET` in `.env` file
-- Global constants in `config.py` (symbol, date ranges, thresholds)
-- Data manifest: `data_manifest.json` tracks available time periods and validates data integrity
+- App config: `app/config.py` (DB path, API keys, ML parameters, trading constants)
+- Database: SQLite at `instance/tradebot.db`
 
-### Data Management System
+## Architecture
 
-The enhanced pipeline includes a data manifest system that tracks time-chunked datasets:
+### Project Structure
 
-**Manifest Features**:
-- Automatic discovery of existing data periods in `base_data/`
-- Gap and overlap detection between time periods
-- File integrity validation
-- Support for sample datasets for rapid development
-
-**Rapid Development Workflow**:
-1. `python main.py --list-periods` - See available data periods
-2. `python main.py --sample 100 --features-only` - Test changes on small dataset
-3. `python main.py --period YYYY_MM_DD-YYYY_MM_DD --features-only` - Test on specific period
-4. `python main.py --all-periods --features-only` - Full production run
-
-**Time-Chunked Data Structure**:
 ```
-base_data/
-├── ml_dataset_2017_01_01-2020_12_31.csv      # ~29K rows
-├── levels_dataset_2017_01_01-2020_12_31.csv
-├── ml_dataset_2021_01_01-2024_12_31.csv      # ~35K rows
-├── levels_dataset_2021_01_01-2024_12_31.csv
-└── data_manifest.json                        # Auto-generated
+app/                    # Flask application
+├── __init__.py         # create_app() factory
+├── config.py           # Configuration classes
+├── extensions.py       # SQLAlchemy, APScheduler instances
+├── models/             # SQLAlchemy ORM models
+├── services/           # Business logic (pure Python, no Flask dependency)
+├── views/              # Flask Blueprints (routes)
+├── tasks/              # Background jobs (APScheduler)
+├── templates/          # Jinja2 templates (Bootstrap 5)
+└── static/             # CSS, JS
+
+scripts/                # CLI utilities
+tests/                  # pytest test suite
+migrations/             # Alembic database migrations
+legacy/                 # Archived original code (reference only)
+datasets/               # CSV source data
+instance/               # SQLite database (gitignored)
 ```
 
-## High-Level Architecture
+### Database Models (SQLAlchemy)
 
-### Core Components
+- **Candle** — Multi-timeframe OHLCV data (symbol, timeframe, open_time unique)
+- **Level** — Technical levels (HTF, Fractal, Fibonacci, Volume Profile) with touch tracking
+- **Feature** — Computed ML features per candle (1:1 with candle)
+- **MLModel** — Trained model registry with metrics
+- **Prediction** — Prediction history with probabilities
+- **PipelineRun** — Pipeline execution log
 
-**Data Pipeline**:
-1. **data_fetching.py**: Fetches OHLCV data from Binance API for multiple timeframes (1m, 1h, 12h, 1d, 1w, 1M)
-2. **indicators.py**: Detects fractals and calculates technical levels (HTF, Fibonacci, Volume Profile)
-3. **dataset_generation.py**: Creates two main datasets:
-   - `ml_dataset.csv`: 1-hour candles with fractal labels for ML training
-   - `levels_dataset.csv`: All technical levels across timeframes
-4. **create_ml_features.py**: Feature engineering pipeline that combines candle data with level interactions
+### Views (Blueprints)
 
-**Technical Analysis**:
-- **fractal_timing.py**: 5-candle fractal detection (swing highs/lows) with timing features
-- **level_touch_tracker.py**: Tracks level touches and validates levels (invalid after 4 touches)
-- **feature_engineering.py**: Confluence zone analysis and level clustering
-- **candle_ratios.py**: Candlestick pattern analysis (body ratios, wick ratios, patterns)
-- **volume_ratios.py**: Volume analysis against moving averages
-- **time_blocks.py**: Trading session detection (Asian/European/American sessions)
+- `dashboard_bp` → `/` — Main dashboard with data coverage stats
+- `data_bp` → `/data/` — Data management and status
+- `charts_bp` → `/charts/` — TradingView Lightweight Charts
+- `features_bp` → `/features/` — Feature engineering status
+- `models_bp` → `/models/` — ML model registry
+- `api_bp` → `/api/` — JSON API endpoints
 
-**Level Types**:
-- **HTF Levels**: Higher timeframe structure levels from candle direction changes
-- **Volume Profile**: POC (Point of Control), VAH/VAL (Value Area High/Low)
-- **Fibonacci**: 0.5, 0.618, 0.75 retracement levels between swing points
-- **Fractals**: Swing highs/lows from daily/weekly/monthly timeframes
+### Key API Endpoints
 
-### Feature Engineering Strategy
+- `GET /api/health` — Health check
+- `GET /api/stats` — Dashboard statistics
+- `GET /api/candles?tf=1h&start=...&end=...&limit=500` — Candle data
+- `GET /api/levels?start=...&end=...&active_only=true` — Level data
 
-The ML pipeline generates features by analyzing candle N-1 interactions with zones derived from candle N-2:
+### Technology Stack
 
-1. **Zone Detection**: Find nearest naked support/resistance levels around N-2 close price
-2. **Zone Analysis**: Create 1.5% zones around key levels, count level types by timeframe
-3. **Interaction Features**: Track which levels are touched by N-1 candle's high/low
-4. **Pattern Features**: Detect potential swing patterns, candle structure, volume spikes
-5. **Timing Features**: Track candles since last fractal formation
+| Concern | Choice |
+|---------|--------|
+| Database | SQLite + SQLAlchemy ORM |
+| Web framework | Flask + Blueprints |
+| UI | Bootstrap 5 + Jinja2 |
+| Charts | Lightweight Charts (TradingView) |
+| Background tasks | APScheduler |
+| Testing | pytest |
+| Migrations | Alembic |
+| Container | Podman |
 
-### Data Structures
+## Project Context
 
-**Candle Data** (OHLCV + features):
-```python
-{
-    'open_time': datetime,
-    'open': float, 'high': float, 'low': float, 'close': float, 'volume': float,
-    'bearish_fractal': bool, 'bullish_fractal': bool,
-    # Feature columns added by create_ml_features.py
-}
-```
+Bitcoin (BTCUSDT) fractal prediction system using ML. Combines multi-timeframe technical analysis with level tracking to predict swing highs/lows.
 
-**Level Data**:
-```python
-{
-    'price_level': float,
-    'level_type': str,  # 'Fractal_Low', 'VP_poc', 'Fib_0.618', 'HTF_level'
-    'timeframe': str,   # 'daily', 'weekly', 'monthly'
-    'created_at': datetime,
-    'source': str       # 'fractal', 'htf', 'fibonacci', 'volume_profile'
-}
-```
+### Core Concepts
 
-### Testing Strategy
+- **Fractals**: 5-candle swing highs/lows detected by indicator pipeline
+- **Levels**: HTF structure, Fibonacci retracements, Volume Profile (POC/VAH/VAL)
+- **Features**: Candle N-1 interactions with zones derived from N-2 close price
+- **Targets**: 0=no_fractal, 1=bullish_fractal (swing low), 2=bearish_fractal (swing high)
 
-- **test_all.py**: Integration test using synthetic data across all feature modules
-- **test_data/**: Contains synthetic candle and level data for reproducible testing
-- **manual_test.py**: Interactive testing with predefined scenarios
-- Individual test files for each feature module (test_fractal_timing.py, etc.)
+### Legacy Code
 
-### Project Context
+All original business logic is preserved in `legacy/` for reference during service migration. Key files:
+- `legacy/indicators.py` — Fractal detection, HTF levels, Fibonacci, Volume Profile
+- `legacy/create_ml_features.py` — Feature engineering pipeline
+- `legacy/target_variable.py` — Target variable generation
+- `legacy/ml_models/` — Model training, evaluation, prediction
 
-This is a cryptocurrency trading bot focused on Bitcoin (BTCUSDT) that uses machine learning to predict fractal formation (potential reversal points). The bot combines multiple timeframe analysis with technical level tracking to identify high-probability turning points in the market.
+### Build Phases
 
-**Key Files**:
-- `main.py`: Entry point and orchestration
-- `config.py`: Global configuration and API credentials
-- `create_ml_features.py`: Main feature engineering pipeline
-- `project_documentation.md`: Detailed technical specifications
-- `new_ml_features.md`: Implementation plan and feature descriptions
-
-**Data Storage**:
-- `base_data/`: Historical datasets split by time periods
-- CSV files: Generated datasets for ML training
-- HTML files: Interactive visualizations of price action and levels
+1. **Phase 1** (DONE): Project restructure + SQLite foundation
+2. **Phase 2**: Dashboard + data status views
+3. **Phase 3**: Indicators pipeline integration
+4. **Phase 4**: Interactive charts
+5. **Phase 5**: Feature engineering pipeline
+6. **Phase 6**: ML training & evaluation UI
+7. **Phase 7**: Predictions & automation
+8. **Phase 8**: Polish, testing & deployment

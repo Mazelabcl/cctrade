@@ -21,6 +21,10 @@ __pycache__/
 .venv
 *.venv
 
+# SQLite database
+instance/
+*.db
+
 # Data files
 features/
 

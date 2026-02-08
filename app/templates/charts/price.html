@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Charts - Tradebot{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Price Chart</h2>
+<div class="card bg-dark">
+    <div class="card-body">
+        <div id="chart-container" style="height: 600px;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}

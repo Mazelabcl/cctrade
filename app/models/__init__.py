@@ -5,5 +5,6 @@ from .ml_model import MLModel
 from .prediction import Prediction
 from .pipeline_run import PipelineRun
 from .backtest_result import BacktestResult
+from .setting import Setting
 
-__all__ = ['Candle', 'Level', 'Feature', 'MLModel', 'Prediction', 'PipelineRun', 'BacktestResult']
+__all__ = ['Candle', 'Level', 'Feature', 'MLModel', 'Prediction', 'PipelineRun', 'BacktestResult', 'Setting']

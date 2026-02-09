@@ -58,6 +58,15 @@
                     </a>
                 </li>
             </ul>
+            <hr class="text-secondary mx-3 my-0">
+            <ul class="nav flex-column p-2">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.blueprint == 'settings' %}active{% endif %}"
+                       href="{{ url_for('settings.index') }}">
+                        <i class="bi bi-sliders me-2"></i> Settings
+                    </a>
+                </li>
+            </ul>
         </nav>
 
         <!-- Main content -->

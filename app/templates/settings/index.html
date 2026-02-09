@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+{% block title %}Settings — Tradebot{% endblock %}
+
+{% block content %}
+<h3 class="mb-4"><i class="bi bi-sliders me-2"></i>Settings</h3>
+
+<div class="row g-4">
+    <!-- API Keys -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-key me-1"></i> Binance API Keys
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('settings.save') }}">
+                    <div class="mb-3">
+                        <label for="api_key" class="form-label">API Key</label>
+                        <input type="text" class="form-control font-monospace" id="api_key"
+                               name="api_key" value="{{ api_key }}"
+                               placeholder="Enter your Binance API key">
+                    </div>
+                    <div class="mb-3">
+                        <label for="api_secret" class="form-label">API Secret</label>
+                        <input type="password" class="form-control font-monospace" id="api_secret"
+                               name="api_secret" value="{{ masked_secret }}"
+                               placeholder="Enter your Binance API secret">
+                        {% if has_secret %}
+                        <div class="form-text">Secret is stored. Leave unchanged to keep current value.</div>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>Save Keys
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="btnTestConnection">
+                            <i class="bi bi-plug me-1"></i>Test Connection
+                        </button>
+                    </div>
+                </form>
+                <div id="connectionResult" class="mt-3" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Sync -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-arrow-repeat me-1"></i> Live Data Sync
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('settings.save') }}">
+                    <!-- Pass through current API key/secret so they aren't blanked -->
+                    <input type="hidden" name="api_key" value="{{ api_key }}">
+                    <input type="hidden" name="api_secret" value="{{ masked_secret }}">
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="live_sync_enabled"
+                               name="live_sync_enabled" {% if live_sync_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="live_sync_enabled">
+                            Enable automatic data fetching
+                        </label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="live_sync_interval" class="form-label">Fetch interval</label>
+                        <select class="form-select" id="live_sync_interval" name="live_sync_interval">
+                            {% for val in [1, 5, 10, 15, 30] %}
+                            <option value="{{ val }}" {% if live_sync_interval|string == val|string %}selected{% endif %}>
+                                Every {{ val }} minute{{ 's' if val != 1 }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Timeframes</label>
+                        <div>
+                            {% for tf in available_timeframes %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="sync_timeframes"
+                                       value="{{ tf }}" id="tf_{{ tf }}"
+                                       {% if tf in sync_timeframes %}checked{% endif %}>
+                                <label class="form-check-label" for="tf_{{ tf }}">{{ tf }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="run_full_pipeline_on_sync"
+                               name="run_full_pipeline_on_sync" {% if run_pipeline %}checked{% endif %}>
+                        <label class="form-check-label" for="run_full_pipeline_on_sync">
+                            Run full pipeline after fetch
+                            <small class="text-muted d-block">Indicators + Features + Predictions</small>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>Save Sync Settings
+                    </button>
+                </form>
+
+                <hr>
+                <h6>Sync Status</h6>
+                <div id="syncStatus">
+                    <span class="text-muted">Loading...</span>
+                </div>
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-success" id="btnStartSync" {% if live_sync_enabled %}style="display:none"{% endif %}>
+                        <i class="bi bi-play-fill me-1"></i>Start Now
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" id="btnStopSync" {% if not live_sync_enabled %}style="display:none"{% endif %}>
+                        <i class="bi bi-stop-fill me-1"></i>Stop
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Latest Signal + Sync History row -->
+<div class="row g-4 mt-0">
+    <!-- Latest Signal -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-bullseye me-1"></i> Latest Signal
+            </div>
+            <div class="card-body" id="latestSignal">
+                <span class="text-muted">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sync History -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clock-history me-1"></i> Sync History
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Status</th>
+                                <th>Candles</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody id="syncHistoryBody">
+                            <tr><td colspan="4" class="text-muted text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('btnTestConnection').addEventListener('click', function() {
+    const btn = this;
+    const result = document.getElementById('connectionResult');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Testing...';
+    result.style.display = 'none';
+
+    fetch('{{ url_for("settings.test_connection") }}', {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            result.style.display = 'block';
+            if (data.status === 'ok') {
+                result.innerHTML = `<div class="alert alert-success mb-0">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Connected! System: ${data.system_status}, Trading: ${data.can_trade ? 'Enabled' : 'Disabled'},
+                    Balances: ${data.balances} asset(s)
+                </div>`;
+            } else {
+                result.innerHTML = `<div class="alert alert-danger mb-0">
+                    <i class="bi bi-x-circle me-1"></i> ${data.message}
+                </div>`;
+            }
+        })
+        .catch(err => {
+            result.style.display = 'block';
+            result.innerHTML = `<div class="alert alert-danger mb-0">
+                <i class="bi bi-x-circle me-1"></i> Connection failed: ${err.message}
+            </div>`;
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-plug me-1"></i>Test Connection';
+        });
+});
+
+function formatDuration(start, end) {
+    if (!start || !end) return '—';
+    const ms = new Date(end) - new Date(start);
+    if (ms < 1000) return ms + 'ms';
+    return (ms / 1000).toFixed(1) + 's';
+}
+
+function formatTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleTimeString() + ' ' + d.toLocaleDateString();
+}
+
+function refreshSyncStatus() {
+    fetch('/api/sync-status')
+        .then(r => r.json())
+        .then(data => {
+            const el = document.getElementById('syncStatus');
+            const startBtn = document.getElementById('btnStartSync');
+            const stopBtn = document.getElementById('btnStopSync');
+
+            if (data.enabled && data.job_active) {
+                el.innerHTML = `<span class="badge bg-success">Active</span>
+                    Interval: ${data.interval_minutes}m
+                    ${data.last_fetch ? '| Last fetch: ' + formatTime(data.last_fetch) : ''}`;
+                startBtn.style.display = 'none';
+                stopBtn.style.display = '';
+            } else {
+                el.innerHTML = `<span class="badge bg-secondary">Inactive</span> Sync is not running.
+                    ${data.last_fetch ? '<br><small class="text-muted">Last fetch: ' + formatTime(data.last_fetch) + '</small>' : ''}`;
+                startBtn.style.display = '';
+                stopBtn.style.display = 'none';
+            }
+
+            // Populate sync history table
+            const tbody = document.getElementById('syncHistoryBody');
+            if (data.recent_syncs && data.recent_syncs.length > 0) {
+                tbody.innerHTML = data.recent_syncs.map(s => {
+                    const badge = s.status === 'completed'
+                        ? '<span class="badge bg-success">OK</span>'
+                        : s.status === 'failed'
+                        ? '<span class="badge bg-danger">Fail</span>'
+                        : '<span class="badge bg-warning">Running</span>';
+                    return `<tr>
+                        <td><small>${formatTime(s.started_at)}</small></td>
+                        <td>${badge}</td>
+                        <td>${s.rows_processed !== null ? s.rows_processed : '—'}</td>
+                        <td><small>${formatDuration(s.started_at, s.finished_at)}</small></td>
+                    </tr>`;
+                }).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-muted text-center">No sync history yet.</td></tr>';
+            }
+        })
+        .catch(() => {
+            document.getElementById('syncStatus').innerHTML =
+                '<span class="text-muted">Could not fetch status.</span>';
+        });
+}
+
+function refreshLatestSignal() {
+    fetch('/api/latest-signal')
+        .then(r => r.json())
+        .then(data => {
+            const el = document.getElementById('latestSignal');
+            if (data.status === 'no_data') {
+                el.innerHTML = '<span class="text-muted">No predictions yet. Run the pipeline first.</span>';
+                return;
+            }
+
+            const signalColors = {LONG: 'success', SHORT: 'danger', FLAT: 'secondary'};
+            const signalIcons = {LONG: 'arrow-up-circle-fill', SHORT: 'arrow-down-circle-fill', FLAT: 'dash-circle'};
+            const color = signalColors[data.signal] || 'secondary';
+            const icon = signalIcons[data.signal] || 'dash-circle';
+            const conf = (data.confidence * 100).toFixed(1);
+
+            let html = `
+                <div class="text-center mb-2">
+                    <i class="bi bi-${icon} text-${color}" style="font-size: 2rem;"></i>
+                    <h4 class="text-${color} mb-0">${data.signal}</h4>
+                    <div class="fs-5">${conf}% confidence</div>
+                </div>
+                <table class="table table-sm mb-0">
+                    <tr><td class="text-muted">Candle</td><td>${formatTime(data.candle_time)}</td></tr>
+                    <tr><td class="text-muted">Close</td><td>$${data.candle_close.toLocaleString()}</td></tr>`;
+
+            if (data.signal !== 'FLAT') {
+                if (data.stop_loss) html += `<tr><td class="text-muted">Stop Loss</td><td>$${data.stop_loss.toFixed(2)}</td></tr>`;
+                if (data.take_profit) html += `<tr><td class="text-muted">Take Profit</td><td>$${data.take_profit.toFixed(2)}</td></tr>`;
+            }
+
+            html += `<tr><td class="text-muted">Reason</td><td><small>${data.reason}</small></td></tr>`;
+
+            // Probability breakdown
+            const pBull = (data.prob_bullish * 100).toFixed(1);
+            const pBear = (data.prob_bearish * 100).toFixed(1);
+            const pFlat = (data.prob_no_fractal * 100).toFixed(1);
+            html += `<tr><td class="text-muted">Probabilities</td><td>
+                <small class="text-success">Bull ${pBull}%</small> |
+                <small class="text-danger">Bear ${pBear}%</small> |
+                <small class="text-muted">Flat ${pFlat}%</small>
+            </td></tr>`;
+
+            html += '</table>';
+            el.innerHTML = html;
+        })
+        .catch(() => {
+            document.getElementById('latestSignal').innerHTML =
+                '<span class="text-muted">Could not fetch signal.</span>';
+        });
+}
+
+document.getElementById('btnStartSync').addEventListener('click', function() {
+    fetch('/api/toggle-live-sync', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({enabled: true})
+    }).then(() => refreshSyncStatus());
+});
+
+document.getElementById('btnStopSync').addEventListener('click', function() {
+    fetch('/api/toggle-live-sync', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({enabled: false})
+    }).then(() => refreshSyncStatus());
+});
+
+refreshSyncStatus();
+refreshLatestSignal();
+setInterval(refreshSyncStatus, 30000);
+setInterval(refreshLatestSignal, 30000);
+</script>
+{% endblock %}

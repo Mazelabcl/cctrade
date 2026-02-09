@@ -4,7 +4,7 @@ import threading
 from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, Response, current_app
 from ..extensions import db
-from ..models import Candle, Level, Feature, MLModel, Prediction, PipelineRun, BacktestResult
+from ..models import Candle, Feature, Level, MLModel, Prediction, PipelineRun, BacktestResult
 
 api_bp = Blueprint('api', __name__)
 
@@ -397,6 +397,107 @@ def backtest_results():
         query = query.filter_by(model_id=model_id)
     rows = query.order_by(BacktestResult.created_at.desc()).limit(limit).all()
     return jsonify([r.to_dict() for r in rows])
+
+
+@api_bp.route('/toggle-live-sync', methods=['POST'])
+def toggle_live_sync():
+    """Start or stop the live data sync scheduler job."""
+    from ..models.setting import get_setting, set_setting
+    from ..tasks.scheduler import start_live_sync, stop_live_sync, is_live_sync_active
+
+    data = request.get_json() or {}
+    enabled = data.get('enabled', True)
+    app = current_app._get_current_object()
+
+    if enabled:
+        interval = int(get_setting('live_sync_interval_minutes', '5'))
+        set_setting('live_sync_enabled', 'true')
+        start_live_sync(app, interval)
+        return jsonify({'status': 'ok', 'message': f'Live sync started (every {interval}m)'})
+    else:
+        set_setting('live_sync_enabled', 'false')
+        stop_live_sync()
+        return jsonify({'status': 'ok', 'message': 'Live sync stopped'})
+
+
+@api_bp.route('/sync-status')
+def sync_status():
+    """Return current live sync state and recent sync history."""
+    from ..models.setting import get_setting
+    from ..tasks.scheduler import is_live_sync_active
+    from ..tasks.data_sync import get_last_fetch_time
+
+    enabled = get_setting('live_sync_enabled', 'false') == 'true'
+    interval = get_setting('live_sync_interval_minutes', '5')
+    job_active = is_live_sync_active()
+    last_fetch = get_last_fetch_time()
+
+    # Recent sync history from PipelineRun
+    recent_syncs = (
+        PipelineRun.query
+        .filter_by(pipeline_type='data_fetch')
+        .order_by(PipelineRun.started_at.desc())
+        .limit(15)
+        .all()
+    )
+
+    return jsonify({
+        'enabled': enabled,
+        'interval_minutes': int(interval),
+        'job_active': job_active,
+        'last_fetch': last_fetch.isoformat() if last_fetch else None,
+        'recent_syncs': [r.to_dict() for r in recent_syncs],
+    })
+
+
+@api_bp.route('/latest-signal')
+def latest_signal():
+    """Get the latest prediction with trade signal for the most recent candle."""
+    from ..services.signal_generator import generate_signal
+
+    # Find the most recent prediction
+    latest_pred = (
+        Prediction.query
+        .join(Candle, Prediction.candle_id == Candle.id)
+        .order_by(Candle.open_time.desc())
+        .first()
+    )
+
+    if not latest_pred:
+        return jsonify({'status': 'no_data', 'message': 'No predictions available'})
+
+    candle = db.session.get(Candle, latest_pred.candle_id)
+    feature = Feature.query.filter_by(candle_id=latest_pred.candle_id).first()
+
+    # Find nearest support/resistance from active levels
+    active_levels = Level.query.filter(Level.invalidated_at.is_(None)).all()
+    nearest_support = None
+    nearest_resistance = None
+    for lvl in sorted(active_levels, key=lambda l: l.price_level, reverse=True):
+        if lvl.price_level <= candle.close and nearest_support is None:
+            nearest_support = lvl.price_level
+    for lvl in sorted(active_levels, key=lambda l: l.price_level):
+        if lvl.price_level > candle.close and nearest_resistance is None:
+            nearest_resistance = lvl.price_level
+
+    signal = generate_signal(latest_pred, candle, feature, nearest_support, nearest_resistance)
+
+    return jsonify({
+        'status': 'ok',
+        'candle_time': candle.open_time.isoformat(),
+        'candle_close': candle.close,
+        'predicted_class': latest_pred.predicted_class,
+        'prob_bullish': latest_pred.prob_bullish,
+        'prob_bearish': latest_pred.prob_bearish,
+        'prob_no_fractal': latest_pred.prob_no_fractal,
+        'confidence': latest_pred.confidence,
+        'signal': signal.signal,
+        'entry_price': signal.entry_price,
+        'stop_loss': signal.stop_loss,
+        'take_profit': signal.take_profit,
+        'atr': signal.atr,
+        'reason': signal.reason,
+    })
 
 
 @api_bp.route('/pipeline-runs')

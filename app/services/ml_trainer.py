@@ -18,6 +18,7 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import StandardScaler, label_binarize
+from sqlalchemy import func as sa_func
 from sqlalchemy.orm import Session
 
 from ..models import Candle, Feature, MLModel, PipelineRun
@@ -199,7 +200,7 @@ def train_model(
         # Save model file
         os.makedirs(model_dir, exist_ok=True)
         version = (
-            db.query(db.func.max(MLModel.version))
+            db.query(sa_func.max(MLModel.version))
             .filter_by(algorithm=algorithm, prediction_horizon=prediction_horizon)
             .scalar() or 0
         ) + 1
@@ -384,7 +385,7 @@ def train_enhanced_model(
         # Save model file
         os.makedirs(model_dir, exist_ok=True)
         version = (
-            db.query(db.func.max(MLModel.version))
+            db.query(sa_func.max(MLModel.version))
             .filter_by(algorithm=algorithm, prediction_horizon=prediction_horizon)
             .scalar() or 0
         ) + 1

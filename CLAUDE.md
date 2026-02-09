@@ -27,8 +27,9 @@ alembic upgrade head
 ```
 
 ### Configuration
-- Environment variables: Set `BINANCE_API_KEY` and `BINANCE_API_SECRET` in `.env` file
-- App config: `app/config.py` (DB path, API keys, ML parameters, trading constants)
+- **Runtime settings**: Binance API keys and sync preferences are stored in the DB `settings` table, editable via `/settings/` page
+- **Fallback**: `.env` file (`BINANCE_API_KEY`, `BINANCE_API_SECRET`) used when DB settings are empty
+- App config: `app/config.py` (DB path, ML parameters, trading constants)
 - Database: SQLite at `instance/tradebot.db`
 
 ## Architecture
@@ -63,6 +64,8 @@ instance/               # SQLite database (gitignored)
 - **MLModel** — Trained model registry with metrics
 - **Prediction** — Prediction history with probabilities
 - **PipelineRun** — Pipeline execution log
+- **Setting** — Key-value runtime configuration (API keys, sync preferences)
+- **BacktestResult** — Backtest results with trade log JSON
 
 ### Views (Blueprints)
 
@@ -71,6 +74,8 @@ instance/               # SQLite database (gitignored)
 - `charts_bp` → `/charts/` — TradingView Lightweight Charts
 - `features_bp` → `/features/` — Feature engineering status
 - `models_bp` → `/models/` — ML model registry
+- `backtest_bp` → `/backtest/` — Backtesting UI
+- `settings_bp` → `/settings/` — API keys, live sync config, latest signal
 - `api_bp` → `/api/` — JSON API endpoints
 
 ### Key API Endpoints
@@ -79,6 +84,9 @@ instance/               # SQLite database (gitignored)
 - `GET /api/stats` — Dashboard statistics
 - `GET /api/candles?tf=1h&start=...&end=...&limit=500` — Candle data
 - `GET /api/levels?start=...&end=...&active_only=true` — Level data
+- `GET /api/sync-status` — Live sync status + recent sync history
+- `GET /api/latest-signal` — Latest prediction signal (LONG/SHORT/FLAT) with confidence %
+- `POST /api/toggle-live-sync` — Enable/disable live data sync
 
 ### Technology Stack
 
@@ -112,13 +120,24 @@ All original business logic is preserved in `legacy/` for reference during servi
 - `legacy/target_variable.py` — Target variable generation
 - `legacy/ml_models/` — Model training, evaluation, prediction
 
+### Live Sync & Pipeline
+
+The settings page (`/settings/`) provides:
+- **Binance API key management** — keys stored in DB, masked on display
+- **Live data sync** — configurable interval (1–30 min), timeframes (1h/4h/1d)
+- **Full pipeline mode** — when enabled, each sync tick runs: fetch → indicators → features → predictions
+- **Latest signal display** — shows LONG/SHORT/FLAT with confidence %, SL/TP, probability breakdown
+- **Sync history** — table of recent sync runs with status, candle count, duration
+
+Key files: `app/views/settings.py`, `app/tasks/data_sync.py`, `app/tasks/scheduler.py`
+
 ### Build Phases
 
 1. **Phase 1** (DONE): Project restructure + SQLite foundation
-2. **Phase 2**: Dashboard + data status views
-3. **Phase 3**: Indicators pipeline integration
-4. **Phase 4**: Interactive charts
-5. **Phase 5**: Feature engineering pipeline
-6. **Phase 6**: ML training & evaluation UI
-7. **Phase 7**: Predictions & automation
-8. **Phase 8**: Polish, testing & deployment
+2. **Phase 2** (DONE): Dashboard + data status views
+3. **Phase 3** (DONE): Indicators pipeline integration
+4. **Phase 4** (DONE): Interactive charts
+5. **Phase 5** (DONE): Feature engineering pipeline
+6. **Phase 6** (DONE): ML training & evaluation UI
+7. **Phase 7** (DONE): Predictions & automation
+8. **Phase 8** (DONE): Settings UI, live sync, backtesting

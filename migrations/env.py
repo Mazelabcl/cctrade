@@ -16,7 +16,7 @@ if config.config_file_name is not None:
 
 # Import models for autogenerate support
 from app.extensions import db
-from app.models import Candle, Level, Feature, MLModel, Prediction, PipelineRun  # noqa: F401
+from app.models import Candle, Level, Feature, MLModel, Prediction, PipelineRun, BacktestResult  # noqa: F401
 target_metadata = db.metadata
 
 # other values from the config, defined by the needs of env.py,

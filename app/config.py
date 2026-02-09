@@ -55,6 +55,16 @@ class Config:
         2: 'bearish_fractal',
     }
 
+    # Backtesting
+    BACKTEST_INITIAL_CASH = 100_000.0
+    BACKTEST_COMMISSION = 0.001        # 0.1% per trade
+    BACKTEST_RISK_PER_TRADE = 0.02     # 2% of portfolio
+    BACKTEST_CONFIDENCE_THRESHOLD = 0.55
+    BACKTEST_LEVEL_PROXIMITY_PCT = 0.02  # price within 2% of level
+    BACKTEST_ATR_SL_MULT = 1.5         # stop-loss = 1.5x ATR
+    BACKTEST_ATR_TP_MULT = 3.0         # take-profit = 3.0x ATR
+    BACKTEST_INVALIDATE_ON_FIRST_TOUCH = True  # levels disappear on first touch in backtest
+
     # Scheduler
     SCHEDULER_API_ENABLED = False
     SCHEDULER_ENABLED = os.getenv('SCHEDULER_ENABLED', 'false').lower() == 'true'

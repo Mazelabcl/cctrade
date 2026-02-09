@@ -38,6 +38,19 @@ try:
 except ImportError:
     LIGHTGBM_AVAILABLE = False
 
+try:
+    import optuna
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+    OPTUNA_AVAILABLE = True
+except ImportError:
+    OPTUNA_AVAILABLE = False
+
+try:
+    from imblearn.over_sampling import SMOTE
+    SMOTE_AVAILABLE = True
+except ImportError:
+    SMOTE_AVAILABLE = False
+
 # Feature columns used for training
 FEATURE_COLUMNS = [
     'support_distance_pct', 'support_daily_count', 'support_weekly_count',
@@ -48,6 +61,8 @@ FEATURE_COLUMNS = [
     'volume_short_ratio', 'volume_long_ratio',
     'utc_block', 'candles_since_last_up', 'candles_since_last_down',
     'total_support_touches', 'total_resistance_touches',
+    'rsi_14', 'macd_line', 'macd_signal', 'macd_histogram',
+    'bollinger_width', 'atr_14', 'momentum_12',
 ]
 
 
@@ -224,6 +239,194 @@ def train_model(
         logger.info(
             "Model trained: %s v%d — acc=%.3f, f1=%.3f, roc=%.3f",
             model_name, version, acc, f1, roc or 0,
+        )
+        return ml_model
+
+    except Exception as exc:
+        run.status = 'failed'
+        run.finished_at = datetime.now(timezone.utc)
+        run.error_message = str(exc)
+        db.commit()
+        raise
+
+
+def train_enhanced_model(
+    db: Session,
+    prediction_horizon: str = 'day',
+    name: str = None,
+    model_dir: str = 'instance/models',
+    n_trials: int = 50,
+    use_smote: bool = True,
+) -> MLModel:
+    """Train an enhanced LightGBM model with Optuna hyperparameter tuning.
+
+    Uses TimeSeriesSplit cross-validation, optional SMOTE oversampling for
+    minority fractal classes, and a held-out test set for final evaluation.
+
+    Returns the MLModel record.
+    """
+    if not LIGHTGBM_AVAILABLE:
+        raise RuntimeError("lightgbm is required for train_enhanced_model")
+    if not OPTUNA_AVAILABLE:
+        raise RuntimeError("optuna is required for train_enhanced_model")
+
+    algorithm = 'lightgbm_enhanced'
+
+    run = PipelineRun(
+        pipeline_type='training',
+        status='running',
+        started_at=datetime.now(timezone.utc),
+        metadata_json={'algorithm': algorithm, 'horizon': prediction_horizon,
+                       'n_trials': n_trials, 'smote': use_smote},
+    )
+    db.add(run)
+    db.commit()
+
+    start_time = time.time()
+
+    try:
+        X, y = _build_dataset(db, prediction_horizon)
+        if X.empty:
+            raise ValueError("No training data available. Compute features first.")
+
+        X = X.fillna(0)
+
+        # Hold out last 15% as final test set
+        n = len(X)
+        split_idx = int(n * 0.85)
+        X_dev, y_dev = X.iloc[:split_idx], y.iloc[:split_idx]
+        X_test, y_test = X.iloc[split_idx:], y.iloc[split_idx:]
+
+        # Scale features
+        scaler = StandardScaler()
+        X_dev_scaled = pd.DataFrame(scaler.fit_transform(X_dev), columns=X.columns)
+        X_test_scaled = pd.DataFrame(scaler.transform(X_test), columns=X.columns)
+
+        # Apply SMOTE to dev set if requested
+        X_train_final = X_dev_scaled
+        y_train_final = y_dev
+        if use_smote and SMOTE_AVAILABLE:
+            try:
+                sm = SMOTE(random_state=42)
+                X_train_final, y_train_final = sm.fit_resample(X_dev_scaled, y_dev)
+            except ValueError:
+                logger.warning("SMOTE failed (possibly too few minority samples), using original data")
+
+        # Optuna objective
+        tscv = TimeSeriesSplit(n_splits=5)
+
+        def _objective(trial):
+            params = {
+                'n_estimators': trial.suggest_int('n_estimators', 100, 500),
+                'max_depth': trial.suggest_int('max_depth', 3, 10),
+                'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),
+                'num_leaves': trial.suggest_int('num_leaves', 15, 127),
+                'min_child_samples': trial.suggest_int('min_child_samples', 5, 50),
+                'subsample': trial.suggest_float('subsample', 0.6, 1.0),
+                'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 1.0),
+                'reg_alpha': trial.suggest_float('reg_alpha', 1e-8, 10.0, log=True),
+                'reg_lambda': trial.suggest_float('reg_lambda', 1e-8, 10.0, log=True),
+            }
+            scores = []
+            for train_idx, val_idx in tscv.split(X_dev_scaled):
+                X_tr = X_dev_scaled.iloc[train_idx]
+                y_tr = y_dev.iloc[train_idx]
+                X_va = X_dev_scaled.iloc[val_idx]
+                y_va = y_dev.iloc[val_idx]
+
+                if use_smote and SMOTE_AVAILABLE:
+                    try:
+                        sm = SMOTE(random_state=42)
+                        X_tr, y_tr = sm.fit_resample(X_tr, y_tr)
+                    except ValueError:
+                        pass
+
+                mdl = lgb.LGBMClassifier(
+                    **params, class_weight='balanced',
+                    random_state=42, n_jobs=-1, verbose=-1,
+                )
+                mdl.fit(X_tr, y_tr)
+                y_pred = mdl.predict(X_va)
+                scores.append(f1_score(y_va, y_pred, average='macro', zero_division=0))
+            return np.mean(scores)
+
+        study = optuna.create_study(direction='maximize')
+        study.optimize(_objective, n_trials=n_trials, show_progress_bar=False)
+
+        best_params = study.best_params
+        logger.info("Optuna best params: %s (f1=%.4f)", best_params, study.best_value)
+
+        # Train final model with best params on full dev set
+        model = lgb.LGBMClassifier(
+            **best_params, class_weight='balanced',
+            random_state=42, n_jobs=-1, verbose=-1,
+        )
+        model.fit(X_train_final, y_train_final)
+
+        # Evaluate on held-out test set
+        y_pred = model.predict(X_test_scaled)
+        y_proba = model.predict_proba(X_test_scaled)
+
+        acc = accuracy_score(y_test, y_pred)
+        prec = precision_score(y_test, y_pred, average='macro', zero_division=0)
+        rec = recall_score(y_test, y_pred, average='macro', zero_division=0)
+        f1 = f1_score(y_test, y_pred, average='macro', zero_division=0)
+
+        roc = None
+        try:
+            classes = sorted(y.unique())
+            y_test_bin = label_binarize(y_test, classes=classes)
+            if y_test_bin.shape[1] > 1:
+                roc = roc_auc_score(y_test_bin, y_proba, average='macro', multi_class='ovr')
+        except Exception:
+            pass
+
+        # Save model file
+        os.makedirs(model_dir, exist_ok=True)
+        version = (
+            db.query(db.func.max(MLModel.version))
+            .filter_by(algorithm=algorithm, prediction_horizon=prediction_horizon)
+            .scalar() or 0
+        ) + 1
+        model_name = name or f"{algorithm}_{prediction_horizon}"
+        file_name = f"{model_name}_v{version}.joblib"
+        file_path = os.path.join(model_dir, file_name)
+
+        joblib.dump({
+            'model': model, 'scaler': scaler, 'features': list(X.columns),
+            'best_params': best_params,
+        }, file_path)
+
+        duration = time.time() - start_time
+
+        ml_model = MLModel(
+            name=model_name,
+            algorithm=algorithm,
+            version=version,
+            prediction_horizon=prediction_horizon,
+            file_path=file_path,
+            feature_names=list(X.columns),
+            accuracy=acc,
+            precision_macro=prec,
+            recall_macro=rec,
+            f1_macro=f1,
+            roc_auc=roc,
+            train_rows=len(X_dev),
+            train_period=f"{X.index[0]}-{X.index[-1]}",
+            hyperparameters=best_params,
+            training_duration_sec=duration,
+            created_at=datetime.now(timezone.utc),
+        )
+        db.add(ml_model)
+
+        run.status = 'completed'
+        run.finished_at = datetime.now(timezone.utc)
+        run.rows_processed = len(X)
+        db.commit()
+
+        logger.info(
+            "Enhanced model trained: %s v%d — acc=%.3f, f1=%.3f, roc=%.3f (%.1fs)",
+            model_name, version, acc, f1, roc or 0, duration,
         )
         return ml_model
 

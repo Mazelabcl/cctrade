@@ -4,7 +4,7 @@ import threading
 from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, Response, current_app
 from ..extensions import db
-from ..models import Candle, Level, Feature, MLModel, Prediction, PipelineRun
+from ..models import Candle, Level, Feature, MLModel, Prediction, PipelineRun, BacktestResult
 
 api_bp = Blueprint('api', __name__)
 
@@ -342,6 +342,61 @@ def backfill_actuals():
         return jsonify({'status': 'ok', 'updated': count})
     except Exception as e:
         return jsonify({'status': 'error', 'error': str(e)}), 400
+
+
+@api_bp.route('/run-backtest', methods=['POST'])
+def run_backtest_endpoint():
+    """Trigger a backtest in a background thread."""
+    from ..services.backtest.runner import run_backtest as _run_bt
+
+    data = request.get_json() or {}
+    model_id = data.get('model_id')
+    if not model_id:
+        return jsonify({'status': 'error', 'error': 'model_id required'}), 400
+
+    cash = data.get('cash', 100000)
+    commission = data.get('commission', 0.001)
+    risk = data.get('risk_per_trade', 0.02)
+    confidence = data.get('confidence_threshold', 0.55)
+
+    app = current_app._get_current_object()
+
+    def _work():
+        with app.app_context():
+            publish_sse('pipeline', {'status': 'running', 'type': 'backtest',
+                                     'model_id': model_id})
+            try:
+                result = _run_bt(
+                    db.session, model_id=model_id,
+                    initial_cash=cash, commission=commission,
+                    risk_per_trade=risk, confidence_threshold=confidence,
+                )
+                publish_sse('pipeline', {
+                    'status': 'completed', 'type': 'backtest',
+                    'result_id': result.id,
+                    'total_return': result.total_return,
+                    'total_trades': result.total_trades,
+                })
+            except Exception as e:
+                publish_sse('pipeline', {'status': 'failed', 'type': 'backtest',
+                                         'error': str(e)})
+
+    thread = threading.Thread(target=_work, daemon=True)
+    thread.start()
+    return jsonify({'status': 'started', 'message': f'Backtest started for model {model_id}'})
+
+
+@api_bp.route('/backtest-results')
+def backtest_results():
+    """Get backtest results, optionally filtered by model."""
+    model_id = request.args.get('model_id', type=int)
+    limit = request.args.get('limit', 20, type=int)
+
+    query = BacktestResult.query
+    if model_id:
+        query = query.filter_by(model_id=model_id)
+    rows = query.order_by(BacktestResult.created_at.desc()).limit(limit).all()
+    return jsonify([r.to_dict() for r in rows])
 
 
 @api_bp.route('/pipeline-runs')

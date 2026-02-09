@@ -4,6 +4,8 @@ from app.extensions import db as _db
 from app.models import Candle, Level, Feature
 from app.services.feature_engine import (
     _candle_ratios, _volume_ratios, _utc_block, _find_nearest_levels,
+    _compute_rsi, _compute_macd, _compute_bollinger_width,
+    _compute_atr, _compute_momentum,
     compute_features,
 )
 import numpy as np
@@ -89,6 +91,83 @@ def test_find_nearest_levels_empty():
     sup, res = _find_nearest_levels(42500, pd.DataFrame())
     assert sup is None
     assert res is None
+
+
+def test_compute_rsi_basic():
+    """RSI with simple rising prices should be near 100."""
+    closes = np.arange(100.0, 120.0)  # 20 rising closes
+    rsi = _compute_rsi(closes, period=14)
+    assert rsi is not None
+    assert 90 <= rsi <= 100  # strongly bullish
+
+
+def test_compute_rsi_falling():
+    """RSI with falling prices should be near 0."""
+    closes = np.arange(120.0, 100.0, -1.0)  # 20 falling closes
+    rsi = _compute_rsi(closes, period=14)
+    assert rsi is not None
+    assert 0 <= rsi <= 10  # strongly bearish
+
+
+def test_compute_rsi_insufficient_data():
+    """RSI returns None with insufficient data."""
+    assert _compute_rsi(np.array([1, 2, 3]), period=14) is None
+
+
+def test_compute_macd_basic():
+    """MACD returns three values with sufficient data."""
+    closes = np.sin(np.linspace(0, 6 * np.pi, 100)) * 100 + 1000
+    ml, ms, mh = _compute_macd(closes)
+    assert ml is not None
+    assert ms is not None
+    assert mh is not None
+    assert abs(mh - (ml - ms)) < 0.001
+
+
+def test_compute_macd_insufficient():
+    """MACD returns None with insufficient data."""
+    ml, ms, mh = _compute_macd(np.array([1, 2, 3]))
+    assert ml is None
+
+
+def test_compute_bollinger_width():
+    """Bollinger width is positive for volatile data."""
+    closes = np.array([100, 102, 98, 104, 96, 106, 94, 108, 92, 110,
+                        100, 102, 98, 104, 96, 106, 94, 108, 92, 110])
+    bw = _compute_bollinger_width(closes, period=20)
+    assert bw is not None
+    assert bw > 0
+
+
+def test_compute_bollinger_width_insufficient():
+    assert _compute_bollinger_width(np.array([1, 2, 3]), period=20) is None
+
+
+def test_compute_atr_basic():
+    """ATR should be positive with typical OHLC data."""
+    n = 20
+    highs = np.array([100 + i + 5 for i in range(n)], dtype=float)
+    lows = np.array([100 + i - 5 for i in range(n)], dtype=float)
+    closes = np.array([100 + i for i in range(n)], dtype=float)
+    atr = _compute_atr(highs, lows, closes, period=14)
+    assert atr is not None
+    assert atr > 0
+
+
+def test_compute_atr_insufficient():
+    assert _compute_atr(np.array([1.0]), np.array([1.0]), np.array([1.0]), period=14) is None
+
+
+def test_compute_momentum():
+    """Momentum for rising prices should be positive."""
+    closes = np.arange(100.0, 120.0)
+    mom = _compute_momentum(closes, period=12)
+    assert mom is not None
+    assert mom > 0
+
+
+def test_compute_momentum_insufficient():
+    assert _compute_momentum(np.array([1.0, 2.0]), period=12) is None
 
 
 def test_compute_features_basic(app, sample_candles, sample_levels):

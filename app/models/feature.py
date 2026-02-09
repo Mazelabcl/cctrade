@@ -46,6 +46,15 @@ class Feature(db.Model):
     candles_since_last_up = db.Column(db.Integer)
     candles_since_last_down = db.Column(db.Integer)
 
+    # Momentum / Volatility indicators
+    rsi_14 = db.Column(db.Float)
+    macd_line = db.Column(db.Float)
+    macd_signal = db.Column(db.Float)
+    macd_histogram = db.Column(db.Float)
+    bollinger_width = db.Column(db.Float)
+    atr_14 = db.Column(db.Float)
+    momentum_12 = db.Column(db.Float)
+
     # Vectors stored as JSON
     support_level_vector = db.Column(db.JSON)
     resistance_level_vector = db.Column(db.JSON)

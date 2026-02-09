@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}Backtest #{{ result.id }}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <a href="{{ url_for('backtest.index') }}" class="btn btn-outline-secondary me-3">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h2 class="mb-0">Backtest #{{ result.id }}</h2>
+    <span class="badge bg-primary ms-3">Model: {{ model.name if model else result.model_id }}</span>
+</div>
+
+<!-- Metrics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Total Return</h6>
+                <h3 class="{{ 'text-success' if result.total_return and result.total_return > 0 else 'text-danger' }}">
+                    {{ '%.2f'|format(result.total_return * 100) if result.total_return else 'N/A' }}%
+                </h3>
+                <small class="text-muted">${{ '{:,.0f}'.format(result.initial_cash) }} → ${{ '{:,.0f}'.format(result.final_value) if result.final_value else 'N/A' }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Sharpe Ratio</h6>
+                <h3>{{ '%.3f'|format(result.sharpe_ratio) if result.sharpe_ratio else 'N/A' }}</h3>
+                <small class="text-muted">Risk-adjusted return</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Max Drawdown</h6>
+                <h3 class="text-danger">{{ '%.2f'|format(result.max_drawdown * 100) if result.max_drawdown else 'N/A' }}%</h3>
+                <small class="text-muted">Peak-to-trough decline</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Win Rate</h6>
+                <h3>{{ '%.1f'|format(result.win_rate * 100) if result.win_rate else '0' }}%</h3>
+                <small class="text-muted">{{ result.total_trades or 0 }} trades</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Profit Factor</h6>
+                <h3>{{ '%.2f'|format(result.profit_factor) if result.profit_factor else 'N/A' }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Avg Win</h6>
+                <h3 class="text-success">${{ '{:,.2f}'.format(result.avg_win) if result.avg_win else '0' }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Avg Loss</h6>
+                <h3 class="text-danger">${{ '{:,.2f}'.format(result.avg_loss) if result.avg_loss else '0' }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">SQN</h6>
+                <h3>{{ '%.2f'|format(result.sqn) if result.sqn else 'N/A' }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Config -->
+<div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0">Configuration</h5></div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-2"><strong>Cash:</strong> ${{ '{:,.0f}'.format(result.initial_cash) }}</div>
+            <div class="col-md-2"><strong>Commission:</strong> {{ '%.2f'|format(result.commission * 100) if result.commission else 'N/A' }}%</div>
+            <div class="col-md-2"><strong>Risk/Trade:</strong> {{ '%.1f'|format(result.risk_per_trade * 100) if result.risk_per_trade else 'N/A' }}%</div>
+            <div class="col-md-2"><strong>Confidence:</strong> {{ '%.0f'|format(result.confidence_threshold * 100) if result.confidence_threshold else 'N/A' }}%</div>
+            <div class="col-md-2"><strong>SL Mult:</strong> {{ result.atr_sl_mult or 'N/A' }}x</div>
+            <div class="col-md-2"><strong>TP Mult:</strong> {{ result.atr_tp_mult or 'N/A' }}x</div>
+        </div>
+    </div>
+</div>
+
+<!-- Equity Curve -->
+{% if result.trade_log and result.trade_log|length > 0 %}
+<div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0">Equity Curve</h5></div>
+    <div class="card-body">
+        <canvas id="equity-chart" height="200"></canvas>
+    </div>
+</div>
+
+<!-- Trade Log -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between">
+        <h5 class="mb-0">Trade Log</h5>
+        <span class="badge bg-secondary">{{ result.trade_log|length }} trades</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+            <table class="table table-hover table-sm mb-0">
+                <thead class="sticky-top">
+                    <tr>
+                        <th>#</th>
+                        <th>Direction</th>
+                        <th>Entry Time</th>
+                        <th>Entry Price</th>
+                        <th>Exit Time</th>
+                        <th>PnL</th>
+                        <th>Confidence</th>
+                        <th>SL</th>
+                        <th>TP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in result.trade_log %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            {% if t.direction == 'LONG' %}
+                            <span class="badge bg-success">LONG</span>
+                            {% else %}
+                            <span class="badge bg-danger">SHORT</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ t.entry_time[:19] if t.entry_time else '' }}</td>
+                        <td>${{ '{:,.0f}'.format(t.entry_price) if t.entry_price else '' }}</td>
+                        <td>{{ t.exit_time[:19] if t.exit_time else '' }}</td>
+                        <td class="{{ 'text-success' if t.pnlcomm > 0 else 'text-danger' }}">
+                            ${{ '{:,.2f}'.format(t.pnlcomm) }}
+                        </td>
+                        <td>{{ '%.2f'|format(t.confidence) }}</td>
+                        <td>${{ '{:,.0f}'.format(t.sl) if t.sl else '' }}</td>
+                        <td>${{ '{:,.0f}'.format(t.tp) if t.tp else '' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">No trades were executed in this backtest.</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if result.trade_log and result.trade_log|length > 0 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+const tradeLog = {{ result.trade_log | tojson }};
+const initialCash = {{ result.initial_cash }};
+
+// Build cumulative equity curve from trade PnL
+let equity = initialCash;
+const labels = [];
+const data = [initialCash];
+
+tradeLog.forEach((t, i) => {
+    equity += t.pnlcomm;
+    labels.push(i + 1);
+    data.push(equity);
+});
+
+new Chart(document.getElementById('equity-chart'), {
+    type: 'line',
+    data: {
+        labels: ['Start', ...labels],
+        datasets: [{
+            label: 'Equity',
+            data: data,
+            borderColor: data[data.length-1] >= initialCash ? '#198754' : '#dc3545',
+            backgroundColor: 'rgba(25,135,84,0.1)',
+            fill: true,
+            tension: 0.1,
+            pointRadius: 2,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {legend: {display: false}},
+        scales: {
+            x: {title: {display: true, text: 'Trade #'}},
+            y: {title: {display: true, text: 'Equity ($)'}}
+        }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

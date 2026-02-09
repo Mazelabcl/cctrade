@@ -15,8 +15,14 @@ HIT_COUNT_THRESHOLD = 4  # Levels are invalidated after this many total touches
 
 
 def update_level_touches(db: Session, candle: Candle,
-                         invalidation_threshold: int = HIT_COUNT_THRESHOLD) -> int:
+                         invalidation_threshold: int = HIT_COUNT_THRESHOLD,
+                         invalidate_on_first_touch: bool = False) -> int:
     """Update touch counts for all active levels based on a single candle.
+
+    Args:
+        invalidate_on_first_touch: When True, levels are invalidated on the
+            first price touch (used by backtesting signal generator).
+            Default False preserves the original threshold-based behaviour.
 
     Returns the number of levels that were touched.
     """
@@ -41,9 +47,12 @@ def update_level_touches(db: Session, candle: Candle,
 
         if was_touched:
             touched += 1
-            total = level.support_touches + level.resistance_touches
-            if total >= invalidation_threshold:
+            if invalidate_on_first_touch:
                 level.invalidated_at = candle.open_time
+            else:
+                total = level.support_touches + level.resistance_touches
+                if total >= invalidation_threshold:
+                    level.invalidated_at = candle.open_time
 
     db.commit()
     return touched

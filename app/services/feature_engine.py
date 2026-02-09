@@ -62,6 +62,77 @@ def _utc_block(dt):
 
 
 # ---------------------------------------------------------------------------
+# Momentum / volatility indicators
+# ---------------------------------------------------------------------------
+
+def _compute_rsi(closes, period=14):
+    """Compute RSI from a numpy array of close prices ending at current bar."""
+    if len(closes) < period + 1:
+        return None
+    deltas = np.diff(closes[-(period + 1):])
+    gains = np.where(deltas > 0, deltas, 0.0)
+    losses = np.where(deltas < 0, -deltas, 0.0)
+    avg_gain = gains.mean()
+    avg_loss = losses.mean()
+    if avg_loss == 0:
+        return 100.0
+    rs = avg_gain / avg_loss
+    return 100.0 - (100.0 / (1.0 + rs))
+
+
+def _compute_macd(closes, fast=12, slow=26, signal=9):
+    """Compute MACD line, signal line, and histogram."""
+    if len(closes) < slow + signal:
+        return None, None, None
+    s = pd.Series(closes)
+    ema_fast = s.ewm(span=fast, adjust=False).mean()
+    ema_slow = s.ewm(span=slow, adjust=False).mean()
+    macd_line = ema_fast - ema_slow
+    macd_signal = macd_line.ewm(span=signal, adjust=False).mean()
+    hist = macd_line - macd_signal
+    return float(macd_line.iloc[-1]), float(macd_signal.iloc[-1]), float(hist.iloc[-1])
+
+
+def _compute_bollinger_width(closes, period=20):
+    """Compute Bollinger Band width (upper - lower) / middle."""
+    if len(closes) < period:
+        return None
+    window = closes[-period:]
+    mid = window.mean()
+    if mid == 0:
+        return None
+    std = window.std()
+    upper = mid + 2 * std
+    lower = mid - 2 * std
+    return float((upper - lower) / mid)
+
+
+def _compute_atr(highs, lows, closes, period=14):
+    """Compute Average True Range from numpy arrays."""
+    if len(highs) < period + 1:
+        return None
+    trs = []
+    for j in range(len(highs) - period, len(highs)):
+        tr = max(
+            highs[j] - lows[j],
+            abs(highs[j] - closes[j - 1]),
+            abs(lows[j] - closes[j - 1]),
+        )
+        trs.append(tr)
+    return float(np.mean(trs))
+
+
+def _compute_momentum(closes, period=12):
+    """Price momentum: (close - close[n periods ago]) / close[n periods ago]."""
+    if len(closes) < period + 1:
+        return None
+    prev = closes[-(period + 1)]
+    if prev == 0:
+        return None
+    return float((closes[-1] - prev) / prev)
+
+
+# ---------------------------------------------------------------------------
 # Zone detection helpers
 # ---------------------------------------------------------------------------
 
@@ -167,8 +238,11 @@ def compute_features(db: Session, timeframe: str = '1h',
             'resistance_touches': l.resistance_touches,
         } for l in levels]) if levels else pd.DataFrame()
 
-        # Volume history array for ratio calculation
+        # Price / volume history arrays for indicator calculation
         volumes = np.array([c.volume for c in candles])
+        closes = np.array([c.close for c in candles])
+        highs = np.array([c.high for c in candles])
+        lows = np.array([c.low for c in candles])
 
         # Fractal timing state
         candles_since_up = 0
@@ -213,6 +287,13 @@ def compute_features(db: Session, timeframe: str = '1h',
             else:
                 candles_since_down += 1
 
+            # Momentum / volatility indicators (computed up to N-1)
+            rsi = _compute_rsi(closes[:i], period=14)
+            macd_l, macd_s, macd_h = _compute_macd(closes[:i])
+            bw = _compute_bollinger_width(closes[:i], period=20)
+            atr = _compute_atr(highs[:i], lows[:i], closes[:i], period=14)
+            mom = _compute_momentum(closes[:i], period=12)
+
             # Zone detection from N-2 perspective
             sup, res = None, None
             if not levels_df.empty:
@@ -231,6 +312,13 @@ def compute_features(db: Session, timeframe: str = '1h',
                 utc_block=utc,
                 candles_since_last_up=candles_since_up,
                 candles_since_last_down=candles_since_down,
+                rsi_14=rsi,
+                macd_line=macd_l,
+                macd_signal=macd_s,
+                macd_histogram=macd_h,
+                bollinger_width=bw,
+                atr_14=atr,
+                momentum_12=mom,
             )
 
             if sup:

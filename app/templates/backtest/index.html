@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Backtest{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-lightning"></i> Backtesting</h2>
+
+<div class="row">
+    <!-- Config Form -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Run Backtest</h5>
+            </div>
+            <div class="card-body">
+                <form id="backtest-form">
+                    <div class="mb-3">
+                        <label class="form-label">Model</label>
+                        <select class="form-select" id="model-id" required>
+                            <option value="">Select a model...</option>
+                            {% for m in models %}
+                            <option value="{{ m.id }}">{{ m.name }} v{{ m.version }} ({{ m.algorithm }}, {{ m.prediction_horizon }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Initial Cash</label>
+                            <input type="number" class="form-control" id="cash" value="100000" step="1000">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Commission %</label>
+                            <input type="number" class="form-control" id="commission" value="0.1" step="0.01">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Risk/Trade %</label>
+                            <input type="number" class="form-control" id="risk" value="2" step="0.1">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Confidence %</label>
+                            <input type="number" class="form-control" id="confidence" value="55" step="1">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" id="run-btn">
+                        <i class="bi bi-play-fill"></i> Run Backtest
+                    </button>
+                </form>
+                <div id="status-msg" class="mt-3" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Results</h5>
+                <span class="badge bg-secondary">{{ results|length }} runs</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Model</th>
+                                <th>Return</th>
+                                <th>Sharpe</th>
+                                <th>Drawdown</th>
+                                <th>Trades</th>
+                                <th>Win Rate</th>
+                                <th>PF</th>
+                                <th>Date</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-body">
+                            {% for r in results %}
+                            <tr>
+                                <td>{{ r.id }}</td>
+                                <td>{{ r.model_id }}</td>
+                                <td class="{{ 'text-success' if r.total_return and r.total_return > 0 else 'text-danger' }}">
+                                    {{ '%.2f'|format(r.total_return * 100) if r.total_return else 'N/A' }}%
+                                </td>
+                                <td>{{ '%.2f'|format(r.sharpe_ratio) if r.sharpe_ratio else 'N/A' }}</td>
+                                <td>{{ '%.2f'|format(r.max_drawdown * 100) if r.max_drawdown else 'N/A' }}%</td>
+                                <td>{{ r.total_trades or 0 }}</td>
+                                <td>{{ '%.1f'|format(r.win_rate * 100) if r.win_rate else 'N/A' }}%</td>
+                                <td>{{ '%.2f'|format(r.profit_factor) if r.profit_factor else 'N/A' }}</td>
+                                <td>{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td><a href="{{ url_for('backtest.detail', result_id=r.id) }}" class="btn btn-sm btn-outline-primary">View</a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('backtest-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('run-btn');
+    const statusMsg = document.getElementById('status-msg');
+    const modelId = document.getElementById('model-id').value;
+    if (!modelId) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Running...';
+    statusMsg.style.display = 'block';
+    statusMsg.className = 'mt-3 alert alert-info';
+    statusMsg.textContent = 'Backtest started...';
+
+    fetch('/api/run-backtest', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            model_id: parseInt(modelId),
+            cash: parseFloat(document.getElementById('cash').value),
+            commission: parseFloat(document.getElementById('commission').value) / 100,
+            risk_per_trade: parseFloat(document.getElementById('risk').value) / 100,
+            confidence_threshold: parseFloat(document.getElementById('confidence').value) / 100,
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        statusMsg.textContent = data.message || 'Backtest queued';
+    })
+    .catch(err => {
+        statusMsg.className = 'mt-3 alert alert-danger';
+        statusMsg.textContent = 'Error: ' + err;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-play-fill"></i> Run Backtest';
+    });
+
+    // Listen for SSE completion
+    const es = new EventSource('/api/stream');
+    es.addEventListener('pipeline', function(e) {
+        const d = JSON.parse(e.data);
+        if (d.type === 'backtest') {
+            if (d.status === 'completed') {
+                statusMsg.className = 'mt-3 alert alert-success';
+                statusMsg.innerHTML = 'Backtest complete! Return: ' +
+                    (d.total_return * 100).toFixed(2) + '%, Trades: ' + d.total_trades +
+                    ' <a href="/backtest/' + d.result_id + '" class="alert-link">View details</a>';
+                es.close();
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-play-fill"></i> Run Backtest';
+            } else if (d.status === 'failed') {
+                statusMsg.className = 'mt-3 alert alert-danger';
+                statusMsg.textContent = 'Failed: ' + d.error;
+                es.close();
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-play-fill"></i> Run Backtest';
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

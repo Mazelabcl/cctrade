@@ -23,7 +23,7 @@ def create_app(config_name=None):
     db.init_app(app)
     scheduler.init_app(app)
 
-    from .models import candle, level, feature, ml_model, prediction, pipeline_run  # noqa: F401
+    from .models import candle, level, feature, ml_model, prediction, pipeline_run, backtest_result  # noqa: F401
 
     from .views.dashboard import dashboard_bp
     from .views.data import data_bp
@@ -31,6 +31,7 @@ def create_app(config_name=None):
     from .views.features import features_bp
     from .views.models import models_bp
     from .views.api import api_bp
+    from .views.backtest import backtest_bp
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(data_bp, url_prefix='/data')
@@ -38,6 +39,7 @@ def create_app(config_name=None):
     app.register_blueprint(features_bp, url_prefix='/features')
     app.register_blueprint(models_bp, url_prefix='/models')
     app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(backtest_bp, url_prefix='/backtest')
 
     with app.app_context():
         db.create_all()

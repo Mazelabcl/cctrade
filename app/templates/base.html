@@ -52,9 +52,15 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if request.blueprint == 'backtest' %}active{% endif %}"
+                    <a class="nav-link {% if request.blueprint == 'backtest' and request.endpoint == 'backtest.index' %}active{% endif %}"
                        href="{{ url_for('backtest.index') }}">
                         <i class="bi bi-lightning me-2"></i> Backtest
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint and 'individual_level' in request.endpoint %}active{% endif %}"
+                       href="{{ url_for('backtest.individual_levels') }}">
+                        <i class="bi bi-bar-chart-steps me-2"></i> Level Backtests
                     </a>
                 </li>
             </ul>

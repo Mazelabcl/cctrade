@@ -114,13 +114,13 @@ def calculate_htf_levels(df: pd.DataFrame, timeframe: str) -> list[dict]:
 def calculate_fibonacci_levels(df: pd.DataFrame, timeframe: str) -> list[dict]:
     """Calculate Fibonacci retracement levels between fractals.
 
-    Uses 0.25, 0.50, 0.639, 0.75 ratios. Each fractal anchor pulls to
+    Uses 0.50, 0.618 (golden pocket), 0.75, 0.786 ratios. Each fractal anchor pulls to
     future opposite fractals while the anchor hasn't been invalidated.
     """
     df = detect_fractals_df(df)
     fib_levels: list[dict] = []
 
-    ratios = [('0.25', 0.25), ('0.50', 0.50), ('0.618', 0.639), ('0.75', 0.75)]
+    ratios = [('0.50', 0.50), ('0.618', 0.639), ('0.75', 0.75), ('0.786', 0.786)]
 
     high_fractals = df[df['bearish_fractal']].copy()
     low_fractals = df[df['bullish_fractal']].copy()

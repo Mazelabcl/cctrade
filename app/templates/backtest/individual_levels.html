@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block title %}Individual Level Backtests{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-bar-chart-steps"></i> Individual Level Backtests</h2>
+        <small class="text-muted">Testing each level type independently | Strategy: fixed_percent (SL 2%, TP 4%, timeout 50)</small>
+    </div>
+    <a href="{{ url_for('backtest.index') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> ML Backtests
+    </a>
+</div>
+
+{% if backtests %}
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    {% set best = backtests|sort(attribute='win_rate', reverse=true)|first %}
+    {% set most_trades = backtests|sort(attribute='total_trades', reverse=true)|first %}
+    {% set best_pf = backtests|sort(attribute='profit_factor', reverse=true)|first %}
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <small class="text-muted">Best Win Rate</small>
+                <h3 class="text-success mb-0">{{ '%.1f'|format(best.win_rate) }}%</h3>
+                <small>{{ best.level_type }} / {{ best.level_source_timeframe }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <small class="text-muted">Best Profit Factor</small>
+                <h3 class="text-info mb-0">{{ '%.2f'|format(best_pf.profit_factor) if best_pf.profit_factor and best_pf.profit_factor < 100 else 'INF' }}</h3>
+                <small>{{ best_pf.level_type }} / {{ best_pf.level_source_timeframe }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <small class="text-muted">Most Trades</small>
+                <h3 class="text-warning mb-0">{{ most_trades.total_trades }}</h3>
+                <small>{{ most_trades.level_type }} / {{ most_trades.level_source_timeframe }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <small class="text-muted">Total Backtests</small>
+                <h3 class="mb-0">{{ backtests|length }}</h3>
+                <small>level type / timeframe combos</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><h6 class="mb-0">Win Rate by Level Type</h6></div>
+            <div class="card-body"><canvas id="winRateChart" height="260"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><h6 class="mb-0">Profit Factor by Level Type</h6></div>
+            <div class="card-body"><canvas id="pfChart" height="260"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">All Results</h5>
+        <div>
+            <select id="tf-filter" class="form-select form-select-sm d-inline-block" style="width:auto;">
+                <option value="">All Timeframes</option>
+                <option value="1d">Daily (1d)</option>
+                <option value="1w">Weekly (1w)</option>
+                <option value="1M">Monthly (1M)</option>
+            </select>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0" id="results-table">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort="level_type">Level Type</th>
+                        <th class="sortable" data-sort="source_tf">Source TF</th>
+                        <th class="sortable text-end" data-sort="trades">Trades</th>
+                        <th class="sortable text-end" data-sort="win_rate">Win Rate</th>
+                        <th class="sortable text-end" data-sort="pf">Profit Factor</th>
+                        <th class="sortable text-end" data-sort="pnl">Total PnL</th>
+                        <th class="sortable text-end" data-sort="avg_win">Avg Win</th>
+                        <th class="sortable text-end" data-sort="avg_loss">Avg Loss</th>
+                        <th class="sortable text-end" data-sort="sharpe">Sharpe</th>
+                        <th class="sortable text-end" data-sort="dd">Max DD</th>
+                        <th class="text-end" data-sort="duration">Avg Duration</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in backtests %}
+                    <tr data-tf="{{ b.level_source_timeframe }}">
+                        <td>
+                            <span class="badge
+                                {% if 'Fractal' in b.level_type %}bg-success
+                                {% elif 'HTF' in b.level_type %}bg-primary
+                                {% elif 'Fib' in b.level_type %}bg-warning text-dark
+                                {% elif 'VP' in b.level_type %}bg-info text-dark
+                                {% else %}bg-secondary{% endif %}">
+                                {{ b.level_type }}
+                            </span>
+                        </td>
+                        <td>{{ b.level_source_timeframe }}</td>
+                        <td class="text-end">{{ b.total_trades }}</td>
+                        <td class="text-end fw-bold {{ 'text-success' if b.win_rate and b.win_rate >= 50 else 'text-danger' }}">
+                            {{ '%.1f'|format(b.win_rate) if b.win_rate else 0 }}%
+                        </td>
+                        <td class="text-end {{ 'text-success' if b.profit_factor and b.profit_factor >= 1.0 else 'text-danger' }}">
+                            {{ '%.2f'|format(b.profit_factor) if b.profit_factor and b.profit_factor < 100 else 'INF' if b.profit_factor and b.profit_factor >= 100 else '0.00' }}
+                        </td>
+                        <td class="text-end {{ 'text-success' if b.total_pnl and b.total_pnl > 0 else 'text-danger' }}">
+                            ${{ '{:,.0f}'.format(b.total_pnl) if b.total_pnl else 0 }}
+                        </td>
+                        <td class="text-end text-success">${{ '{:,.0f}'.format(b.avg_win) if b.avg_win else 0 }}</td>
+                        <td class="text-end text-danger">${{ '{:,.0f}'.format(b.avg_loss) if b.avg_loss else 0 }}</td>
+                        <td class="text-end">{{ '%.2f'|format(b.sharpe_ratio) if b.sharpe_ratio else 'N/A' }}</td>
+                        <td class="text-end">{{ '%.1f'|format(b.max_drawdown) if b.max_drawdown else 0 }}%</td>
+                        <td class="text-end">{{ '%.0f'|format(b.avg_trade_duration) if b.avg_trade_duration else 0 }} candles</td>
+                        <td>
+                            <a href="{{ url_for('backtest.individual_level_detail', bt_id=b.id) }}"
+                               class="btn btn-sm btn-outline-primary" title="View trades">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No individual level backtests found.
+    Run backtests via the API or script first.
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Timeframe filter
+document.getElementById('tf-filter').addEventListener('change', function() {
+    const tf = this.value;
+    document.querySelectorAll('#results-table tbody tr').forEach(row => {
+        row.style.display = (!tf || row.dataset.tf === tf) ? '' : 'none';
+    });
+});
+
+{% if backtests %}
+// Prepare chart data
+const data = {{ backtests_json|tojson }};
+
+// Group by level_type (aggregate across timeframes)
+const grouped = {};
+data.forEach(b => {
+    if (!grouped[b.level_type]) {
+        grouped[b.level_type] = { wr: [], pf: [], trades: 0 };
+    }
+    if (b.win_rate) grouped[b.level_type].wr.push(b.win_rate);
+    if (b.profit_factor && b.profit_factor < 100) grouped[b.level_type].pf.push(b.profit_factor);
+    grouped[b.level_type].trades += b.total_trades || 0;
+});
+
+const labels = Object.keys(grouped);
+const avgWr = labels.map(l => {
+    const arr = grouped[l].wr;
+    return arr.length ? arr.reduce((a,b) => a+b, 0) / arr.length : 0;
+});
+const avgPf = labels.map(l => {
+    const arr = grouped[l].pf;
+    return arr.length ? arr.reduce((a,b) => a+b, 0) / arr.length : 0;
+});
+
+// Color mapping
+function getColor(label) {
+    if (label.includes('Fractal')) return 'rgba(40, 167, 69, 0.8)';
+    if (label.includes('HTF')) return 'rgba(13, 110, 253, 0.8)';
+    if (label.includes('Fib')) return 'rgba(255, 193, 7, 0.8)';
+    if (label.includes('VP')) return 'rgba(13, 202, 240, 0.8)';
+    return 'rgba(108, 117, 125, 0.8)';
+}
+const colors = labels.map(getColor);
+
+// Win Rate Chart
+new Chart(document.getElementById('winRateChart'), {
+    type: 'bar',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Avg Win Rate %',
+            data: avgWr,
+            backgroundColor: colors,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            annotation: {
+                annotations: {
+                    line: { type: 'line', yMin: 50, yMax: 50, borderColor: 'rgba(255,255,255,0.3)', borderDash: [5,5] }
+                }
+            }
+        },
+        scales: {
+            y: { beginAtZero: true, max: 100, title: { display: true, text: 'Win Rate %' } }
+        }
+    }
+});
+
+// Profit Factor Chart
+new Chart(document.getElementById('pfChart'), {
+    type: 'bar',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Avg Profit Factor',
+            data: avgPf,
+            backgroundColor: colors,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            annotation: {
+                annotations: {
+                    line: { type: 'line', yMin: 1, yMax: 1, borderColor: 'rgba(255,255,255,0.3)', borderDash: [5,5] }
+                }
+            }
+        },
+        scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'Profit Factor' } }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

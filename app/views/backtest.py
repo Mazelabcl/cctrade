@@ -153,6 +153,88 @@ def api_il_replay(bt_id):
     })
 
 
+@backtest_bp.route('/api/individual-levels/trade/<int:trade_id>/chart-data')
+def api_il_trade_chart(trade_id):
+    """JSON: candle data around a specific trade for chart visualization."""
+    from pathlib import Path
+    from ..services.individual_level_backtest import load_candles_csv
+    import pandas as pd
+
+    trade = db.session.get(IndividualLevelTrade, trade_id)
+    if trade is None:
+        abort(404)
+
+    # Load candle data from CSV
+    root = Path(__file__).resolve().parent.parent.parent
+    datasets = root / 'datasets'
+    candle_files = sorted(datasets.glob('ml_dataset_*.csv'))
+    if not candle_files:
+        return jsonify({'error': 'No dataset files'}), 404
+
+    candles = load_candles_csv(*[str(f) for f in candle_files])
+
+    # Get candles around the trade: 24h before entry to 24h after exit
+    entry = pd.Timestamp(trade.entry_time)
+    exit_t = pd.Timestamp(trade.exit_time) if trade.exit_time else entry
+    margin = pd.Timedelta(hours=48)
+    mask = (candles['open_time'] >= entry - margin) & (candles['open_time'] <= exit_t + margin)
+    subset = candles[mask]
+
+    chart_candles = []
+    for _, row in subset.iterrows():
+        chart_candles.append({
+            'time': int(row['open_time'].timestamp()),
+            'open': float(row['open']),
+            'high': float(row['high']),
+            'low': float(row['low']),
+            'close': float(row['close']),
+        })
+
+    return jsonify({
+        'trade': trade.to_dict(),
+        'candles': chart_candles,
+        'markers': {
+            'entry_time': int(entry.timestamp()),
+            'entry_price': trade.entry_price,
+            'exit_time': int(pd.Timestamp(trade.exit_time).timestamp()) if trade.exit_time else None,
+            'exit_price': trade.exit_price,
+            'stop_loss': trade.stop_loss,
+            'take_profit': trade.take_profit,
+            'direction': trade.direction,
+            'exit_reason': trade.exit_reason,
+        },
+    })
+
+
+@backtest_bp.route('/individual-levels/<int:bt_id>/trade/<int:trade_id>')
+def individual_trade_chart(bt_id, trade_id):
+    """Individual trade chart visualization page."""
+    bt = db.session.get(IndividualLevelBacktest, bt_id)
+    trade = db.session.get(IndividualLevelTrade, trade_id)
+    if bt is None or trade is None:
+        abort(404)
+
+    # Get prev/next trade for navigation
+    prev_trade = (
+        IndividualLevelTrade.query
+        .filter_by(backtest_id=bt_id)
+        .filter(IndividualLevelTrade.entry_time < trade.entry_time)
+        .order_by(IndividualLevelTrade.entry_time.desc())
+        .first()
+    )
+    next_trade = (
+        IndividualLevelTrade.query
+        .filter_by(backtest_id=bt_id)
+        .filter(IndividualLevelTrade.entry_time > trade.entry_time)
+        .order_by(IndividualLevelTrade.entry_time.asc())
+        .first()
+    )
+
+    return render_template('backtest/individual_trade_chart.html',
+                           bt=bt, trade=trade,
+                           prev_trade=prev_trade, next_trade=next_trade)
+
+
 @backtest_bp.route('/api/individual-levels/run', methods=['POST'])
 def api_il_run():
     """Run a new individual level backtest."""

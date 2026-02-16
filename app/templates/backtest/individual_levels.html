@@ -9,7 +9,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2><i class="bi bi-bar-chart-steps"></i> Individual Level Backtests</h2>
-        <small class="text-muted">Testing each level type independently | Strategy: fixed_percent (SL 2%, TP 4%, timeout 50)</small>
+        <small class="text-muted">Testing each level type independently across all timeframes</small>
     </div>
     <a href="{{ url_for('backtest.index') }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left"></i> ML Backtests
@@ -17,6 +17,45 @@
 </div>
 
 {% if backtests %}
+
+<!-- Strategy Explanation -->
+<div class="card mb-4 border-info">
+    <div class="card-header bg-info bg-opacity-10">
+        <h6 class="mb-0"><i class="bi bi-info-circle me-1"></i> Entry &amp; Exit Criteria Used (Run #1: Baseline)</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <h6 class="text-info">Entry Rule (all levels)</h6>
+                <p class="mb-1">For each <strong>naked level</strong> (not previously touched):</p>
+                <ul class="mb-0 small">
+                    <li><strong>LONG (bounce from support):</strong> Candle low touches level (within 2% tolerance) AND candle closes ABOVE the level.</li>
+                    <li><strong>SHORT (rejection from resistance):</strong> Candle high touches level (within 2% tolerance) AND candle closes BELOW the level.</li>
+                </ul>
+                <p class="mt-1 mb-0 small text-muted">The close confirmation is key: it proves the level held, not just that price touched it.</p>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-success">Exit Rules</h6>
+                <ul class="mb-1 small">
+                    <li><strong>Take Profit:</strong> +4% from entry price</li>
+                    <li><strong>Stop Loss:</strong> -2% from entry price (R:R = 2:1)</li>
+                    <li><strong>Timeout:</strong> 50 candles (if neither TP nor SL hit)</li>
+                </ul>
+                <p class="mb-0 small text-muted">Strategy: <code>fixed_percent</code> — SL and TP as fixed % of entry.</p>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-warning">Next Iterations</h6>
+                <p class="mb-1 small">This is the baseline. We plan to also test:</p>
+                <ul class="mb-0 small">
+                    <li><strong>ATR-based:</strong> SL/TP dynamic based on volatility</li>
+                    <li><strong>Level-based:</strong> TP at next level, SL at opposite level</li>
+                    <li><strong>Different tolerances:</strong> 1%, 2%, 3%</li>
+                    <li><strong>Different R:R ratios:</strong> 1:1, 2:1, 3:1</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Summary Cards -->
 <div class="row mb-4">
@@ -61,19 +100,13 @@
     </div>
 </div>
 
-<!-- Charts Row -->
-<div class="row mb-4">
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header"><h6 class="mb-0">Win Rate by Level Type</h6></div>
-            <div class="card-body"><canvas id="winRateChart" height="260"></canvas></div>
-        </div>
+<!-- Full Expanded Chart — All Combinations -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0">All Level + Timeframe Combinations</h6>
     </div>
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header"><h6 class="mb-0">Profit Factor by Level Type</h6></div>
-            <div class="card-body"><canvas id="pfChart" height="260"></canvas></div>
-        </div>
+    <div class="card-body">
+        <canvas id="allCombosChart" height="350"></canvas>
     </div>
 </div>
 
@@ -95,17 +128,17 @@
             <table class="table table-hover table-sm mb-0" id="results-table">
                 <thead>
                     <tr>
-                        <th class="sortable" data-sort="level_type">Level Type</th>
-                        <th class="sortable" data-sort="source_tf">Source TF</th>
-                        <th class="sortable text-end" data-sort="trades">Trades</th>
-                        <th class="sortable text-end" data-sort="win_rate">Win Rate</th>
-                        <th class="sortable text-end" data-sort="pf">Profit Factor</th>
-                        <th class="sortable text-end" data-sort="pnl">Total PnL</th>
-                        <th class="sortable text-end" data-sort="avg_win">Avg Win</th>
-                        <th class="sortable text-end" data-sort="avg_loss">Avg Loss</th>
-                        <th class="sortable text-end" data-sort="sharpe">Sharpe</th>
-                        <th class="sortable text-end" data-sort="dd">Max DD</th>
-                        <th class="text-end" data-sort="duration">Avg Duration</th>
+                        <th>Level Type</th>
+                        <th>Source TF</th>
+                        <th class="text-end">Trades</th>
+                        <th class="text-end">Win Rate</th>
+                        <th class="text-end">Profit Factor</th>
+                        <th class="text-end">Total PnL</th>
+                        <th class="text-end">Avg Win</th>
+                        <th class="text-end">Avg Loss</th>
+                        <th class="text-end">Sharpe</th>
+                        <th class="text-end">Max DD</th>
+                        <th class="text-end">Avg Duration</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -171,90 +204,83 @@ document.getElementById('tf-filter').addEventListener('change', function() {
 });
 
 {% if backtests %}
-// Prepare chart data
 const data = {{ backtests_json|tojson }};
 
-// Group by level_type (aggregate across timeframes)
-const grouped = {};
-data.forEach(b => {
-    if (!grouped[b.level_type]) {
-        grouped[b.level_type] = { wr: [], pf: [], trades: 0 };
-    }
-    if (b.win_rate) grouped[b.level_type].wr.push(b.win_rate);
-    if (b.profit_factor && b.profit_factor < 100) grouped[b.level_type].pf.push(b.profit_factor);
-    grouped[b.level_type].trades += b.total_trades || 0;
-});
+// Sort by win rate desc for the chart
+data.sort((a, b) => (b.win_rate || 0) - (a.win_rate || 0));
 
-const labels = Object.keys(grouped);
-const avgWr = labels.map(l => {
-    const arr = grouped[l].wr;
-    return arr.length ? arr.reduce((a,b) => a+b, 0) / arr.length : 0;
-});
-const avgPf = labels.map(l => {
-    const arr = grouped[l].pf;
-    return arr.length ? arr.reduce((a,b) => a+b, 0) / arr.length : 0;
-});
+// Build labels like "Fractal_Low / 1w"
+const labels = data.map(b => b.level_type + ' / ' + b.level_source_timeframe);
+const winRates = data.map(b => b.win_rate || 0);
+const profitFactors = data.map(b => (b.profit_factor && b.profit_factor < 100) ? b.profit_factor : 0);
+const trades = data.map(b => b.total_trades || 0);
 
-// Color mapping
 function getColor(label) {
-    if (label.includes('Fractal')) return 'rgba(40, 167, 69, 0.8)';
-    if (label.includes('HTF')) return 'rgba(13, 110, 253, 0.8)';
-    if (label.includes('Fib')) return 'rgba(255, 193, 7, 0.8)';
-    if (label.includes('VP')) return 'rgba(13, 202, 240, 0.8)';
-    return 'rgba(108, 117, 125, 0.8)';
+    if (label.includes('Fractal')) return 'rgba(40, 167, 69, 0.85)';
+    if (label.includes('HTF')) return 'rgba(13, 110, 253, 0.85)';
+    if (label.includes('Fib')) return 'rgba(255, 193, 7, 0.85)';
+    if (label.includes('VP')) return 'rgba(13, 202, 240, 0.85)';
+    return 'rgba(108, 117, 125, 0.85)';
 }
-const colors = labels.map(getColor);
+const barColors = labels.map(getColor);
 
-// Win Rate Chart
-new Chart(document.getElementById('winRateChart'), {
+new Chart(document.getElementById('allCombosChart'), {
     type: 'bar',
     data: {
         labels: labels,
-        datasets: [{
-            label: 'Avg Win Rate %',
-            data: avgWr,
-            backgroundColor: colors,
-        }]
+        datasets: [
+            {
+                label: 'Win Rate %',
+                data: winRates,
+                backgroundColor: barColors,
+                yAxisID: 'y',
+                order: 2,
+            },
+            {
+                label: 'Profit Factor',
+                data: profitFactors,
+                type: 'line',
+                borderColor: '#ffc107',
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                pointRadius: 4,
+                pointBackgroundColor: '#ffc107',
+                yAxisID: 'y2',
+                order: 1,
+            },
+        ]
     },
     options: {
         responsive: true,
+        interaction: { mode: 'index', intersect: false },
         plugins: {
-            legend: { display: false },
-            annotation: {
-                annotations: {
-                    line: { type: 'line', yMin: 50, yMax: 50, borderColor: 'rgba(255,255,255,0.3)', borderDash: [5,5] }
+            legend: { position: 'top' },
+            tooltip: {
+                callbacks: {
+                    afterBody: function(items) {
+                        const idx = items[0].dataIndex;
+                        return 'Trades: ' + trades[idx];
+                    }
                 }
             }
         },
         scales: {
-            y: { beginAtZero: true, max: 100, title: { display: true, text: 'Win Rate %' } }
-        }
-    }
-});
-
-// Profit Factor Chart
-new Chart(document.getElementById('pfChart'), {
-    type: 'bar',
-    data: {
-        labels: labels,
-        datasets: [{
-            label: 'Avg Profit Factor',
-            data: avgPf,
-            backgroundColor: colors,
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { display: false },
-            annotation: {
-                annotations: {
-                    line: { type: 'line', yMin: 1, yMax: 1, borderColor: 'rgba(255,255,255,0.3)', borderDash: [5,5] }
-                }
+            x: {
+                ticks: { maxRotation: 45, minRotation: 45, font: { size: 11 } }
+            },
+            y: {
+                beginAtZero: true,
+                max: 100,
+                position: 'left',
+                title: { display: true, text: 'Win Rate %' },
+                grid: { drawOnChartArea: true },
+            },
+            y2: {
+                beginAtZero: true,
+                position: 'right',
+                title: { display: true, text: 'Profit Factor' },
+                grid: { drawOnChartArea: false },
             }
-        },
-        scales: {
-            y: { beginAtZero: true, title: { display: true, text: 'Profit Factor' } }
         }
     }
 });

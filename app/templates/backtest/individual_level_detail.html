@@ -142,6 +142,7 @@
                         <th class="text-end">Duration</th>
                         <th class="text-end">Vol Ratio</th>
                         <th class="text-end">Confluence</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody id="trades-body">
@@ -176,6 +177,12 @@
                         <td class="text-end">{{ t.candles_held }} candles</td>
                         <td class="text-end">{{ '%.1f'|format(t.volume_ratio) if t.volume_ratio else '' }}x</td>
                         <td class="text-end">{{ t.zone_confluence or 0 }}</td>
+                        <td>
+                            <a href="{{ url_for('backtest.individual_trade_chart', bt_id=bt.id, trade_id=t.id) }}"
+                               class="btn btn-sm btn-outline-info" title="View on chart">
+                                <i class="bi bi-graph-up"></i>
+                            </a>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

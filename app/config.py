@@ -25,11 +25,23 @@ class Config:
     START_DATE = '1 Jan 2017'
     END_DATE = '30 Jun 2025'
 
+    # Foundation defaults (overridable via Settings UI)
+    FOUNDATION_DATA_START = '2020-01-01'
+    FOUNDATION_DATA_END = '2025-12-31'
+    FOUNDATION_TRAIN_TEST_CUTOFF = '2024-06-01'
+    FOUNDATION_FETCH_TIMEFRAMES = ['1d', '1w', '1M']
+    FOUNDATION_HTF_TIMEFRAMES = ['1d', '1w', '1M']
+    FOUNDATION_FRACTAL_TIMEFRAMES = ['1d', '1w', '1M']
+    FOUNDATION_FIBONACCI_TIMEFRAMES = ['1d', '1w']
+    FOUNDATION_VP_TIMEFRAMES = ['1d', '1w', '1M']
+    FOUNDATION_ALL_TIMEFRAMES = ['1h', '4h', '1d', '1w', '1M']
+
     # Technical Analysis
     ROUNDING_PRECISION = 1
     CONFLUENCE_THRESHOLD = 2
     HIT_COUNT_THRESHOLD = 3
     PRICE_RANGE = 100
+    TOUCHED_THRESHOLD = 1  # touches needed to consider a level "touched" (parametrizable)
 
     # ML Prediction
     PREDICTION_HORIZONS = {

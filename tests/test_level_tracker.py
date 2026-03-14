@@ -1,4 +1,4 @@
-"""Tests for level touch tracking and invalidation."""
+"""Tests for level touch tracking."""
 from datetime import datetime
 from app.extensions import db as _db
 from app.models import Candle, Level
@@ -30,6 +30,39 @@ def _make_level(db, price, created_at=None):
     return level
 
 
+def test_touch_increments_counter(app):
+    """A candle whose range covers the level increments support_touches."""
+    with app.app_context():
+        level = _make_level(_db, 42000.0)
+        c1 = _make_candle(_db, 1, low=41900.0, high=42100.0)
+        touched = update_level_touches(_db.session, c1)
+        assert touched == 1
+        assert level.support_touches == 1
+        assert level.first_touched_at == c1.open_time
+        assert level.invalidated_at is None  # no invalidation
+
+
+def test_multiple_touches_no_invalidation(app):
+    """Multiple touches increment counter but never invalidate."""
+    with app.app_context():
+        level = _make_level(_db, 42000.0)
+        for hour in range(1, 6):
+            c = _make_candle(_db, hour, low=41900.0, high=42100.0)
+            update_level_touches(_db.session, c)
+        assert level.support_touches == 5
+        assert level.invalidated_at is None
+
+
+def test_candle_not_reaching_level(app):
+    """Candle range that doesn't cover level price — no touch."""
+    with app.app_context():
+        level = _make_level(_db, 42000.0)
+        c = _make_candle(_db, 1, low=42100.0, high=42400.0)
+        touched = update_level_touches(_db.session, c)
+        assert touched == 0
+        assert level.support_touches == 0
+
+
 def test_first_touch_invalidation(app):
     """Level is invalidated immediately on first touch when flag is set."""
     with app.app_context():
@@ -43,42 +76,10 @@ def test_first_touch_invalidation(app):
         assert level.invalidated_at == candle.open_time
 
 
-def test_threshold_invalidation_preserves_default(app):
-    """Default behaviour: level survives touches below threshold."""
-    with app.app_context():
-        level = _make_level(_db, 42000.0)
-        # Candle entirely above level — only resistance touch (+1)
-        c1 = _make_candle(_db, 1, low=42000.0, high=42300.0)
-        update_level_touches(_db.session, c1)
-        assert level.invalidated_at is None
-        assert level.resistance_touches == 1
-
-        # Another candle entirely above — still only 2 total touches
-        c2 = _make_candle(_db, 2, low=42100.0, high=42400.0)
-        update_level_touches(_db.session, c2)
-        assert level.invalidated_at is None
-
-
-def test_threshold_invalidation_triggers(app):
-    """Level is invalidated after reaching the threshold."""
-    with app.app_context():
-        level = _make_level(_db, 42000.0)
-        # Each candle that spans the level adds +1 support and +1 resistance = 2 touches
-        # Threshold = 4, so 2 candles should invalidate
-        c1 = _make_candle(_db, 1, low=41900.0, high=42100.0)
-        update_level_touches(_db.session, c1)
-        assert level.invalidated_at is None
-
-        c2 = _make_candle(_db, 2, low=41900.0, high=42100.0)
-        update_level_touches(_db.session, c2)
-        assert level.invalidated_at == c2.open_time
-
-
 def test_level_created_after_candle_not_touched(app):
     """Levels created after a candle's open_time are not touched."""
     with app.app_context():
         candle = _make_candle(_db, 1, low=41900.0, high=42100.0)
-        # Level created AFTER candle
         level = _make_level(_db, 42000.0, created_at=datetime(2024, 1, 3))
 
         touched = update_level_touches(

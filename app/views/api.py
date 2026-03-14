@@ -27,6 +27,13 @@ def publish_sse(event: str, data: dict):
             _sse_subscribers.remove(q)
 
 
+@api_bp.route('/foundation-progress')
+def foundation_progress():
+    """Return real-time foundation pipeline progress (in-memory, no DB)."""
+    from ..services.progress import get_state
+    return jsonify(get_state())
+
+
 @api_bp.route('/health')
 def health():
     candle_count = db.session.query(Candle).filter_by(timeframe='1h').count()
@@ -93,6 +100,9 @@ def levels():
     end = request.args.get('end')
     active_only = request.args.get('active_only', 'true') == 'true'
     level_type = request.args.get('type')
+    timeframe = request.args.get('timeframe')    # comma-separated: daily,weekly
+    source = request.args.get('source')          # comma-separated: htf,fibonacci
+    naked_only = request.args.get('naked_only', 'false') == 'true'
 
     query = Level.query
     if active_only:
@@ -103,6 +113,19 @@ def levels():
         query = query.filter(Level.created_at <= end)
     if level_type:
         query = query.filter(Level.level_type.like(f'%{level_type}%'))
+    if timeframe:
+        tfs = [t.strip() for t in timeframe.split(',') if t.strip()]
+        if tfs:
+            query = query.filter(Level.timeframe.in_(tfs))
+    if source:
+        sources = [s.strip() for s in source.split(',') if s.strip()]
+        if sources:
+            query = query.filter(Level.source.in_(sources))
+    if naked_only:
+        query = query.filter(
+            Level.support_touches == 0,
+            Level.resistance_touches == 0,
+        )
 
     rows = query.order_by(Level.price_level).all()
     return jsonify([l.to_dict() for l in rows])
@@ -314,6 +337,91 @@ def predict_endpoint():
         return jsonify({'status': 'ok', 'predictions': len(results)})
     except Exception as e:
         return jsonify({'status': 'error', 'error': str(e)}), 400
+
+
+@api_bp.route('/run-foundation', methods=['POST'])
+def run_foundation():
+    """Trigger the foundation pipeline (fetch + multi-TF indicators + touch tracking)."""
+    from ..tasks.pipeline_runner import run_foundation_pipeline
+
+    app = current_app._get_current_object()
+
+    def _work():
+        with app.app_context():
+            run_foundation_pipeline(app)
+
+    thread = threading.Thread(target=_work, daemon=True)
+    thread.start()
+    return jsonify({'status': 'started', 'message': 'Foundation pipeline started'})
+
+
+@api_bp.route('/foundation-status')
+def foundation_status():
+    """Return foundation data coverage and level counts."""
+    from ..models.setting import get_setting
+
+    # Data coverage per timeframe
+    data_coverage = {}
+    timeframes = db.session.query(Candle.timeframe).distinct().all()
+    for (tf,) in timeframes:
+        count = db.session.query(Candle).filter_by(timeframe=tf).count()
+        earliest = (
+            db.session.query(Candle.open_time)
+            .filter_by(timeframe=tf)
+            .order_by(Candle.open_time)
+            .first()
+        )
+        latest = (
+            db.session.query(Candle.open_time)
+            .filter_by(timeframe=tf)
+            .order_by(Candle.open_time.desc())
+            .first()
+        )
+        data_coverage[tf] = {
+            'count': count,
+            'from': earliest[0].isoformat() if earliest else None,
+            'to': latest[0].isoformat() if latest else None,
+        }
+
+    # Levels by type and timeframe
+    level_rows = (
+        db.session.query(Level.source, Level.timeframe, db.func.count(Level.id))
+        .filter(Level.invalidated_at.is_(None))
+        .group_by(Level.source, Level.timeframe)
+        .all()
+    )
+    levels_by_type_tf = {}
+    for source, tf, count in level_rows:
+        if source not in levels_by_type_tf:
+            levels_by_type_tf[source] = {}
+        levels_by_type_tf[source][tf] = count
+
+    # Train/test split info
+    cutoff = get_setting('train_test_cutoff', '2024-06-01')
+    train_levels = db.session.query(Level).filter(
+        Level.created_at < cutoff,
+        Level.invalidated_at.is_(None),
+    ).count()
+    test_levels = db.session.query(Level).filter(
+        Level.created_at >= cutoff,
+        Level.invalidated_at.is_(None),
+    ).count()
+
+    # Check if foundation pipeline is running
+    pipeline_running = (
+        db.session.query(PipelineRun)
+        .filter_by(pipeline_type='foundation', status='running')
+        .first()
+    ) is not None
+
+    return jsonify({
+        'data_coverage': data_coverage,
+        'levels_by_type_tf': levels_by_type_tf,
+        'train_test_cutoff': cutoff,
+        'train_levels': train_levels,
+        'test_levels': test_levels,
+        'pipeline_running': pipeline_running,
+    })
 
 
 @api_bp.route('/run-pipeline', methods=['POST'])

@@ -20,7 +20,22 @@ def create_app(config_name=None):
         format='%(asctime)s %(name)s %(levelname)s %(message)s',
     )
 
+    # SQLite: enable WAL mode + busy timeout for concurrent access
+    from sqlalchemy import event as sa_event
+
     db.init_app(app)
+
+    with app.app_context():
+        @sa_event.listens_for(db.engine, 'connect')
+        def _set_sqlite_pragma(dbapi_connection, connection_record):
+            cursor = dbapi_connection.cursor()
+            # Skip WAL for in-memory databases (used in tests)
+            result = cursor.execute('PRAGMA database_list').fetchone()
+            if result and result[2]:  # has a file path (not in-memory)
+                cursor.execute('PRAGMA journal_mode=WAL')
+            cursor.execute('PRAGMA busy_timeout=30000')
+            cursor.close()
+
     scheduler.init_app(app)
 
     from .models import candle, level, feature, ml_model, prediction, pipeline_run, backtest_result, setting  # noqa: F401

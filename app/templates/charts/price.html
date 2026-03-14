@@ -31,11 +31,12 @@
             <button class="btn btn-outline-secondary" data-tf="1w">1W</button>
         </div>
         <!-- Candle count -->
+        <span class="text-muted" style="font-size:0.75rem">Candles:</span>
         <div class="btn-group" id="count-selector">
-            <button class="btn btn-outline-secondary" data-count="200">200</button>
-            <button class="btn btn-outline-secondary active" data-count="500">500</button>
-            <button class="btn btn-outline-secondary" data-count="1000">1000</button>
-            <button class="btn btn-outline-secondary" data-count="5000">5000</button>
+            <button class="btn btn-outline-secondary" data-count="200" title="Show last 200 candles">200</button>
+            <button class="btn btn-outline-secondary active" data-count="500" title="Show last 500 candles">500</button>
+            <button class="btn btn-outline-secondary" data-count="1000" title="Show last 1000 candles">1000</button>
+            <button class="btn btn-outline-secondary" data-count="5000" title="Show last 5000 candles">5000</button>
         </div>
         <button class="btn btn-outline-secondary btn-sm" id="btn-fractals" title="Toggle fractal markers">
             <i class="bi bi-diamond-fill"></i> Fractals
@@ -51,10 +52,11 @@
     <div class="filter-group">
         <span class="filter-label">Type:</span>
         <div class="btn-group" id="level-toggles">
-            <button class="btn btn-outline-danger btn-sm active" data-level="Fractal">Frac</button>
-            <button class="btn btn-outline-primary btn-sm active" data-level="HTF">HTF</button>
-            <button class="btn btn-outline-warning btn-sm active" data-level="Fib">Fib</button>
-            <button class="btn btn-outline-info btn-sm active" data-level="VP">VP</button>
+            <button class="btn btn-outline-light btn-sm active" data-level="SFP">SFP</button>
+            <button class="btn btn-outline-info btn-sm active" data-level="HTF">HTF</button>
+            <button class="btn btn-outline-warning btn-sm active" data-level="CC">CC</button>
+            <button class="btn btn-outline-danger btn-sm active" data-level="Igor">Igor</button>
+            <button class="btn btn-outline-secondary btn-sm active" data-level="VP">VP</button>
         </div>
     </div>
     <div class="filter-group">
@@ -75,18 +77,22 @@
     <span id="level-count" class="text-muted"></span>
 </div>
 
-<!-- Level legend -->
+<!-- Level legend — Chart Champions methodology -->
 <div class="level-legend mb-2">
-    <span><span class="dot dot-solid" style="background:#ef5350"></span> Fractal</span>
-    <span><span class="dot dot-solid" style="background:#42a5f5"></span> HTF</span>
-    <span><span class="dot dot-solid" style="background:#ffd54f"></span> Fibonacci</span>
-    <span><span class="dot dot-solid" style="background:#ab47bc"></span> Vol Profile</span>
+    <span><span class="dot dot-solid" style="background:#e0e0e0"></span> SFP</span>
+    <span><span class="dot dot-solid" style="background:#00e5ff"></span> HTF D</span>
+    <span><span class="dot dot-solid" style="background:#ffd54f"></span> HTF W</span>
+    <span><span class="dot dot-solid" style="background:#ab47bc"></span> HTF M</span>
+    <span><span class="dot dot-solid" style="background:#ffd54f; border-bottom:1px dashed #ffd54f"></span> CC</span>
+    <span><span class="dot dot-solid" style="background:#ef5350"></span> Igor</span>
+    <span><span class="dot dot-solid" style="background:#ef5350"></span> POC</span>
+    <span><span class="dot dot-solid" style="background:#42a5f5"></span> VA</span>
     <span>|</span>
-    <span><span class="dot dot-solid" style="background:#fff"></span> Naked (solid)</span>
-    <span><span class="dot dot-dashed" style="background:#888"></span> Touched (dashed)</span>
+    <span><span class="dot dot-solid" style="background:#fff"></span> Naked</span>
+    <span><span class="dot dot-dashed" style="background:#888"></span> Touched</span>
     <span>|</span>
-    <span><i class="bi bi-caret-up-fill text-success"></i> Bullish fractal</span>
-    <span><i class="bi bi-caret-down-fill text-danger"></i> Bearish fractal</span>
+    <span><i class="bi bi-caret-up-fill text-success"></i> Bullish</span>
+    <span><i class="bi bi-caret-down-fill text-danger"></i> Bearish</span>
 </div>
 
 <div class="card bg-dark">

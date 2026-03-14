@@ -52,10 +52,10 @@
     .progress-log .log-error { color: #f85149; }
     .progress-log .log-done { color: #3fb950; }
 
-    /* Modal tweaks */
-    #pipelineModal .modal-content { background: #161b22; border: 1px solid #30363d; }
-    #pipelineModal .modal-header { border-bottom: 1px solid #30363d; }
-    #pipelineModal .modal-footer { border-top: 1px solid #30363d; }
+    /* Wizard steps */
+    .wizard-step.wizard-locked { opacity: 0.5; }
+    .wizard-step.wizard-done { border-left: 3px solid #198754; }
+    .wizard-step.wizard-running { border-left: 3px solid #0d6efd; }
 </style>
 {% endblock %}
 
@@ -137,17 +137,20 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════ -->
-<!-- FOUNDATION CONFIG — the main section                         -->
+<!-- FOUNDATION CONFIG                                             -->
 <!-- ══════════════════════════════════════════════════════════════ -->
 <div class="row g-4 mt-0">
     <div class="col-12">
         <div class="card border-info">
-            <div class="card-header bg-info bg-opacity-10">
-                <i class="bi bi-bricks me-1"></i> <strong>Foundation Pipeline</strong>
+            <div class="card-header bg-info bg-opacity-10 d-flex align-items-center">
+                <span><i class="bi bi-bricks me-1"></i> <strong>Foundation Pipeline</strong></span>
                 <small class="text-muted ms-2">Configure data, detect levels, verify visually</small>
+                <button type="button" class="btn btn-sm btn-outline-info ms-auto" id="btnSaveConfig">
+                    <i class="bi bi-check-lg me-1"></i>Save Config
+                </button>
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('settings.save_foundation') }}" id="foundationForm">
+                <form id="foundationForm">
                     <div class="row g-3">
                         <!-- Data Range -->
                         <div class="col-lg-3">
@@ -219,19 +222,14 @@
                             </table>
                         </div>
 
-                        <!-- Actions -->
+                        <!-- Run All (legacy) -->
                         <div class="col-lg-3">
-                            <h6 class="mb-2"><i class="bi bi-play-circle me-1"></i> Actions</h6>
+                            <h6 class="mb-2"><i class="bi bi-fast-forward me-1"></i> Quick Run</h6>
                             <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-sm btn-outline-info">
-                                    <i class="bi bi-check-lg me-1"></i>Save Config
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnRunAll">
+                                    <i class="bi bi-play-fill me-1"></i>Run All Steps
                                 </button>
-                                <button type="button" class="btn btn-success" id="btnRunFoundation">
-                                    <i class="bi bi-play-fill me-1"></i>Run Foundation Pipeline
-                                </button>
-                                <a href="/charts/" class="btn btn-sm btn-outline-light">
-                                    <i class="bi bi-graph-up me-1"></i>Verify in Charts
-                                </a>
+                                <small class="text-muted">Or use the step-by-step wizard below</small>
                             </div>
                         </div>
                     </div>
@@ -241,82 +239,99 @@
     </div>
 </div>
 
-<!-- Pipeline Progress Modal -->
-<div class="modal fade" id="pipelineModal" tabindex="-1" aria-labelledby="pipelineModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="pipelineModalLabel">
-                    <i class="bi bi-bricks me-2"></i>Foundation Pipeline
-                </h5>
-                <span id="modalElapsed" class="ms-auto me-2 text-muted" style="font-size:0.8rem;"></span>
-                <span id="modalHeaderBadge" class="me-3"></span>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Close" id="modalCloseBtn" style="display:none;"></button>
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- WIZARD — Step-by-step foundation pipeline                     -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="row g-3 mt-0">
+    <!-- Step 1: Fetch Data -->
+    <div class="col-12">
+        <div class="card wizard-step" id="wizStep1">
+            <div class="card-header d-flex align-items-center">
+                <span class="badge bg-info me-2">1</span>
+                <strong>Fetch Data</strong>
+                <span class="wizard-status ms-auto" id="ws1-status"></span>
             </div>
-            <div class="modal-body">
-                <!-- Step Tracker -->
-                <ul class="pipeline-steps mb-3" id="stepTracker">
-                    <li class="pipeline-step pending" data-step="config">
-                        <span class="step-icon"><i class="bi bi-circle"></i></span>
-                        <div>
-                            <div class="step-label">Configuration</div>
-                            <div class="step-detail" id="detail-config"></div>
-                        </div>
-                    </li>
-                    <li class="pipeline-step pending" data-step="fetch">
-                        <span class="step-icon"><i class="bi bi-circle"></i></span>
-                        <div>
-                            <div class="step-label">Fetching candles</div>
-                            <div class="step-detail" id="detail-fetch"></div>
-                        </div>
-                    </li>
-                    <li class="pipeline-step pending" data-step="indicators">
-                        <span class="step-icon"><i class="bi bi-circle"></i></span>
-                        <div>
-                            <div class="step-label">Computing levels</div>
-                            <div class="step-detail" id="detail-indicators"></div>
-                        </div>
-                    </li>
-                    <li class="pipeline-step pending" data-step="volume_profile">
-                        <span class="step-icon"><i class="bi bi-circle"></i></span>
-                        <div>
-                            <div class="step-label">Volume Profile</div>
-                            <div class="step-detail" id="detail-volume_profile"></div>
-                        </div>
-                    </li>
-                    <li class="pipeline-step pending" data-step="touch_tracking">
-                        <span class="step-icon"><i class="bi bi-circle"></i></span>
-                        <div>
-                            <div class="step-label">Touch tracking</div>
-                            <div class="step-detail" id="detail-touch_tracking"></div>
-                        </div>
-                    </li>
-                </ul>
-
-                <!-- Log Terminal -->
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <small class="text-muted"><i class="bi bi-terminal me-1"></i>Log</small>
-                    <small class="text-muted" id="logCounter"></small>
+            <div class="card-body">
+                <div id="ws1-preview" class="mb-2" style="font-size:0.85rem;"></div>
+                <div id="ws1-progress" style="display:none;">
+                    <div class="progress-log" id="ws1-log" style="max-height:120px;"></div>
                 </div>
-                <div class="progress-log" id="progressLog"></div>
-            </div>
-            <div class="modal-footer" id="modalFooter" style="display:none;">
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-                <a href="/charts/" class="btn btn-sm btn-outline-info">
-                    <i class="bi bi-graph-up me-1"></i>Verify in Charts
-                </a>
+                <div id="ws1-result" style="display:none;"></div>
+                <div class="d-flex gap-2 mt-2">
+                    <button class="btn btn-sm btn-success" id="ws1-run">
+                        <i class="bi bi-download me-1"></i>Fetch from Binance
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" id="ws1-skip">Skip (data exists)</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Foundation Status (data coverage) -->
-<div class="row g-4 mt-0" id="statusPanel" style="display:none;">
+    <!-- Step 2: Detect Levels -->
     <div class="col-12">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-bar-chart me-1"></i> Foundation Status</div>
-            <div class="card-body" id="statusBody"></div>
+        <div class="card wizard-step wizard-locked" id="wizStep2">
+            <div class="card-header d-flex align-items-center">
+                <span class="badge bg-warning text-dark me-2">2</span>
+                <strong>Detect Levels</strong>
+                <span class="wizard-status ms-auto" id="ws2-status"></span>
+            </div>
+            <div class="card-body">
+                <div id="ws2-preview" class="mb-2" style="font-size:0.85rem;"></div>
+                <div id="ws2-progress" style="display:none;">
+                    <div class="progress-log" id="ws2-log" style="max-height:150px;"></div>
+                </div>
+                <div id="ws2-result" style="display:none;"></div>
+                <div class="d-flex gap-2 mt-2">
+                    <button class="btn btn-sm btn-success" id="ws2-run" disabled>
+                        <i class="bi bi-rulers me-1"></i>Detect Levels
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" id="ws2-skip" disabled>Skip (levels exist)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Touch Tracking -->
+    <div class="col-12">
+        <div class="card wizard-step wizard-locked" id="wizStep3">
+            <div class="card-header d-flex align-items-center">
+                <span class="badge bg-danger me-2">3</span>
+                <strong>Touch Tracking</strong>
+                <span class="wizard-status ms-auto" id="ws3-status"></span>
+            </div>
+            <div class="card-body">
+                <div id="ws3-preview" class="mb-2" style="font-size:0.85rem; color:#8b949e;">
+                    Counts how many times each level was touched by price action.
+                </div>
+                <div id="ws3-progress" style="display:none;">
+                    <div class="progress-log" id="ws3-log" style="max-height:120px;"></div>
+                </div>
+                <div id="ws3-result" style="display:none;"></div>
+                <div class="d-flex gap-2 mt-2">
+                    <button class="btn btn-sm btn-success" id="ws3-run" disabled>
+                        <i class="bi bi-hand-index me-1"></i>Run Touch Tracking
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" id="ws3-skip" disabled>Skip</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Visualize -->
+    <div class="col-12">
+        <div class="card wizard-step wizard-locked" id="wizStep4">
+            <div class="card-header d-flex align-items-center">
+                <span class="badge bg-success me-2">4</span>
+                <strong>Visualize</strong>
+            </div>
+            <div class="card-body text-center py-3">
+                <a href="/charts/?tf=1d&count=1000" class="btn btn-outline-info btn-lg" id="ws4-link" style="pointer-events:none; opacity:0.5;">
+                    <i class="bi bi-graph-up me-2"></i>Open Charts
+                </a>
+                <div class="mt-2 text-muted" style="font-size:0.8rem;">
+                    View all detected levels on the interactive chart
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -356,307 +371,244 @@ document.getElementById('btnTestConnection').addEventListener('click', function(
         });
 });
 
-// ── Foundation Pipeline Modal ───────────────────────────────────
-let progressInterval = null;
-let pipelineModal = null;
-let elapsedInterval = null;
-let pipelineStartTime = null;
+// ── Save Config ────────────────────────────────────────────────
+document.getElementById('btnSaveConfig').addEventListener('click', function() {
+    const btn = this;
+    btn.disabled = true;
+    const formData = new FormData(document.getElementById('foundationForm'));
+    fetch('{{ url_for("settings.save_foundation") }}', {
+        method: 'POST', body: formData,
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+    })
+    .then(r => r.json())
+    .then(() => { btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Saved!'; })
+    .catch(() => { btn.innerHTML = '<i class="bi bi-x me-1"></i>Error'; })
+    .finally(() => {
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Save Config';
+        }, 1500);
+    });
+});
 
-function startElapsedTimer() {
-    pipelineStartTime = Date.now();
-    const el = document.getElementById('modalElapsed');
-    elapsedInterval = setInterval(() => {
-        const secs = Math.floor((Date.now() - pipelineStartTime) / 1000);
-        const m = Math.floor(secs / 60);
-        const s = secs % 60;
-        el.textContent = m > 0 ? `${m}m ${s.toString().padStart(2,'0')}s` : `${s}s`;
+// ── Wizard State ───────────────────────────────────────────────
+let wizardPollInterval = null;
+
+function saveConfigSilently() {
+    const formData = new FormData(document.getElementById('foundationForm'));
+    return fetch('{{ url_for("settings.save_foundation") }}', {
+        method: 'POST', body: formData,
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+    });
+}
+
+function addWizardLog(logEl, msg, isError) {
+    const time = new Date().toLocaleTimeString();
+    const cls = isError ? 'log-error' : msg.includes('done') || msg.includes('completed') ? 'log-done' : 'log-msg';
+    logEl.innerHTML += `<div class="log-entry"><span class="log-time">${time}</span> <span class="${cls}">${msg}</span></div>`;
+    logEl.scrollTop = logEl.scrollHeight;
+}
+
+function pollProgress(logEl, onDone) {
+    let lastLogCount = 0;
+    wizardPollInterval = setInterval(() => {
+        fetch('/api/foundation-progress').then(r => r.json()).then(state => {
+            if (state.log && state.log.length > lastLogCount) {
+                for (let i = lastLogCount; i < state.log.length; i++) {
+                    addWizardLog(logEl, state.log[i].msg, state.log[i].msg.includes('ERROR'));
+                }
+                lastLogCount = state.log.length;
+            }
+            if (!state.running) {
+                clearInterval(wizardPollInterval);
+                wizardPollInterval = null;
+                onDone(state.error, state.result);
+            }
+        }).catch(() => {});
     }, 1000);
 }
 
-function stopElapsedTimer() {
-    if (elapsedInterval) { clearInterval(elapsedInterval); elapsedInterval = null; }
+function unlockStep(n) {
+    const card = document.getElementById(`wizStep${n}`);
+    if (card) {
+        card.classList.remove('wizard-locked');
+        card.querySelectorAll('button').forEach(b => b.disabled = false);
+    }
+    if (n === 4) {
+        const link = document.getElementById('ws4-link');
+        if (link) { link.style.pointerEvents = ''; link.style.opacity = '1'; }
+    }
 }
 
-// Ordered pipeline steps (must match backend progress.update() step names)
-const PIPELINE_STEPS = ['config', 'fetch', 'indicators', 'volume_profile', 'touch_tracking'];
-const STEP_ICONS = {
-    pending:  '<i class="bi bi-circle"></i>',
-    active:   '<span class="spinner-border spinner-border-sm" style="width:14px;height:14px;"></span>',
-    done:     '<i class="bi bi-check-lg"></i>',
-    error:    '<i class="bi bi-x-lg"></i>',
-};
+function markStepDone(n, statusHtml) {
+    const card = document.getElementById(`wizStep${n}`);
+    card.classList.add('wizard-done');
+    card.classList.remove('wizard-running');
+    const statusEl = document.getElementById(`ws${n}-status`);
+    statusEl.innerHTML = statusHtml || '<span class="badge bg-success">Done</span>';
+    unlockStep(n + 1);
+}
 
-// Track latest detail per step so done steps keep their final message
-let stepDetails = {};
+function markStepRunning(n) {
+    const card = document.getElementById(`wizStep${n}`);
+    card.classList.add('wizard-running');
+    card.classList.remove('wizard-done');
+    const statusEl = document.getElementById(`ws${n}-status`);
+    statusEl.innerHTML = '<span class="spinner-border spinner-border-sm text-info"></span>';
+    document.getElementById(`ws${n}-progress`).style.display = '';
+    document.getElementById(`ws${n}-run`).disabled = true;
+    document.getElementById(`ws${n}-skip`).disabled = true;
+}
 
-function resetModal() {
-    stepDetails = {};
-    stopElapsedTimer();
-    startElapsedTimer();
-    document.getElementById('modalElapsed').textContent = '0s';
-    PIPELINE_STEPS.forEach(step => {
-        const el = document.querySelector(`.pipeline-step[data-step="${step}"]`);
-        if (el) {
-            el.className = 'pipeline-step pending';
-            el.querySelector('.step-icon').innerHTML = STEP_ICONS.pending;
-            document.getElementById(`detail-${step}`).textContent = '';
-        }
+// ── Step 1: Fetch Data ─────────────────────────────────────────
+document.getElementById('ws1-run').addEventListener('click', function() {
+    saveConfigSilently().then(() => {
+        markStepRunning(1);
+        const logEl = document.getElementById('ws1-log');
+        logEl.innerHTML = '';
+        addWizardLog(logEl, 'Starting fetch from Binance...', false);
+        fetch('/api/foundation/fetch', {method: 'POST'}).then(r => r.json()).then(() => {
+            pollProgress(logEl, (error, result) => {
+                if (error) {
+                    markStepDone(1, '<span class="badge bg-danger">Error</span>');
+                } else {
+                    let summary = '';
+                    if (result) {
+                        summary = Object.entries(result).map(([tf, cnt]) =>
+                            `${tf}: ${typeof cnt === 'number' ? cnt.toLocaleString() + ' candles' : cnt}`
+                        ).join(', ');
+                    }
+                    markStepDone(1, `<span class="badge bg-success">Done</span> <small class="text-muted ms-1">${summary}</small>`);
+                }
+                loadPreview();
+            });
+        });
     });
-    document.getElementById('progressLog').innerHTML = '';
-    document.getElementById('logCounter').textContent = '';
-    document.getElementById('modalCloseBtn').style.display = 'none';
-    document.getElementById('modalFooter').style.display = 'none';
-    document.getElementById('modalHeaderBadge').innerHTML =
-        '<span class="spinner-border spinner-border-sm text-info"></span>';
-}
+});
 
-function updateStepDetails(logEntries, fromIdx) {
-    // Parse log entries to extract the latest detail per step
-    for (let i = fromIdx; i < logEntries.length; i++) {
-        const msg = logEntries[i].msg;
-        // Log format: "[step_name] detail text"
-        const match = msg.match(/^\[(\w+)\]\s*(.+)$/);
-        if (match) {
-            stepDetails[match[1]] = match[2];
-        }
-    }
-}
+document.getElementById('ws1-skip').addEventListener('click', function() {
+    markStepDone(1, '<span class="badge bg-secondary">Skipped</span>');
+});
 
-function updateStepTracker(currentStep, detail, isRunning, hasError) {
-    const currentIdx = PIPELINE_STEPS.indexOf(currentStep);
+// ── Step 2: Detect Levels ──────────────────────────────────────
+document.getElementById('ws2-run').addEventListener('click', function() {
+    saveConfigSilently().then(() => {
+        markStepRunning(2);
+        const logEl = document.getElementById('ws2-log');
+        logEl.innerHTML = '';
+        addWizardLog(logEl, 'Starting level detection...', false);
+        fetch('/api/foundation/detect-levels', {method: 'POST'}).then(r => r.json()).then(() => {
+            pollProgress(logEl, (error, result) => {
+                if (error) {
+                    markStepDone(2, '<span class="badge bg-danger">Error</span>');
+                } else {
+                    let summary = '';
+                    if (result) {
+                        const parts = [];
+                        for (const [type, counts] of Object.entries(result)) {
+                            if (typeof counts === 'object' && counts !== null) {
+                                const total = Object.values(counts).reduce((a, b) => (typeof b === 'number' ? a + b : a), 0);
+                                if (total > 0) parts.push(`${type}: ${total}`);
+                            }
+                        }
+                        summary = parts.join(', ');
+                    }
+                    markStepDone(2, `<span class="badge bg-success">Done</span> <small class="text-muted ms-1">${summary}</small>`);
+                }
+                loadPreview();
+            });
+        });
+    });
+});
 
-    // Always update current step's detail
-    if (currentStep && detail) {
-        stepDetails[currentStep] = detail;
-    }
+document.getElementById('ws2-skip').addEventListener('click', function() {
+    markStepDone(2, '<span class="badge bg-secondary">Skipped</span>');
+});
 
-    PIPELINE_STEPS.forEach((step, idx) => {
-        const el = document.querySelector(`.pipeline-step[data-step="${step}"]`);
-        if (!el) return;
-
-        if (!isRunning) {
-            // Pipeline finished
-            if (hasError && idx === currentIdx) {
-                el.className = 'pipeline-step error';
-                el.querySelector('.step-icon').innerHTML = STEP_ICONS.error;
-            } else if (idx <= currentIdx || currentStep === 'done') {
-                el.className = 'pipeline-step done';
-                el.querySelector('.step-icon').innerHTML = STEP_ICONS.done;
+// ── Step 3: Touch Tracking ─────────────────────────────────────
+document.getElementById('ws3-run').addEventListener('click', function() {
+    markStepRunning(3);
+    const logEl = document.getElementById('ws3-log');
+    logEl.innerHTML = '';
+    addWizardLog(logEl, 'Resetting touches and re-scanning all candles...', false);
+    fetch('/api/foundation/touch-tracking', {method: 'POST'}).then(r => r.json()).then(() => {
+        pollProgress(logEl, (error, result) => {
+            if (error) {
+                markStepDone(3, '<span class="badge bg-danger">Error</span>');
+            } else {
+                let summary = '';
+                if (result) {
+                    summary = `${result.total_touches?.toLocaleString() || 0} touches (${result.naked || 0} naked, ${result.touched || 0} touched)`;
+                }
+                markStepDone(3, `<span class="badge bg-success">Done</span> <small class="text-muted ms-1">${summary}</small>`);
             }
-        } else if (idx < currentIdx) {
-            el.className = 'pipeline-step done';
-            el.querySelector('.step-icon').innerHTML = STEP_ICONS.done;
-        } else if (idx === currentIdx) {
-            el.className = 'pipeline-step active';
-            el.querySelector('.step-icon').innerHTML = STEP_ICONS.active;
-        } else {
-            el.className = 'pipeline-step pending';
-            el.querySelector('.step-icon').innerHTML = STEP_ICONS.pending;
-        }
-
-        // Always show latest detail for each step (from stepDetails cache)
-        const detailEl = document.getElementById(`detail-${step}`);
-        if (detailEl && stepDetails[step]) {
-            detailEl.textContent = stepDetails[step];
-        }
+        });
     });
-}
+});
 
-document.getElementById('btnRunFoundation').addEventListener('click', function() {
+document.getElementById('ws3-skip').addEventListener('click', function() {
+    markStepDone(3, '<span class="badge bg-secondary">Skipped</span>');
+});
+
+// ── Run All (legacy) ───────────────────────────────────────────
+document.getElementById('btnRunAll').addEventListener('click', function() {
     const btn = this;
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Running...';
 
-    // Init and show modal
-    resetModal();
-    if (!pipelineModal) {
-        pipelineModal = new bootstrap.Modal(document.getElementById('pipelineModal'), {
-            backdrop: 'static', keyboard: false,
+    saveConfigSilently().then(() => {
+        fetch('/api/run-foundation', {method: 'POST'}).then(r => r.json()).then(() => {
+            // Mark all steps as running visually
+            [1,2,3].forEach(n => markStepRunning(n));
+            const logEl = document.getElementById('ws2-log');
+            pollProgress(logEl, (error) => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Run All Steps';
+                [1,2,3].forEach(n => markStepDone(n, error
+                    ? '<span class="badge bg-danger">Error</span>'
+                    : '<span class="badge bg-success">Done</span>'
+                ));
+                loadPreview();
+            });
         });
-    }
-    pipelineModal.show();
-
-    // Save config first, then run
-    const formData = new FormData(document.getElementById('foundationForm'));
-    addLogEntry('Saving configuration...', false);
-
-    fetch('{{ url_for("settings.save_foundation") }}', {
-        method: 'POST',
-        body: formData,
-        headers: {'X-Requested-With': 'XMLHttpRequest'},
-    })
-        .then(r => r.json())
-        .then(saveResult => {
-            addLogEntry('Config saved: ' + (saveResult.message || 'OK'), false);
-            return fetch('/api/run-foundation', {method: 'POST'});
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.status === 'started') {
-                startProgressPolling();
-            }
-        })
-        .catch(err => {
-            addLogEntry('ERROR: ' + err.message, true);
-            onPipelineFinished(true);
-        });
+    });
 });
 
-function startProgressPolling() {
-    let lastLogCount = 0;
-
-    progressInterval = setInterval(() => {
-        fetch('/api/foundation-progress')
-            .then(r => r.json())
-            .then(state => {
-                // Parse log entries for step details BEFORE updating tracker
-                if (state.log && state.log.length > lastLogCount) {
-                    updateStepDetails(state.log, lastLogCount);
-                }
-
-                // Update step tracker (uses stepDetails cache)
-                updateStepTracker(state.step, state.detail, state.running, !!state.error);
-
-                // Append new log entries to terminal
-                if (state.log && state.log.length > lastLogCount) {
-                    const logEl = document.getElementById('progressLog');
-                    for (let i = lastLogCount; i < state.log.length; i++) {
-                        const entry = state.log[i];
-                        const time = new Date(entry.time).toLocaleTimeString();
-                        const isError = entry.msg.includes('ERROR');
-                        const isDone = entry.msg.includes('completed successfully');
-                        const cssClass = isError ? 'log-error' : isDone ? 'log-done' : 'log-msg';
-                        logEl.innerHTML += `<div class="log-entry"><span class="log-time">${time}</span> <span class="${cssClass}">${entry.msg}</span></div>`;
-                    }
-                    lastLogCount = state.log.length;
-                    logEl.scrollTop = logEl.scrollHeight;
-                    document.getElementById('logCounter').textContent = `${lastLogCount} entries`;
-                }
-
-                // Stop polling when done
-                if (!state.running) {
-                    clearInterval(progressInterval);
-                    progressInterval = null;
-                    onPipelineFinished(!!state.error);
-                }
-            })
-            .catch(() => {});
-    }, 1200);
-}
-
-function onPipelineFinished(hasError) {
-    stopElapsedTimer();
-
-    // Update header badge
-    const badge = document.getElementById('modalHeaderBadge');
-    if (hasError) {
-        badge.innerHTML = '<span class="badge bg-danger">Failed</span>';
-    } else {
-        badge.innerHTML = '<span class="badge bg-success">Complete</span>';
-    }
-
-    // Show close button and footer
-    document.getElementById('modalCloseBtn').style.display = '';
-    document.getElementById('modalFooter').style.display = '';
-
-    // Re-enable the run button
-    const btn = document.getElementById('btnRunFoundation');
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Run Foundation Pipeline';
-
-    // Refresh status panel
-    loadFoundationStatus();
-}
-
-function addLogEntry(msg, isError) {
-    const logEl = document.getElementById('progressLog');
-    const time = new Date().toLocaleTimeString();
-    const cssClass = isError ? 'log-error' : 'log-msg';
-    logEl.innerHTML += `<div class="log-entry"><span class="log-time">${time}</span> <span class="${cssClass}">${msg}</span></div>`;
-    logEl.scrollTop = logEl.scrollHeight;
-}
-
-// ── Foundation Status ───────────────────────────────────────────
-function loadFoundationStatus() {
-    fetch('/api/foundation-status')
-        .then(r => r.json())
-        .then(data => {
-            const panel = document.getElementById('statusPanel');
-            const body = document.getElementById('statusBody');
-
-            if (!data.data_coverage || Object.keys(data.data_coverage).length === 0) return;
-            panel.style.display = '';
-
-            let html = '<div class="row g-3">';
-
-            // Data coverage
-            html += '<div class="col-md-5"><h6>Data Coverage</h6><table class="table table-sm"><thead><tr><th>TF</th><th>Candles</th><th>From</th><th>To</th></tr></thead><tbody>';
-            for (const [tf, info] of Object.entries(data.data_coverage)) {
-                html += `<tr><td><code>${tf}</code></td><td>${info.count.toLocaleString()}</td><td><small>${info.from ? info.from.split('T')[0] : '—'}</small></td><td><small>${info.to ? info.to.split('T')[0] : '—'}</small></td></tr>`;
+// ── Preview (load on page init) ────────────────────────────────
+function loadPreview() {
+    fetch('/api/foundation/preview').then(r => r.json()).then(data => {
+        // Step 1 preview: existing candle data
+        const ws1 = document.getElementById('ws1-preview');
+        if (data.existing_candles && Object.keys(data.existing_candles).length > 0) {
+            let html = `<div class="text-muted mb-1">Range: ${data.date_range.start} to ${data.date_range.end} | Cutoff: ${data.train_test_cutoff}</div>`;
+            html += '<table class="table table-sm mb-0" style="font-size:0.8rem;"><thead><tr><th>TF</th><th>Candles</th><th>From</th><th>To</th></tr></thead><tbody>';
+            for (const [tf, info] of Object.entries(data.existing_candles)) {
+                const check = info.count > 0 ? '<i class="bi bi-check-circle-fill text-success me-1"></i>' : '<i class="bi bi-circle text-muted me-1"></i>';
+                html += `<tr><td>${check}<code>${tf}</code></td><td>${info.count.toLocaleString()}</td><td>${info.from ? info.from.split(' ')[0] : '—'}</td><td>${info.to ? info.to.split(' ')[0] : '—'}</td></tr>`;
             }
-            html += '</tbody></table></div>';
-
-            // Levels
-            html += '<div class="col-md-5"><h6>Active Levels</h6><table class="table table-sm"><thead><tr><th>Type</th><th>Daily</th><th>Weekly</th><th>Monthly</th><th>Total</th></tr></thead><tbody>';
-            const colors = {htf:'primary', fractal:'danger', fibonacci:'warning', volume_profile:'info'};
-            if (data.levels_by_type_tf) {
-                for (const [type, tfs] of Object.entries(data.levels_by_type_tf)) {
-                    const c = colors[type] || 'secondary';
-                    const d = tfs.daily || 0, w = tfs.weekly || 0, m = tfs.monthly || 0;
-                    html += `<tr><td><span class="badge bg-${c}">${type}</span></td><td>${d}</td><td>${w}</td><td>${m}</td><td><strong>${d+w+m}</strong></td></tr>`;
-                }
-            }
-            html += '</tbody></table></div>';
-
-            // Train/test
-            html += '<div class="col-md-2"><h6>Split</h6>';
-            html += `<div><small class="text-muted">Cutoff</small><br><strong>${data.train_test_cutoff}</strong></div>`;
-            html += `<div class="mt-1"><small class="text-muted">Train</small><br>${data.train_levels} levels</div>`;
-            html += `<div class="mt-1"><small class="text-muted">Test</small><br>${data.test_levels} levels</div>`;
-            html += '</div>';
-
-            html += '</div>';
-            body.innerHTML = html;
-        })
-        .catch(() => {});
-}
-
-// Load status on page load
-loadFoundationStatus();
-
-// Check if pipeline is currently running (e.g. page reload during execution)
-fetch('/api/foundation-progress')
-    .then(r => r.json())
-    .then(state => {
-        if (state.running) {
-            // Pipeline still running — open modal and resume polling
-            resetModal();
-            if (!pipelineModal) {
-                pipelineModal = new bootstrap.Modal(document.getElementById('pipelineModal'), {
-                    backdrop: 'static', keyboard: false,
-                });
-            }
-            pipelineModal.show();
-
-            // Replay existing log entries
-            const logEl = document.getElementById('progressLog');
-            state.log.forEach(entry => {
-                const time = new Date(entry.time).toLocaleTimeString();
-                const isError = entry.msg.includes('ERROR');
-                const isDone = entry.msg.includes('completed');
-                const cssClass = isError ? 'log-error' : isDone ? 'log-done' : 'log-msg';
-                logEl.innerHTML += `<div class="log-entry"><span class="log-time">${time}</span> <span class="${cssClass}">${entry.msg}</span></div>`;
-            });
-            logEl.scrollTop = logEl.scrollHeight;
-            document.getElementById('logCounter').textContent = `${state.log.length} entries`;
-
-            updateStepTracker(state.step, state.detail, true, false);
-
-            document.getElementById('btnRunFoundation').disabled = true;
-            document.getElementById('btnRunFoundation').innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Running...';
-            startProgressPolling();
+            html += '</tbody></table>';
+            if (!data.has_api_keys) html += '<div class="text-warning mt-1" style="font-size:0.8rem"><i class="bi bi-exclamation-triangle me-1"></i>No API keys — fetch will be skipped</div>';
+            ws1.innerHTML = html;
         }
-    })
-    .catch(() => {});
+
+        // Step 2 preview: existing levels
+        const ws2 = document.getElementById('ws2-preview');
+        if (data.existing_levels && Object.keys(data.existing_levels).length > 0) {
+            const parts = Object.entries(data.existing_levels).map(([type, cnt]) => `${type}: ${cnt}`);
+            ws2.innerHTML = `<span class="text-muted">Current levels: ${parts.join(', ')}</span>`;
+        } else {
+            ws2.innerHTML = '<span class="text-muted">No levels detected yet.</span>';
+        }
+
+        // Auto-unlock steps if data exists
+        const hasCandles = Object.values(data.existing_candles || {}).some(c => c.count > 0);
+        const hasLevels = Object.keys(data.existing_levels || {}).length > 0;
+        if (hasCandles) unlockStep(2);
+        if (hasLevels) unlockStep(3);
+        if (hasCandles && hasLevels) unlockStep(4);
+    }).catch(() => {});
+}
+
+loadPreview();
 </script>
 {% endblock %}

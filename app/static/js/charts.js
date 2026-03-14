@@ -3,12 +3,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const container = document.getElementById('chart-container');
     if (!container || typeof LightweightCharts === 'undefined') return;
 
+    // Read URL params for pre-set state (e.g., /charts/?tf=1d&count=1000)
+    const urlParams = new URLSearchParams(window.location.search);
+
     // State
-    let currentTf = '1d';
-    let currentCount = 500;
+    let currentTf = urlParams.get('tf') || '1d';
+    let currentCount = parseInt(urlParams.get('count')) || 500;
     let showFractals = true;
     let showPredictions = true;
-    let enabledLevels = { Fractal: true, HTF: true, Fib: true, VP: true };
+    let enabledLevels = { SFP: true, HTF: true, CC: true, Igor: true, VP: true };
     let enabledSourceTfs = { daily: true, weekly: true, monthly: true };
     let enabledStatus = { naked: true, touched: true };
     let levelSeriesList = [];   // line series for levels (start at birth)
@@ -34,25 +37,65 @@ document.addEventListener('DOMContentLoaded', function() {
         wickUpColor: '#26a69a', wickDownColor: '#ef5350',
     });
 
-    // Level color mapping
-    const levelColors = {
-        Fractal: '#ef5350',
-        HTF: '#42a5f5',
-        Fib: '#ffd54f',
-        VP: '#ab47bc',
-    };
-
     // Short labels for display
     const tfShort = {
         hourly: 'H', '4hourly': '4H', daily: 'D', weekly: 'W', monthly: 'M',
     };
 
+    // Chart Champions color mapping by HTF timeframe
+    const htfColors = { daily: '#00e5ff', weekly: '#ffd54f', monthly: '#ab47bc' };
+
     function getLevelCategory(levelType) {
-        if (levelType.startsWith('Fractal')) return 'Fractal';
+        if (levelType.startsWith('Fractal')) return 'SFP';
         if (levelType.startsWith('HTF')) return 'HTF';
-        if (levelType.startsWith('Fib')) return 'Fib';
+        if (levelType === 'Fib_CC') return 'CC';
+        if (levelType.startsWith('Fib')) return 'Igor';
         if (levelType.startsWith('VP') || levelType.startsWith('vp')) return 'VP';
         return 'HTF';
+    }
+
+    function getLevelStyle(level) {
+        const lt = level.level_type;
+        const tf = level.timeframe;
+
+        // HTF — color by timeframe
+        if (lt === 'HTF_level') return { color: htfColors[tf] || '#42a5f5', lineWidth: 1, lineStyle: 0 };
+
+        // SFP (Fractal levels)
+        if (lt.startsWith('Fractal')) return { color: '#e0e0e0', lineWidth: 1, lineStyle: 0 };
+
+        // CC — Daniel's golden pocket (dotted yellow)
+        if (lt === 'Fib_CC') return { color: '#ffd54f', lineWidth: 1, lineStyle: 1 };
+
+        // Igor quarters
+        if (lt === 'Fib_0.50') return { color: '#ffd54f', lineWidth: 1, lineStyle: 0 };
+        if (lt === 'Fib_0.25' || lt === 'Fib_0.75') return { color: '#ef5350', lineWidth: 1, lineStyle: 0 };
+
+        // VP — POC thicker red, VAH/VAL blue
+        if (lt === 'VP_POC') return { color: '#ef5350', lineWidth: 2, lineStyle: 0 };
+        if (lt === 'VP_VAH' || lt === 'VP_VAL') return { color: '#42a5f5', lineWidth: 2, lineStyle: 0 };
+
+        // Old Fib types (pre-migration) — fallback gray
+        if (lt.startsWith('Fib')) return { color: '#888', lineWidth: 1, lineStyle: 0 };
+
+        return { color: '#888', lineWidth: 1, lineStyle: 0 };
+    }
+
+    function getLevelLabel(level) {
+        const lt = level.level_type;
+        const tf = tfShort[level.timeframe] || level.timeframe;
+
+        if (lt === 'HTF_level') return `HTF ${tf}`;
+        if (lt.startsWith('Fractal')) return 'SFP';
+        if (lt === 'Fib_CC') return `CC ${tf}`;
+        if (lt === 'Fib_0.25') return `Igor .25 ${tf}`;
+        if (lt === 'Fib_0.50') return `Igor .50 ${tf}`;
+        if (lt === 'Fib_0.75') return `Igor .75 ${tf}`;
+        if (lt === 'VP_POC') return `POC ${tf}`;
+        if (lt === 'VP_VAH') return `VAH ${tf}`;
+        if (lt === 'VP_VAL') return `VAL ${tf}`;
+
+        return `${lt} ${tf}`;
     }
 
     function isNaked(level) {
@@ -183,8 +226,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 let visibleCount = 0;
                 let capped = false;
 
-                // Sort by created_at so most recent levels are drawn last (on top)
-                levels.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                // Sort by created_at descending — newest levels get priority within the cap
+                levels.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
                 levels.forEach(l => {
                     if (visibleCount >= MAX_LEVEL_SERIES) { capped = true; return; }
@@ -201,37 +244,35 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (naked && !enabledStatus.naked) return;
                     if (!naked && !enabledStatus.touched) return;
 
+                    // Birth time — where the level line starts
+                    const birthTime = Math.floor(new Date(l.created_at).getTime() / 1000);
+
+                    // End time: naked levels extend to chart end, touched levels end at first touch
+                    let endTime = lastTime;
+                    if (!naked && l.first_touched_at) {
+                        endTime = Math.floor(new Date(l.first_touched_at).getTime() / 1000);
+                    }
+
+                    // Skip levels whose entire life is outside the visible chart range
+                    if (endTime < firstTime) return;
+                    if (birthTime > lastTime) return;
+
+                    // Clamp start/end to chart range
+                    const startTime = Math.max(birthTime, firstTime);
+                    if (endTime <= startTime) endTime = startTime + 86400;
+
                     // Dedup by category + rounded price + timeframe
                     const rounded = Math.round(l.price_level / roundTo) * roundTo;
                     const key = `${cat}-${l.timeframe}-${rounded}`;
                     if (seen.has(key)) return;
                     seen.add(key);
 
-                    // Birth time — where the level line starts
-                    const birthTime = Math.floor(new Date(l.created_at).getTime() / 1000);
-                    // Clamp: if born before chart range, start at chart start
-                    const startTime = Math.max(birthTime, firstTime);
-
-                    // Build label
-                    const tfLabel = tfShort[l.timeframe] || l.timeframe;
-                    const typeName = l.level_type.replace('_level', '').replace('VP_', 'VP ');
-                    const title = `${typeName} ${tfLabel}`;
-
-                    // Style
-                    const lineStyle = naked ? 0 : 2;  // 0=solid, 2=dashed
-                    const lineWidth = naked ? 2 : 1;
-                    const color = levelColors[cat] || '#888';
-
-                    // End time: naked levels extend to chart end, touched levels end at first touch
-                    let endTime = lastTime;
-                    if (!naked && l.first_touched_at) {
-                        endTime = Math.floor(new Date(l.first_touched_at).getTime() / 1000);
-                        // Clamp: don't end before start
-                        if (endTime <= startTime) endTime = startTime + 86400;
-                    }
-
-                    // Skip levels that ended before the visible chart range
-                    if (endTime < firstTime) return;
+                    // Build label and style from CC methodology
+                    const title = getLevelLabel(l);
+                    const style = getLevelStyle(l);
+                    const color = style.color;
+                    const lineWidth = naked ? style.lineWidth : 1;
+                    const lineStyle = naked ? style.lineStyle : 2;  // dashed for touched
 
                     // Create a line series that starts at birth and extends to end
                     const series = chart.addLineSeries({
@@ -332,6 +373,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         predBtn.classList.add('active');
     }
+
+    // Sync button active states with URL params
+    document.querySelectorAll('#tf-selector .btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.tf === currentTf);
+    });
+    document.querySelectorAll('#count-selector .btn').forEach(b => {
+        b.classList.toggle('active', parseInt(b.dataset.count) === currentCount);
+    });
 
     // Responsive resize
     new ResizeObserver(entries => {

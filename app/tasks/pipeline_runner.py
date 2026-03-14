@@ -62,20 +62,201 @@ def run_full_pipeline(app: Flask):
         })
 
 
+# ---------------------------------------------------------------------------
+# Foundation config reader (shared by all sub-functions)
+# ---------------------------------------------------------------------------
+
+def _read_foundation_config():
+    """Read foundation pipeline config from DB settings."""
+    from ..models.setting import get_setting
+
+    api_key = get_setting('binance_api_key', '')
+    api_secret = get_setting('binance_api_secret', '')
+    start_date = get_setting('data_start_date', '2020-01-01')
+    end_date = get_setting('data_end_date', '2025-12-31')
+    fetch_tfs = [t for t in get_setting('fetch_timeframes', '1d,1w,1M').split(',') if t]
+    htf_tfs = [t for t in get_setting('htf_timeframes', '1d,1w,1M').split(',') if t]
+    fractal_tfs = [t for t in get_setting('fractal_timeframes', '1d,1w,1M').split(',') if t]
+    fib_tfs = [t for t in get_setting('fibonacci_timeframes', '1d,1w').split(',') if t]
+    vp_tfs = [t for t in get_setting('vp_timeframes', '1d,1w,1M').split(',') if t]
+
+    return {
+        'api_key': api_key, 'api_secret': api_secret,
+        'start_date': start_date, 'end_date': end_date,
+        'fetch_tfs': fetch_tfs, 'htf_tfs': htf_tfs,
+        'fractal_tfs': fractal_tfs, 'fib_tfs': fib_tfs, 'vp_tfs': vp_tfs,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Foundation sub-functions (individually callable)
+# ---------------------------------------------------------------------------
+
+def run_foundation_fetch(app: Flask):
+    """Step 1: Fetch candles from Binance for configured timeframes."""
+    from ..extensions import db
+    from ..services.data_fetcher import fetch_candles
+    from ..services import progress
+
+    progress.start()
+
+    try:
+        with app.app_context():
+            cfg = _read_foundation_config()
+            progress.update('config', f'Fetch TFs: {cfg["fetch_tfs"]}, Range: {cfg["start_date"]} to {cfg["end_date"]}')
+
+            result = {}
+            if cfg['api_key'] and cfg['api_secret']:
+                for tf in cfg['fetch_tfs']:
+                    progress.update('fetch', f'Downloading {tf} candles from Binance...')
+                    try:
+                        count = fetch_candles(
+                            db.session, symbol='BTCUSDT', interval=tf,
+                            start_str=cfg['start_date'], end_str=cfg['end_date'],
+                            api_key=cfg['api_key'], api_secret=cfg['api_secret'],
+                        )
+                        result[tf] = count
+                        progress.update('fetch', f'{tf}: {count} new candles')
+                    except Exception as e:
+                        result[tf] = f'ERROR: {e}'
+                        progress.update('fetch', f'{tf}: ERROR - {e}')
+                        logger.error("Foundation fetch [%s] failed: %s", tf, e)
+            else:
+                progress.update('fetch', 'Skipped - no API keys configured')
+
+            progress.set_result(result)
+            progress.finish()
+            logger.info("Foundation fetch completed: %s", result)
+
+    except Exception as e:
+        progress.finish(error=str(e))
+        logger.error("Foundation fetch failed: %s", e)
+        raise
+
+
+def run_foundation_levels(app: Flask):
+    """Step 2: Run level detection (fractal, HTF, Fibonacci, VP)."""
+    from ..extensions import db
+    from ..services.indicators import run_indicators_multi
+    from ..services import progress
+
+    progress.start()
+
+    try:
+        with app.app_context():
+            cfg = _read_foundation_config()
+            progress.update('config', f'HTF: {cfg["htf_tfs"]}, Frac: {cfg["fractal_tfs"]}, Fib: {cfg["fib_tfs"]}, VP: {cfg["vp_tfs"]}')
+
+            progress.update('indicators', 'Running fractal detection + level calculation...')
+            indicator_summary = run_indicators_multi(
+                db.session, symbol='BTCUSDT',
+                htf_timeframes=cfg['htf_tfs'],
+                fractal_timeframes=cfg['fractal_tfs'],
+                fib_timeframes=cfg['fib_tfs'],
+                vp_timeframes=cfg['vp_tfs'],
+            )
+
+            # Report per-type results
+            for level_type, tf_counts in indicator_summary.items():
+                if tf_counts:
+                    details = ', '.join(f'{tf}={cnt}' for tf, cnt in tf_counts.items())
+                    progress.update('indicators', f'{level_type}: {details}')
+
+            # Volume Profile (needs 1-min data from Binance)
+            if cfg['vp_tfs'] and cfg['api_key'] and cfg['api_secret']:
+                progress.update('volume_profile', f'Computing VP for {cfg["vp_tfs"]} (fetching 1-min data)...')
+                try:
+                    vp_summary = _run_volume_profile(
+                        db.session, cfg['api_key'], cfg['api_secret'],
+                        cfg['start_date'], cfg['end_date'], cfg['vp_tfs'], progress,
+                    )
+                    indicator_summary['vp'] = vp_summary
+                    for tf, vp_result in vp_summary.items():
+                        progress.update('volume_profile', f'{tf}: {vp_result} levels')
+                except Exception as e:
+                    progress.update('volume_profile', f'ERROR: {e}')
+                    logger.error("Foundation VP failed: %s", e)
+
+            progress.set_result(_serialize_summary(indicator_summary))
+            progress.finish()
+            logger.info("Foundation levels completed")
+
+    except Exception as e:
+        progress.finish(error=str(e))
+        logger.error("Foundation levels failed: %s", e)
+        raise
+
+
+def run_foundation_touches(app: Flask):
+    """Step 3: Reset and re-run touch tracking on all levels."""
+    from ..extensions import db
+    from ..models import Level as LevelModel
+    from ..services.level_tracker import run_touch_tracking
+    from ..services import progress
+
+    progress.start()
+
+    try:
+        with app.app_context():
+            cfg = _read_foundation_config()
+
+            progress.update('touch_tracking', 'Resetting touch counts for all levels...')
+            db.session.query(LevelModel).update({
+                LevelModel.support_touches: 0,
+                LevelModel.resistance_touches: 0,
+                LevelModel.invalidated_at: None,
+                LevelModel.first_touched_at: None,
+            })
+            db.session.commit()
+
+            touch_tf = '1d' if '1d' in cfg['fetch_tfs'] else ('1w' if '1w' in cfg['fetch_tfs'] else '1M')
+            progress.update('touch_tracking', f'Processing {touch_tf} candles for level touches...')
+            tt_result = run_touch_tracking(
+                db.session, timeframe=touch_tf, symbol='BTCUSDT',
+            )
+
+            total = tt_result['total_touches']
+            # Count naked vs touched
+            naked_count = db.session.query(LevelModel).filter(
+                LevelModel.support_touches == 0,
+                LevelModel.invalidated_at.is_(None),
+            ).count()
+            touched_count = db.session.query(LevelModel).filter(
+                LevelModel.support_touches > 0,
+            ).count()
+
+            result = {
+                'total_touches': total,
+                'naked': naked_count,
+                'touched': touched_count,
+                'timeframe_used': touch_tf,
+            }
+            progress.update('touch_tracking', f'{touch_tf}: {total} touches ({naked_count} naked, {touched_count} touched)')
+            progress.set_result(result)
+            progress.finish()
+            logger.info("Foundation touches completed: %s", result)
+
+    except Exception as e:
+        progress.finish(error=str(e))
+        logger.error("Foundation touches failed: %s", e)
+        raise
+
+
+# ---------------------------------------------------------------------------
+# Full foundation pipeline (wrapper calling all 3 steps)
+# ---------------------------------------------------------------------------
+
 def run_foundation_pipeline(app: Flask):
     """Run the complete foundation pipeline using configured settings.
 
     Steps:
-    1. Read config from DB settings
-    2. Fetch candles for all configured timeframes
-    3. Run level detection per type per configured TF (HTF, Fractal, Fib)
-    4. Volume Profile (fetches 1-min data from Binance once, computes for all TFs)
-    5. Touch tracking (runs on ALL levels including VP)
-    6. Report progress in real-time via in-memory tracker
+    1. Fetch candles for all configured timeframes
+    2. Run level detection per type per configured TF (HTF, Fractal, Fib, VP)
+    3. Touch tracking (runs on ALL levels including VP)
     """
     from ..extensions import db
     from ..models.setting import get_setting
-    from ..models import PipelineRun
+    from ..models import PipelineRun, Level as LevelModel
     from ..services.data_fetcher import fetch_candles
     from ..services.indicators import run_indicators_multi
     from ..services.level_tracker import run_touch_tracking
@@ -92,35 +273,18 @@ def run_foundation_pipeline(app: Flask):
     db.session.commit()
 
     try:
-        # Read config
-        api_key = get_setting('binance_api_key', '')
-        api_secret = get_setting('binance_api_secret', '')
-        start_date = get_setting('data_start_date', '2020-01-01')
-        end_date = get_setting('data_end_date', '2025-12-31')
-        fetch_tfs = get_setting('fetch_timeframes', '1d,1w,1M').split(',')
-        htf_tfs = get_setting('htf_timeframes', '1d,1w,1M').split(',')
-        fractal_tfs = get_setting('fractal_timeframes', '1d,1w,1M').split(',')
-        fib_tfs = get_setting('fibonacci_timeframes', '1d,1w').split(',')
-        vp_tfs = get_setting('vp_timeframes', '1d,1w,1M').split(',')
-
-        # Filter empty strings
-        fetch_tfs = [t for t in fetch_tfs if t]
-        htf_tfs = [t for t in htf_tfs if t]
-        fractal_tfs = [t for t in fractal_tfs if t]
-        fib_tfs = [t for t in fib_tfs if t]
-        vp_tfs = [t for t in vp_tfs if t]
-
-        progress.update('config', f'Fetch: {fetch_tfs}, HTF: {htf_tfs}, Frac: {fractal_tfs}, Fib: {fib_tfs}, VP: {vp_tfs}')
+        cfg = _read_foundation_config()
+        progress.update('config', f'Fetch: {cfg["fetch_tfs"]}, HTF: {cfg["htf_tfs"]}, Frac: {cfg["fractal_tfs"]}, Fib: {cfg["fib_tfs"]}, VP: {cfg["vp_tfs"]}')
 
         # ── Step 1: Fetch candles ────────────────────────────────
-        if api_key and api_secret:
-            for tf in fetch_tfs:
+        if cfg['api_key'] and cfg['api_secret']:
+            for tf in cfg['fetch_tfs']:
                 progress.update('fetch', f'Downloading {tf} candles from Binance...')
                 try:
                     count = fetch_candles(
                         db.session, symbol='BTCUSDT', interval=tf,
-                        start_str=start_date, end_str=end_date,
-                        api_key=api_key, api_secret=api_secret,
+                        start_str=cfg['start_date'], end_str=cfg['end_date'],
+                        api_key=cfg['api_key'], api_secret=cfg['api_secret'],
                     )
                     progress.update('fetch', f'{tf}: {count} new candles')
                 except Exception as e:
@@ -131,28 +295,24 @@ def run_foundation_pipeline(app: Flask):
 
         # ── Step 2: Run indicators ───────────────────────────────
         progress.update('indicators', 'Running fractal detection + level calculation...')
-
         indicator_summary = run_indicators_multi(
             db.session, symbol='BTCUSDT',
-            htf_timeframes=htf_tfs,
-            fractal_timeframes=fractal_tfs,
-            fib_timeframes=fib_tfs,
-            vp_timeframes=vp_tfs,
+            htf_timeframes=cfg['htf_tfs'],
+            fractal_timeframes=cfg['fractal_tfs'],
+            fib_timeframes=cfg['fib_tfs'],
+            vp_timeframes=cfg['vp_tfs'],
         )
-
-        # Report per-type results
         for level_type, tf_counts in indicator_summary.items():
             if tf_counts:
                 details = ', '.join(f'{tf}={cnt}' for tf, cnt in tf_counts.items())
                 progress.update('indicators', f'{level_type}: {details}')
 
         # ── Step 3: Volume Profile ─────────────────────────────
-        # VP runs BEFORE touch tracking so VP levels also get touches counted
-        if vp_tfs and api_key and api_secret:
-            progress.update('volume_profile', f'Computing VP for {vp_tfs} (fetching 1-min data)...')
+        if cfg['vp_tfs'] and cfg['api_key'] and cfg['api_secret']:
+            progress.update('volume_profile', f'Computing VP for {cfg["vp_tfs"]} (fetching 1-min data)...')
             try:
-                vp_summary = _run_volume_profile(db.session, api_key, api_secret,
-                                                  start_date, end_date, vp_tfs, progress)
+                vp_summary = _run_volume_profile(db.session, cfg['api_key'], cfg['api_secret'],
+                                                  cfg['start_date'], cfg['end_date'], cfg['vp_tfs'], progress)
                 for tf, result in vp_summary.items():
                     progress.update('volume_profile', f'{tf}: {result} levels')
             except Exception as e:
@@ -160,8 +320,6 @@ def run_foundation_pipeline(app: Flask):
                 logger.error("Foundation VP failed: %s", e)
 
         # ── Step 4: Touch tracking ───────────────────────────────
-        # Runs AFTER all level types are created (HTF, Fractal, Fib, VP)
-        from ..models import Level as LevelModel
         progress.update('touch_tracking', 'Resetting touch counts for all levels...')
         db.session.query(LevelModel).update({
             LevelModel.support_touches: 0,
@@ -171,9 +329,7 @@ def run_foundation_pipeline(app: Flask):
         })
         db.session.commit()
 
-        # Use finest available data (daily > weekly > monthly) to test ALL levels
-        # High threshold during foundation: we want to COUNT touches, not invalidate
-        touch_tf = '1d' if '1d' in fetch_tfs else ('1w' if '1w' in fetch_tfs else '1M')
+        touch_tf = '1d' if '1d' in cfg['fetch_tfs'] else ('1w' if '1w' in cfg['fetch_tfs'] else '1M')
         progress.update('touch_tracking', f'Processing {touch_tf} candles for level touches...')
         tt_result = run_touch_tracking(
             db.session, timeframe=touch_tf, symbol='BTCUSDT',

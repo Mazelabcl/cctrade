@@ -149,17 +149,15 @@ def calculate_htf_levels(df: pd.DataFrame, timeframe: str) -> list[dict]:
 # Fibonacci levels
 # ---------------------------------------------------------------------------
 
-def calculate_fibonacci_levels(df: pd.DataFrame, timeframe: str) -> list[dict]:
-    """Calculate Fibonacci retracement levels between fractals.
+def _calculate_fib_levels(df: pd.DataFrame, timeframe: str,
+                          ratios: list[tuple[str, float]]) -> list[dict]:
+    """Core Fibonacci retracement calculation between fractals.
 
-    Uses 0.50, 0.618 (golden pocket at 0.639), 0.75, 0.786 ratios.
     Each fractal anchor pulls to future opposite fractals while the anchor
-    hasn't been invalidated.
+    hasn't been invalidated (price hasn't broken through anchor level).
     """
     df = detect_fractals_df(df)
     fib_levels: list[dict] = []
-
-    ratios = [('0.50', 0.50), ('0.618', 0.639), ('0.75', 0.75), ('0.786', 0.786)]
 
     high_fractals = df[df['bearish_fractal']].copy()
     low_fractals = df[df['bullish_fractal']].copy()
@@ -224,6 +222,27 @@ def calculate_fibonacci_levels(df: pd.DataFrame, timeframe: str) -> list[dict]:
                     })
 
     return fib_levels
+
+
+def calculate_cc_fibonacci_levels(df: pd.DataFrame, timeframe: str) -> list[dict]:
+    """Daniel's CC golden pocket (0.639 ratio)."""
+    from ..config import Config
+    return _calculate_fib_levels(df, timeframe, Config.CC_FIBONACCI_RATIOS)
+
+
+def calculate_igor_fibonacci_levels(df: pd.DataFrame, timeframe: str) -> list[dict]:
+    """Igor's quarter system (0.25, 0.50, 0.75 ratios)."""
+    from ..config import Config
+    return _calculate_fib_levels(df, timeframe, Config.IGOR_FIBONACCI_RATIOS)
+
+
+def calculate_fibonacci_levels(df: pd.DataFrame, timeframe: str) -> list[dict]:
+    """Calculate all Fibonacci levels (CC + Igor combined).
+
+    Convenience wrapper that runs both CC and Igor detectors.
+    """
+    return (calculate_cc_fibonacci_levels(df, timeframe) +
+            calculate_igor_fibonacci_levels(df, timeframe))
 
 
 # ---------------------------------------------------------------------------

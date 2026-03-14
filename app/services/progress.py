@@ -15,6 +15,7 @@ _state = {
     'started_at': None,
     'finished_at': None,
     'error': None,
+    'result': None,  # step-specific result data (dict)
 }
 
 
@@ -28,6 +29,7 @@ def start():
         _state['started_at'] = datetime.now(timezone.utc).isoformat()
         _state['finished_at'] = None
         _state['error'] = None
+        _state['result'] = None
 
 
 def update(step: str, detail: str = ''):
@@ -39,6 +41,12 @@ def update(step: str, detail: str = ''):
             'time': datetime.now(timezone.utc).isoformat(),
             'msg': f"[{step}] {detail}" if detail else step,
         })
+
+
+def set_result(result: dict):
+    """Store step-specific result data."""
+    with _lock:
+        _state['result'] = result
 
 
 def finish(error: str = None):
@@ -72,4 +80,5 @@ def get_state() -> dict:
             'started_at': _state['started_at'],
             'finished_at': _state['finished_at'],
             'error': _state['error'],
+            'result': _state['result'],
         }

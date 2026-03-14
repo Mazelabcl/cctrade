@@ -43,6 +43,10 @@ class Config:
     PRICE_RANGE = 100
     TOUCHED_THRESHOLD = 1  # touches needed to consider a level "touched" (parametrizable)
 
+    # Fibonacci — Chart Champions methodology
+    CC_FIBONACCI_RATIOS = [('CC', 0.639)]       # Daniel's golden pocket (0.618-0.66 avg)
+    IGOR_FIBONACCI_RATIOS = [('0.25', 0.25), ('0.50', 0.50), ('0.75', 0.75)]  # Igor's quarters
+
     # ML Prediction
     PREDICTION_HORIZONS = {
         'hour': 1,

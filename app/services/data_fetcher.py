@@ -44,19 +44,37 @@ def fetch_candles(db: Session, symbol: str = 'BTCUSDT',
     try:
         client = Client(api_key, api_secret)
 
-        # Find latest candle so we only fetch new data
+        # Check for historical gap (earliest candle later than requested start)
+        earliest = (
+            db.query(Candle)
+            .filter_by(symbol=symbol, timeframe=interval)
+            .order_by(Candle.open_time.asc())
+            .first()
+        )
+        # Find latest candle so we only fetch new data going forward
         latest = (
             db.query(Candle)
             .filter_by(symbol=symbol, timeframe=interval)
             .order_by(Candle.open_time.desc())
             .first()
         )
-        if latest:
-            start_str = latest.open_time.strftime('%d %b %Y %H:%M:%S')
 
-        klines = client.get_historical_klines(
-            symbol, interval, start_str, end_str,
-        )
+        # Build list of ranges to fetch: historical gap + forward from latest
+        ranges = []
+        if earliest and earliest.open_time.strftime('%Y-%m-%d') > start_str[:10]:
+            # Gap: from configured start up to the earliest stored candle
+            ranges.append((start_str, earliest.open_time.strftime('%d %b %Y %H:%M:%S')))
+        if latest:
+            ranges.append((latest.open_time.strftime('%d %b %Y %H:%M:%S'), end_str))
+        else:
+            ranges.append((start_str, end_str))
+
+        all_klines = []
+        for range_start, range_end in ranges:
+            chunk = client.get_historical_klines(symbol, interval, range_start, range_end)
+            all_klines.extend(chunk)
+
+        klines = all_klines
 
         if not klines:
             run.status = 'completed'

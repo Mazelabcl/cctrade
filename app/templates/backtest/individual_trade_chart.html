@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}Trade #{{ trade.id }} — {{ bt.level_type }}{% endblock %}
+
+{% block extra_head %}
+<script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0">
+            <span class="badge {{ 'bg-success' if trade.direction == 'LONG' else 'bg-danger' }} me-2">{{ trade.direction }}</span>
+            Trade #{{ trade.id }}
+            <small class="text-muted">—
+                <span class="badge
+                    {% if 'Fractal' in bt.level_type %}bg-success
+                    {% elif 'HTF' in bt.level_type %}bg-primary
+                    {% elif 'Fib' in bt.level_type %}bg-warning text-dark
+                    {% elif 'VP' in bt.level_type %}bg-info text-dark
+                    {% else %}bg-secondary{% endif %}">{{ bt.level_type }}</span>
+                {{ bt.level_source_timeframe }}
+            </small>
+        </h4>
+    </div>
+    <div>
+        {% if prev_trade %}
+        <a href="{{ url_for('backtest.individual_trade_chart', bt_id=bt.id, trade_id=prev_trade.id) }}"
+           class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Prev</a>
+        {% endif %}
+        <a href="{{ url_for('backtest.individual_level_detail', bt_id=bt.id) }}"
+           class="btn btn-outline-secondary btn-sm"><i class="bi bi-list"></i> All Trades</a>
+        {% if next_trade %}
+        <a href="{{ url_for('backtest.individual_trade_chart', bt_id=bt.id, trade_id=next_trade.id) }}"
+           class="btn btn-outline-secondary btn-sm">Next <i class="bi bi-arrow-right"></i></a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Trade Info Cards -->
+<div class="row mb-3">
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body py-2 text-center">
+                <small class="text-muted">Entry</small>
+                <div class="fw-bold">${{ '{:,.0f}'.format(trade.entry_price) }}</div>
+                <small class="text-muted">{{ trade.entry_time.strftime('%Y-%m-%d %H:%M') }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body py-2 text-center">
+                <small class="text-muted">Exit</small>
+                <div class="fw-bold">${{ '{:,.0f}'.format(trade.exit_price) if trade.exit_price else 'Open' }}</div>
+                <small class="text-muted">{{ trade.exit_time.strftime('%Y-%m-%d %H:%M') if trade.exit_time else '' }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card border-{{ 'success' if trade.exit_reason == 'TP_HIT' else 'danger' if trade.exit_reason == 'SL_HIT' else 'secondary' }}">
+            <div class="card-body py-2 text-center">
+                <small class="text-muted">Exit Reason</small>
+                <div class="fw-bold badge {{ 'bg-success' if trade.exit_reason == 'TP_HIT' else 'bg-danger' if trade.exit_reason == 'SL_HIT' else 'bg-secondary' }}">
+                    {{ trade.exit_reason }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body py-2 text-center">
+                <small class="text-muted">PnL</small>
+                <div class="fw-bold {{ 'text-success' if trade.pnl and trade.pnl > 0 else 'text-danger' }}">
+                    ${{ '{:,.0f}'.format(trade.pnl) if trade.pnl else 0 }}
+                    ({{ '%.2f'|format(trade.pnl_pct * 100) if trade.pnl_pct else 0 }}%)
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body py-2 text-center">
+                <small class="text-muted">Duration</small>
+                <div class="fw-bold">{{ trade.candles_held }} candles</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body py-2 text-center">
+                <small class="text-muted">Confluence</small>
+                <div class="fw-bold">{{ trade.zone_confluence or 0 }} levels</div>
+                <small class="text-muted">Vol: {{ '%.1f'|format(trade.volume_ratio) if trade.volume_ratio else '?' }}x</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart -->
+<div class="card mb-3">
+    <div class="card-body p-0">
+        <div id="trade-chart" style="height: 500px;"></div>
+    </div>
+</div>
+
+<!-- Legend -->
+<div class="card">
+    <div class="card-body py-2">
+        <div class="d-flex gap-4 flex-wrap">
+            <span><span style="display:inline-block;width:30px;height:3px;background:#2196F3;vertical-align:middle;"></span> Level Price</span>
+            <span><span style="display:inline-block;width:30px;height:3px;background:#4CAF50;vertical-align:middle;"></span> Take Profit</span>
+            <span><span style="display:inline-block;width:30px;height:3px;background:#F44336;vertical-align:middle;"></span> Stop Loss</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:#4CAF50;border-radius:50%;vertical-align:middle;"></span> Entry</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:{% if trade.exit_reason == 'TP_HIT' %}#4CAF50{% elif trade.exit_reason == 'SL_HIT' %}#F44336{% else %}#9E9E9E{% endif %};border-radius:50%;vertical-align:middle;"></span> Exit ({{ trade.exit_reason }})</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+fetch('{{ url_for("backtest.api_il_trade_chart", trade_id=trade.id) }}')
+    .then(r => r.json())
+    .then(data => {
+        const container = document.getElementById('trade-chart');
+        const chart = LightweightCharts.createChart(container, {
+            width: container.clientWidth,
+            height: 500,
+            layout: {
+                background: { type: 'solid', color: '#1e1e1e' },
+                textColor: '#d1d4dc',
+            },
+            grid: {
+                vertLines: { color: '#2B2B43' },
+                horzLines: { color: '#2B2B43' },
+            },
+            crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+            rightPriceScale: { borderColor: '#2B2B43' },
+            timeScale: {
+                borderColor: '#2B2B43',
+                timeVisible: true,
+                secondsVisible: false,
+            },
+        });
+
+        // Candlestick series
+        const candleSeries = chart.addCandlestickSeries({
+            upColor: '#26a69a',
+            downColor: '#ef5350',
+            borderDownColor: '#ef5350',
+            borderUpColor: '#26a69a',
+            wickDownColor: '#ef5350',
+            wickUpColor: '#26a69a',
+        });
+        candleSeries.setData(data.candles);
+
+        const m = data.markers;
+
+        // Level price line (blue) — reconstructed from distance_to_level
+        // For LONG: level was below entry (support), for SHORT: level was above entry (resistance)
+        const dist = {{ trade.distance_to_level or 0 }};
+        const levelPrice = m.direction === 'LONG'
+            ? m.entry_price * (1 - dist)
+            : m.entry_price * (1 + dist);
+        candleSeries.createPriceLine({
+            price: levelPrice,
+            color: '#2196F3',
+            lineWidth: 2,
+            lineStyle: LightweightCharts.LineStyle.Solid,
+            axisLabelVisible: true,
+            title: 'Level ($' + Math.round(levelPrice) + ')',
+        });
+
+        // Take Profit line (green dashed)
+        candleSeries.createPriceLine({
+            price: m.take_profit,
+            color: '#4CAF50',
+            lineWidth: 1,
+            lineStyle: LightweightCharts.LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: 'TP',
+        });
+
+        // Stop Loss line (red dashed)
+        candleSeries.createPriceLine({
+            price: m.stop_loss,
+            color: '#F44336',
+            lineWidth: 1,
+            lineStyle: LightweightCharts.LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: 'SL',
+        });
+
+        // Entry marker
+        const markers = [];
+        if (m.entry_time) {
+            markers.push({
+                time: m.entry_time,
+                position: m.direction === 'LONG' ? 'belowBar' : 'aboveBar',
+                color: '#4CAF50',
+                shape: m.direction === 'LONG' ? 'arrowUp' : 'arrowDown',
+                text: m.direction + ' Entry @ $' + Math.round(m.entry_price),
+            });
+        }
+
+        // Exit marker
+        if (m.exit_time) {
+            const exitColor = m.exit_reason === 'TP_HIT' ? '#4CAF50' : m.exit_reason === 'SL_HIT' ? '#F44336' : '#9E9E9E';
+            markers.push({
+                time: m.exit_time,
+                position: m.direction === 'LONG' ? 'aboveBar' : 'belowBar',
+                color: exitColor,
+                shape: 'circle',
+                text: m.exit_reason + ' @ $' + Math.round(m.exit_price),
+            });
+        }
+
+        candleSeries.setMarkers(markers);
+
+        // Fit content
+        chart.timeScale().fitContent();
+
+        // Resize
+        window.addEventListener('resize', () => {
+            chart.applyOptions({ width: container.clientWidth });
+        });
+    });
+</script>
+{% endblock %}

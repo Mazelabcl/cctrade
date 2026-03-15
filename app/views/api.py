@@ -1,10 +1,13 @@
 import json
+import logging
 import queue
 import threading
 from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, Response, current_app
 from ..extensions import db
 from ..models import Candle, Feature, Level, MLModel, Prediction, PipelineRun, BacktestResult
+
+logger = logging.getLogger(__name__)
 
 api_bp = Blueprint('api', __name__)
 
@@ -25,6 +28,13 @@ def publish_sse(event: str, data: dict):
                 dead.append(q)
         for q in dead:
             _sse_subscribers.remove(q)
+
+
+@api_bp.route('/foundation-progress')
+def foundation_progress():
+    """Return real-time foundation pipeline progress (in-memory, no DB)."""
+    from ..services.progress import get_state
+    return jsonify(get_state())
 
 
 @api_bp.route('/health')
@@ -93,6 +103,9 @@ def levels():
     end = request.args.get('end')
     active_only = request.args.get('active_only', 'true') == 'true'
     level_type = request.args.get('type')
+    timeframe = request.args.get('timeframe')    # comma-separated: daily,weekly
+    source = request.args.get('source')          # comma-separated: htf,fibonacci
+    naked_only = request.args.get('naked_only', 'false') == 'true'
 
     query = Level.query
     if active_only:
@@ -103,6 +116,19 @@ def levels():
         query = query.filter(Level.created_at <= end)
     if level_type:
         query = query.filter(Level.level_type.like(f'%{level_type}%'))
+    if timeframe:
+        tfs = [t.strip() for t in timeframe.split(',') if t.strip()]
+        if tfs:
+            query = query.filter(Level.timeframe.in_(tfs))
+    if source:
+        sources = [s.strip() for s in source.split(',') if s.strip()]
+        if sources:
+            query = query.filter(Level.source.in_(sources))
+    if naked_only:
+        query = query.filter(
+            Level.support_touches == 0,
+            Level.resistance_touches == 0,
+        )
 
     rows = query.order_by(Level.price_level).all()
     return jsonify([l.to_dict() for l in rows])
@@ -314,6 +340,220 @@ def predict_endpoint():
         return jsonify({'status': 'ok', 'predictions': len(results)})
     except Exception as e:
         return jsonify({'status': 'error', 'error': str(e)}), 400
+
+
+@api_bp.route('/run-foundation', methods=['POST'])
+def run_foundation():
+    """Trigger the foundation pipeline (fetch + multi-TF indicators + touch tracking)."""
+    from ..tasks.pipeline_runner import run_foundation_pipeline
+
+    app = current_app._get_current_object()
+
+    def _work():
+        with app.app_context():
+            run_foundation_pipeline(app)
+
+    thread = threading.Thread(target=_work, daemon=True)
+    thread.start()
+    return jsonify({'status': 'started', 'message': 'Foundation pipeline started'})
+
+
+@api_bp.route('/foundation/preview')
+def foundation_preview():
+    """Return what data exists and what the pipeline would do (read-only)."""
+    from ..models.setting import get_setting
+    from ..tasks.pipeline_runner import _read_foundation_config
+
+    cfg = _read_foundation_config()
+
+    # Existing candle counts per timeframe
+    existing_candles = {}
+    for tf in cfg['fetch_tfs']:
+        count = db.session.query(Candle).filter_by(symbol='BTCUSDT', timeframe=tf).count()
+        earliest = db.session.query(Candle.open_time).filter_by(
+            symbol='BTCUSDT', timeframe=tf
+        ).order_by(Candle.open_time).first()
+        latest = db.session.query(Candle.open_time).filter_by(
+            symbol='BTCUSDT', timeframe=tf
+        ).order_by(Candle.open_time.desc()).first()
+        existing_candles[tf] = {
+            'count': count,
+            'from': str(earliest[0]) if earliest else None,
+            'to': str(latest[0]) if latest else None,
+        }
+
+    # Existing level counts by type
+    from sqlalchemy import func
+    level_counts = dict(
+        db.session.query(Level.level_type, func.count(Level.id))
+        .group_by(Level.level_type).all()
+    )
+
+    return jsonify({
+        'date_range': {'start': cfg['start_date'], 'end': cfg['end_date']},
+        'train_test_cutoff': get_setting('train_test_cutoff', '2024-06-01'),
+        'has_api_keys': bool(cfg['api_key'] and cfg['api_secret']),
+        'fetch_timeframes': cfg['fetch_tfs'],
+        'level_config': {
+            'htf': cfg['htf_tfs'],
+            'fractal': cfg['fractal_tfs'],
+            'fibonacci': cfg['fib_tfs'],
+            'vp': cfg['vp_tfs'],
+        },
+        'existing_candles': existing_candles,
+        'existing_levels': level_counts,
+    })
+
+
+@api_bp.route('/foundation/fetch', methods=['POST'])
+def foundation_fetch():
+    """Step 1: Fetch candles only."""
+    from ..tasks.pipeline_runner import run_foundation_fetch
+
+    app = current_app._get_current_object()
+    thread = threading.Thread(target=run_foundation_fetch, args=(app,), daemon=True)
+    thread.start()
+    return jsonify({'status': 'started', 'step': 'fetch'})
+
+
+@api_bp.route('/foundation/detect-levels', methods=['POST'])
+def foundation_detect_levels():
+    """Step 2: Run level detection (fractal, HTF, Fibonacci, VP)."""
+    from ..tasks.pipeline_runner import run_foundation_levels
+
+    app = current_app._get_current_object()
+    thread = threading.Thread(target=run_foundation_levels, args=(app,), daemon=True)
+    thread.start()
+    return jsonify({'status': 'started', 'step': 'detect-levels'})
+
+
+@api_bp.route('/foundation/touch-tracking', methods=['POST'])
+def foundation_touch_tracking():
+    """Step 3: Reset and re-run touch tracking."""
+    from ..tasks.pipeline_runner import run_foundation_touches
+
+    app = current_app._get_current_object()
+    thread = threading.Thread(target=run_foundation_touches, args=(app,), daemon=True)
+    thread.start()
+    return jsonify({'status': 'started', 'step': 'touch-tracking'})
+
+
+@api_bp.route('/regenerate-fibs', methods=['POST'])
+def regenerate_fibs():
+    """Delete old Fibonacci levels and regenerate with CC/Igor split types."""
+    from ..services.indicators import calculate_fibonacci_levels, _add_levels, _load_candle_df, _tf_label
+    from ..services.level_tracker import run_touch_tracking
+    from ..models.setting import get_setting
+
+    app = current_app._get_current_object()
+
+    def _work():
+        with app.app_context():
+            # Delete all existing Fibonacci levels
+            deleted = db.session.query(Level).filter(Level.source == 'fibonacci').delete()
+            db.session.commit()
+            logger.info("Regenerate fibs: deleted %d old levels", deleted)
+
+            # Regenerate for configured timeframes
+            fib_tfs = get_setting('fibonacci_timeframes', '1d,1w').split(',')
+            fib_tfs = [t for t in fib_tfs if t]
+
+            for tf in fib_tfs:
+                candles = _load_candle_df(db.session, 'BTCUSDT', tf)
+                if candles.empty:
+                    continue
+                fibs = calculate_fibonacci_levels(candles, _tf_label(tf))
+                added = _add_levels(db.session, fibs, skip_duplicates=True)
+                logger.info("Regenerate fibs [%s]: %d new levels", tf, added)
+
+            db.session.commit()
+
+            # Reset touches on ALL levels and re-run touch tracking
+            db.session.query(Level).update({
+                Level.support_touches: 0,
+                Level.resistance_touches: 0,
+                Level.invalidated_at: None,
+                Level.first_touched_at: None,
+            })
+            db.session.commit()
+
+            fetch_tfs = get_setting('fetch_timeframes', '1d,1w,1M').split(',')
+            touch_tf = '1d' if '1d' in fetch_tfs else ('1w' if '1w' in fetch_tfs else '1M')
+            tt = run_touch_tracking(db.session, timeframe=touch_tf, symbol='BTCUSDT')
+            logger.info("Regenerate fibs: touch tracking done — %s", tt)
+
+    thread = threading.Thread(target=_work, daemon=True)
+    thread.start()
+    return jsonify({'status': 'started', 'message': 'Fibonacci regeneration started in background'})
+
+
+@api_bp.route('/foundation-status')
+def foundation_status():
+    """Return foundation data coverage and level counts."""
+    from ..models.setting import get_setting
+
+    # Data coverage per timeframe
+    data_coverage = {}
+    timeframes = db.session.query(Candle.timeframe).distinct().all()
+    for (tf,) in timeframes:
+        count = db.session.query(Candle).filter_by(timeframe=tf).count()
+        earliest = (
+            db.session.query(Candle.open_time)
+            .filter_by(timeframe=tf)
+            .order_by(Candle.open_time)
+            .first()
+        )
+        latest = (
+            db.session.query(Candle.open_time)
+            .filter_by(timeframe=tf)
+            .order_by(Candle.open_time.desc())
+            .first()
+        )
+        data_coverage[tf] = {
+            'count': count,
+            'from': earliest[0].isoformat() if earliest else None,
+            'to': latest[0].isoformat() if latest else None,
+        }
+
+    # Levels by type and timeframe
+    level_rows = (
+        db.session.query(Level.source, Level.timeframe, db.func.count(Level.id))
+        .filter(Level.invalidated_at.is_(None))
+        .group_by(Level.source, Level.timeframe)
+        .all()
+    )
+    levels_by_type_tf = {}
+    for source, tf, count in level_rows:
+        if source not in levels_by_type_tf:
+            levels_by_type_tf[source] = {}
+        levels_by_type_tf[source][tf] = count
+
+    # Train/test split info
+    cutoff = get_setting('train_test_cutoff', '2024-06-01')
+    train_levels = db.session.query(Level).filter(
+        Level.created_at < cutoff,
+        Level.invalidated_at.is_(None),
+    ).count()
+    test_levels = db.session.query(Level).filter(
+        Level.created_at >= cutoff,
+        Level.invalidated_at.is_(None),
+    ).count()
+
+    # Check if foundation pipeline is running
+    pipeline_running = (
+        db.session.query(PipelineRun)
+        .filter_by(pipeline_type='foundation', status='running')
+        .first()
+    ) is not None
+
+    return jsonify({
+        'data_coverage': data_coverage,
+        'levels_by_type_tf': levels_by_type_tf,
+        'train_test_cutoff': cutoff,
+        'train_levels': train_levels,
+        'test_levels': test_levels,
+        'pipeline_running': pipeline_running,
+    })
 
 
 @api_bp.route('/run-pipeline', methods=['POST'])

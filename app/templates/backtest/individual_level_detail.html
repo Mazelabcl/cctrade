@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block title %}{{ bt.level_type }} / {{ bt.level_source_timeframe }} — Backtest Detail{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>
+            <span class="badge
+                {% if 'Fractal' in bt.level_type %}bg-success
+                {% elif 'HTF' in bt.level_type %}bg-primary
+                {% elif 'Fib' in bt.level_type %}bg-warning text-dark
+                {% elif 'VP' in bt.level_type %}bg-info text-dark
+                {% else %}bg-secondary{% endif %} me-2">
+                {{ bt.level_type }}
+            </span>
+            {{ bt.level_source_timeframe }} — Backtest #{{ bt.id }}
+        </h2>
+        <small class="text-muted">
+            Strategy: {{ bt.strategy_name }} |
+            Exec TF: {{ bt.trade_execution_timeframe }} |
+            {{ bt.start_date.strftime('%Y-%m-%d') }} to {{ bt.end_date.strftime('%Y-%m-%d') }}
+        </small>
+    </div>
+    <a href="{{ url_for('backtest.individual_levels') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> All Results
+    </a>
+</div>
+
+<!-- Metrics Cards -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body text-center py-2">
+                <small class="text-muted">Win Rate</small>
+                <h4 class="{{ 'text-success' if bt.win_rate and bt.win_rate >= 50 else 'text-danger' }} mb-0">
+                    {{ '%.1f'|format(bt.win_rate) if bt.win_rate else 0 }}%
+                </h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body text-center py-2">
+                <small class="text-muted">Profit Factor</small>
+                <h4 class="{{ 'text-success' if bt.profit_factor and bt.profit_factor >= 1.0 else 'text-danger' }} mb-0">
+                    {{ '%.2f'|format(bt.profit_factor) if bt.profit_factor and bt.profit_factor < 100 else 'INF' }}
+                </h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body text-center py-2">
+                <small class="text-muted">Total PnL</small>
+                <h4 class="{{ 'text-success' if bt.total_pnl and bt.total_pnl > 0 else 'text-danger' }} mb-0">
+                    ${{ '{:,.0f}'.format(bt.total_pnl) if bt.total_pnl else 0 }}
+                </h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body text-center py-2">
+                <small class="text-muted">Trades</small>
+                <h4 class="mb-0">{{ bt.total_trades }}</h4>
+                <small class="text-success">{{ bt.winning_trades }} W</small> /
+                <small class="text-danger">{{ bt.losing_trades }} L</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body text-center py-2">
+                <small class="text-muted">Sharpe</small>
+                <h4 class="mb-0">{{ '%.2f'|format(bt.sharpe_ratio) if bt.sharpe_ratio else 'N/A' }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body text-center py-2">
+                <small class="text-muted">Max DD</small>
+                <h4 class="text-danger mb-0">{{ '%.1f'|format(bt.max_drawdown) if bt.max_drawdown else 0 }}%</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><h6 class="mb-0">Equity Curve (Cumulative PnL %)</h6></div>
+            <div class="card-body"><canvas id="equityCurve" height="200"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><h6 class="mb-0">Exit Reasons</h6></div>
+            <div class="card-body"><canvas id="exitReasons" height="200"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<!-- Trades Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Trade Log ({{ trades|length }} trades)</h5>
+        <div>
+            <select id="trade-filter" class="form-select form-select-sm d-inline-block" style="width:auto;">
+                <option value="">All Trades</option>
+                <option value="winning">Winning</option>
+                <option value="losing">Losing</option>
+            </select>
+            <select id="exit-filter" class="form-select form-select-sm d-inline-block ms-1" style="width:auto;">
+                <option value="">All Exits</option>
+                <option value="TP_HIT">TP Hit</option>
+                <option value="SL_HIT">SL Hit</option>
+                <option value="TIMEOUT">Timeout</option>
+            </select>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+            <table class="table table-hover table-sm mb-0">
+                <thead class="sticky-top">
+                    <tr>
+                        <th>#</th>
+                        <th>Entry Time</th>
+                        <th>Direction</th>
+                        <th class="text-end">Entry $</th>
+                        <th class="text-end">Exit $</th>
+                        <th class="text-end">SL</th>
+                        <th class="text-end">TP</th>
+                        <th>Exit Reason</th>
+                        <th class="text-end">PnL $</th>
+                        <th class="text-end">PnL %</th>
+                        <th class="text-end">Duration</th>
+                        <th class="text-end">Vol Ratio</th>
+                        <th class="text-end">Confluence</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="trades-body">
+                    {% for t in trades %}
+                    <tr data-result="{{ 'winning' if t.pnl and t.pnl > 0 else 'losing' }}"
+                        data-exit="{{ t.exit_reason }}">
+                        <td>{{ loop.index }}</td>
+                        <td>{{ t.entry_time.strftime('%Y-%m-%d %H:%M') if t.entry_time else '' }}</td>
+                        <td>
+                            <span class="badge {{ 'bg-success' if t.direction == 'LONG' else 'bg-danger' }}">
+                                {{ t.direction }}
+                            </span>
+                        </td>
+                        <td class="text-end">${{ '{:,.0f}'.format(t.entry_price) if t.entry_price else '' }}</td>
+                        <td class="text-end">${{ '{:,.0f}'.format(t.exit_price) if t.exit_price else '' }}</td>
+                        <td class="text-end text-danger">${{ '{:,.0f}'.format(t.stop_loss) if t.stop_loss else '' }}</td>
+                        <td class="text-end text-success">${{ '{:,.0f}'.format(t.take_profit) if t.take_profit else '' }}</td>
+                        <td>
+                            <span class="badge
+                                {% if t.exit_reason == 'TP_HIT' %}bg-success
+                                {% elif t.exit_reason == 'SL_HIT' %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                                {{ t.exit_reason }}
+                            </span>
+                        </td>
+                        <td class="text-end fw-bold {{ 'text-success' if t.pnl and t.pnl > 0 else 'text-danger' }}">
+                            ${{ '{:,.0f}'.format(t.pnl) if t.pnl else 0 }}
+                        </td>
+                        <td class="text-end {{ 'text-success' if t.pnl_pct and t.pnl_pct > 0 else 'text-danger' }}">
+                            {{ '%.2f'|format(t.pnl_pct * 100) if t.pnl_pct else 0 }}%
+                        </td>
+                        <td class="text-end">{{ t.candles_held }} candles</td>
+                        <td class="text-end">{{ '%.1f'|format(t.volume_ratio) if t.volume_ratio else '' }}x</td>
+                        <td class="text-end">{{ t.zone_confluence or 0 }}</td>
+                        <td>
+                            <a href="{{ url_for('backtest.individual_trade_chart', bt_id=bt.id, trade_id=t.id) }}"
+                               class="btn btn-sm btn-outline-info" title="View on chart">
+                                <i class="bi bi-graph-up"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Parameters -->
+<div class="card mt-4">
+    <div class="card-header"><h6 class="mb-0">Backtest Parameters</h6></div>
+    <div class="card-body">
+        <pre class="mb-0 text-muted">{{ bt.parameters|tojson(indent=2) }}</pre>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Trade filters
+function filterTrades() {
+    const result = document.getElementById('trade-filter').value;
+    const exit = document.getElementById('exit-filter').value;
+    document.querySelectorAll('#trades-body tr').forEach(row => {
+        const matchResult = !result || row.dataset.result === result;
+        const matchExit = !exit || row.dataset.exit === exit;
+        row.style.display = (matchResult && matchExit) ? '' : 'none';
+    });
+}
+document.getElementById('trade-filter').addEventListener('change', filterTrades);
+document.getElementById('exit-filter').addEventListener('change', filterTrades);
+
+// Equity Curve
+fetch('{{ url_for("backtest.api_il_equity_curve", bt_id=bt.id) }}')
+    .then(r => r.json())
+    .then(curve => {
+        const ctx = document.getElementById('equityCurve');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: curve.map((c, i) => i + 1),
+                datasets: [{
+                    label: 'Cumulative PnL %',
+                    data: curve.map(c => c.cumulative_pct),
+                    borderColor: curve[curve.length-1]?.cumulative_pct >= 0 ? '#28a745' : '#dc3545',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    tension: 0.1,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { title: { display: true, text: 'Trade #' } },
+                    y: { title: { display: true, text: 'Cumulative PnL %' } }
+                }
+            }
+        });
+    });
+
+// Exit Reasons Pie
+{% set tp_count = trades|selectattr('exit_reason', 'equalto', 'TP_HIT')|list|length %}
+{% set sl_count = trades|selectattr('exit_reason', 'equalto', 'SL_HIT')|list|length %}
+{% set to_count = trades|selectattr('exit_reason', 'equalto', 'TIMEOUT')|list|length %}
+new Chart(document.getElementById('exitReasons'), {
+    type: 'doughnut',
+    data: {
+        labels: ['TP Hit', 'SL Hit', 'Timeout'],
+        datasets: [{
+            data: [{{ tp_count }}, {{ sl_count }}, {{ to_count }}],
+            backgroundColor: ['#28a745', '#dc3545', '#6c757d'],
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } }
+    }
+});
+</script>
+{% endblock %}

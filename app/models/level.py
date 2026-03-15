@@ -12,6 +12,7 @@ class Level(db.Model):
     source = db.Column(db.String(30), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False)
     invalidated_at = db.Column(db.DateTime)
+    first_touched_at = db.Column(db.DateTime)
     support_touches = db.Column(db.Integer, default=0)
     resistance_touches = db.Column(db.Integer, default=0)
     metadata_json = db.Column('metadata', db.JSON)
@@ -35,6 +36,7 @@ class Level(db.Model):
             'source': self.source,
             'created_at': self.created_at.isoformat(),
             'invalidated_at': self.invalidated_at.isoformat() if self.invalidated_at else None,
+            'first_touched_at': self.first_touched_at.isoformat() if self.first_touched_at else None,
             'support_touches': self.support_touches,
             'resistance_touches': self.resistance_touches,
             'metadata': self.metadata_json,

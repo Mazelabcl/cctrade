@@ -1,16 +1,33 @@
-"""Settings views — API keys, live sync configuration."""
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+"""Settings views — API keys, live sync configuration, foundation config."""
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from ..extensions import db
 from ..models.setting import get_setting, set_setting
 
 settings_bp = Blueprint('settings', __name__, template_folder='../templates')
 
 AVAILABLE_TIMEFRAMES = ['1h', '4h', '1d']
+ALL_TIMEFRAMES = ['1h', '4h', '1d', '1w', '1M']
+LEVEL_TYPES = ['htf', 'fractal', 'fibonacci', 'vp']
+
+
+def _get_foundation_config():
+    """Read foundation config from DB settings with app config defaults."""
+    cfg = current_app.config
+    return {
+        'data_start_date': get_setting('data_start_date', cfg.get('FOUNDATION_DATA_START', '2020-01-01')),
+        'data_end_date': get_setting('data_end_date', cfg.get('FOUNDATION_DATA_END', '2025-12-31')),
+        'train_test_cutoff': get_setting('train_test_cutoff', cfg.get('FOUNDATION_TRAIN_TEST_CUTOFF', '2024-06-01')),
+        'fetch_timeframes': get_setting('fetch_timeframes', '1d,1w,1M').split(','),
+        'htf_timeframes': get_setting('htf_timeframes', '1d,1w,1M').split(','),
+        'fractal_timeframes': get_setting('fractal_timeframes', '1d,1w,1M').split(','),
+        'fibonacci_timeframes': get_setting('fibonacci_timeframes', '1d,1w').split(','),
+        'vp_timeframes': get_setting('vp_timeframes', '1d,1w,1M').split(','),
+    }
 
 
 @settings_bp.route('/')
 def index():
-    """Settings page: API keys, live sync toggle."""
+    """Settings page: API keys, live sync toggle, foundation config."""
     api_key = get_setting('binance_api_key', '')
     api_secret = get_setting('binance_api_secret', '')
     live_sync_enabled = get_setting('live_sync_enabled', 'false') == 'true'
@@ -23,6 +40,8 @@ def index():
     if api_secret:
         masked_secret = '*' * 8 + api_secret[-4:]
 
+    foundation = _get_foundation_config()
+
     return render_template('settings/index.html',
                            api_key=api_key,
                            masked_secret=masked_secret,
@@ -31,7 +50,9 @@ def index():
                            live_sync_interval=live_sync_interval,
                            sync_timeframes=sync_timeframes,
                            available_timeframes=AVAILABLE_TIMEFRAMES,
-                           run_pipeline=run_pipeline)
+                           run_pipeline=run_pipeline,
+                           foundation=foundation,
+                           all_timeframes=ALL_TIMEFRAMES)
 
 
 @settings_bp.route('/', methods=['POST'])
@@ -61,6 +82,30 @@ def save():
     set_setting('run_full_pipeline_on_sync', 'true' if run_pipeline else 'false')
 
     flash('Settings saved.', 'success')
+    return redirect(url_for('settings.index'))
+
+
+@settings_bp.route('/save-foundation', methods=['POST'])
+def save_foundation():
+    """Save foundation configuration."""
+    set_setting('data_start_date', request.form.get('data_start_date', '2020-01-01'))
+    set_setting('data_end_date', request.form.get('data_end_date', '2025-12-31'))
+    set_setting('train_test_cutoff', request.form.get('train_test_cutoff', '2024-06-01'))
+
+    # Only allow valid fetch timeframes
+    valid_tfs = set(ALL_TIMEFRAMES)
+    fetch_tfs = [t for t in request.form.getlist('fetch_timeframes') if t in valid_tfs] or ['1d']
+    set_setting('fetch_timeframes', ','.join(fetch_tfs))
+
+    for level_type in LEVEL_TYPES:
+        tfs = [t for t in request.form.getlist(f'{level_type}_timeframes') if t in valid_tfs]
+        set_setting(f'{level_type}_timeframes', ','.join(tfs))
+
+    # Return JSON for AJAX calls, redirect for form submissions
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json':
+        return jsonify({'status': 'ok', 'message': 'Foundation config saved'})
+
+    flash('Foundation config saved.', 'success')
     return redirect(url_for('settings.index'))
 
 

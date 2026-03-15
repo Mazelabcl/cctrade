@@ -1,15 +1,23 @@
-// TradingView Lightweight Charts v4.1.3
+// TradingView Lightweight Charts v4.1.3 — Levels start at birth candle
 document.addEventListener('DOMContentLoaded', function() {
     const container = document.getElementById('chart-container');
     if (!container || typeof LightweightCharts === 'undefined') return;
 
+    // Read URL params for pre-set state (e.g., /charts/?tf=1d&count=1000)
+    const urlParams = new URLSearchParams(window.location.search);
+
     // State
-    let currentTf = '1h';
-    let currentCount = 500;
+    let currentTf = urlParams.get('tf') || '1d';
+    let currentCount = parseInt(urlParams.get('count')) || 500;
     let showFractals = true;
     let showPredictions = true;
-    let enabledLevels = { Fractal: true, HTF: true, Fib: true, VP: true };
-    let levelLines = [];
+    let enabledLevels = { SFP: true, HTF: true, CC: true, Igor: true, VP: true };
+    let enabledSourceTfs = { daily: true, weekly: true, monthly: true };
+    let enabledStatus = { naked: true, touched: true };
+    let levelSeriesList = [];   // line series for levels (start at birth)
+    let lastChartData = [];     // cache for level redraws
+
+    const MAX_LEVEL_SERIES = 300;  // perf cap
 
     // Create chart
     const chart = LightweightCharts.createChart(container, {
@@ -18,39 +26,102 @@ document.addEventListener('DOMContentLoaded', function() {
             vertLines: { color: 'rgba(42, 46, 57, 0.3)' },
             horzLines: { color: 'rgba(42, 46, 57, 0.3)' },
         },
-        crosshair: { mode: 0 },  // Normal
+        crosshair: { mode: 0 },
         timeScale: { borderColor: '#2a2e39', timeVisible: true, secondsVisible: false },
         rightPriceScale: { borderColor: '#2a2e39' },
     });
 
-    // v4.1.3 API: addCandlestickSeries
     const candleSeries = chart.addCandlestickSeries({
         upColor: '#26a69a', downColor: '#ef5350',
         borderVisible: false,
         wickUpColor: '#26a69a', wickDownColor: '#ef5350',
     });
 
-    // Level color mapping
-    const levelColors = {
-        Fractal: '#ef5350',
-        HTF: '#42a5f5',
-        Fib: '#ffd54f',
-        VP: '#ab47bc',
+    // Short labels for display
+    const tfShort = {
+        hourly: 'H', '4hourly': '4H', daily: 'D', weekly: 'W', monthly: 'M',
     };
 
+    // Chart Champions color mapping by HTF timeframe
+    const htfColors = { daily: '#00e5ff', weekly: '#ffd54f', monthly: '#ab47bc' };
+
     function getLevelCategory(levelType) {
-        if (levelType.startsWith('Fractal')) return 'Fractal';
+        if (levelType.startsWith('Fractal')) return 'SFP';
         if (levelType.startsWith('HTF')) return 'HTF';
-        if (levelType.startsWith('Fib')) return 'Fib';
+        if (levelType === 'Fib_CC') return 'CC';
+        if (levelType.startsWith('Fib')) return 'Igor';
         if (levelType.startsWith('VP') || levelType.startsWith('vp')) return 'VP';
         return 'HTF';
     }
 
+    function getLevelStyle(level) {
+        const lt = level.level_type;
+        const tf = level.timeframe;
+
+        // HTF — color by timeframe
+        if (lt === 'HTF_level') return { color: htfColors[tf] || '#42a5f5', lineWidth: 1, lineStyle: 0 };
+
+        // SFP (Fractal levels)
+        if (lt.startsWith('Fractal')) return { color: '#e0e0e0', lineWidth: 1, lineStyle: 0 };
+
+        // CC — Daniel's golden pocket (dotted yellow)
+        if (lt === 'Fib_CC') return { color: '#ffd54f', lineWidth: 1, lineStyle: 1 };
+
+        // Igor quarters
+        if (lt === 'Fib_0.50') return { color: '#ffd54f', lineWidth: 1, lineStyle: 0 };
+        if (lt === 'Fib_0.25' || lt === 'Fib_0.75') return { color: '#ef5350', lineWidth: 1, lineStyle: 0 };
+
+        // VP — POC thicker red, VAH/VAL blue
+        if (lt === 'VP_POC') return { color: '#ef5350', lineWidth: 2, lineStyle: 0 };
+        if (lt === 'VP_VAH' || lt === 'VP_VAL') return { color: '#42a5f5', lineWidth: 2, lineStyle: 0 };
+
+        // Old Fib types (pre-migration) — fallback gray
+        if (lt.startsWith('Fib')) return { color: '#888', lineWidth: 1, lineStyle: 0 };
+
+        return { color: '#888', lineWidth: 1, lineStyle: 0 };
+    }
+
+    function getLevelLabel(level) {
+        const lt = level.level_type;
+        const tf = tfShort[level.timeframe] || level.timeframe;
+
+        if (lt === 'HTF_level') return `HTF ${tf}`;
+        if (lt.startsWith('Fractal')) return 'SFP';
+        if (lt === 'Fib_CC') return `CC ${tf}`;
+        if (lt === 'Fib_0.25') return `Igor .25 ${tf}`;
+        if (lt === 'Fib_0.50') return `Igor .50 ${tf}`;
+        if (lt === 'Fib_0.75') return `Igor .75 ${tf}`;
+        if (lt === 'VP_POC') return `POC ${tf}`;
+        if (lt === 'VP_VAH') return `VAH ${tf}`;
+        if (lt === 'VP_VAL') return `VAL ${tf}`;
+
+        return `${lt} ${tf}`;
+    }
+
+    function isNaked(level) {
+        const totalTouches = (level.support_touches || 0) + (level.resistance_touches || 0);
+        return totalTouches < 1;
+    }
+
     function clearLevelLines() {
-        levelLines.forEach(line => {
-            try { candleSeries.removePriceLine(line); } catch(e) {}
+        levelSeriesList.forEach(s => {
+            try { chart.removeSeries(s); } catch(e) {}
         });
-        levelLines = [];
+        levelSeriesList = [];
+    }
+
+    function buildLevelQueryParams() {
+        const params = new URLSearchParams({ active_only: 'true' });
+        const tfs = Object.entries(enabledSourceTfs)
+            .filter(([_, on]) => on)
+            .map(([tf]) => tf);
+        if (tfs.length > 0 && tfs.length < 3) {
+            params.set('timeframe', tfs.join(','));
+        }
+        if (enabledStatus.naked && !enabledStatus.touched) {
+            params.set('naked_only', 'true');
+        }
+        return params.toString();
     }
 
     function loadData() {
@@ -59,17 +130,20 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(r => r.json())
             .then(data => {
                 if (!data.length) {
-                    container.innerHTML = '<p class="text-muted p-4">No candle data for this timeframe.</p>';
+                    candleSeries.setData([]);
+                    clearLevelLines();
+                    const countEl = document.getElementById('level-count');
+                    if (countEl) countEl.textContent = 'No candle data for this timeframe';
                     return;
                 }
 
-                const chartData = data.map(c => ({
+                lastChartData = data.map(c => ({
                     time: Math.floor(new Date(c.open_time).getTime() / 1000),
                     open: c.open, high: c.high, low: c.low, close: c.close,
                 }));
-                candleSeries.setData(chartData);
+                candleSeries.setData(lastChartData);
 
-                // Build markers from fractals and predictions
+                // Build markers
                 const markers = [];
 
                 if (showFractals) {
@@ -134,39 +208,99 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadLevels(candleData) {
         clearLevelLines();
 
-        if (!candleData.length) return;
+        if (!candleData.length || !lastChartData.length) return;
         const prices = candleData.flatMap(c => [c.high, c.low]);
         const minPrice = Math.min(...prices);
         const maxPrice = Math.max(...prices);
         const margin = (maxPrice - minPrice) * 0.1;
 
-        fetch(`/api/levels?active_only=true`)
+        const firstTime = lastChartData[0].time;
+        const lastTime = lastChartData[lastChartData.length - 1].time;
+
+        const queryParams = buildLevelQueryParams();
+        fetch(`/api/levels?${queryParams}`)
             .then(r => r.json())
             .then(levels => {
                 const seen = new Set();
                 const roundTo = maxPrice > 10000 ? 10 : 1;
+                let visibleCount = 0;
+                let capped = false;
+
+                // Sort by created_at descending — newest levels get priority within the cap
+                levels.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
                 levels.forEach(l => {
+                    if (visibleCount >= MAX_LEVEL_SERIES) { capped = true; return; }
                     if (l.price_level < minPrice - margin || l.price_level > maxPrice + margin) return;
 
                     const cat = getLevelCategory(l.level_type);
                     if (!enabledLevels[cat]) return;
 
+                    // Source TF filter
+                    if (!enabledSourceTfs[l.timeframe]) return;
+
+                    // Status filter
+                    const naked = isNaked(l);
+                    if (naked && !enabledStatus.naked) return;
+                    if (!naked && !enabledStatus.touched) return;
+
+                    // Birth time — where the level line starts
+                    const birthTime = Math.floor(new Date(l.created_at).getTime() / 1000);
+
+                    // End time: naked levels extend to chart end, touched levels end at first touch
+                    let endTime = lastTime;
+                    if (!naked && l.first_touched_at) {
+                        endTime = Math.floor(new Date(l.first_touched_at).getTime() / 1000);
+                    }
+
+                    // Skip levels whose entire life is outside the visible chart range
+                    if (endTime < firstTime) return;
+                    if (birthTime > lastTime) return;
+
+                    // Clamp start/end to chart range
+                    const startTime = Math.max(birthTime, firstTime);
+                    if (endTime <= startTime) endTime = startTime + 86400;
+
+                    // Dedup by category + rounded price + timeframe
                     const rounded = Math.round(l.price_level / roundTo) * roundTo;
-                    const key = `${cat}-${rounded}`;
+                    const key = `${cat}-${l.timeframe}-${rounded}`;
                     if (seen.has(key)) return;
                     seen.add(key);
 
-                    const line = candleSeries.createPriceLine({
-                        price: l.price_level,
-                        color: levelColors[cat] || '#888',
-                        lineWidth: 1,
-                        lineStyle: 2,  // Dotted
-                        axisLabelVisible: false,
-                        title: '',
+                    // Build label and style from CC methodology
+                    const title = getLevelLabel(l);
+                    const style = getLevelStyle(l);
+                    const color = style.color;
+                    const lineWidth = naked ? style.lineWidth : 1;
+                    const lineStyle = naked ? style.lineStyle : 2;  // dashed for touched
+
+                    // Create a line series that starts at birth and extends to end
+                    const series = chart.addLineSeries({
+                        color: color,
+                        lineWidth: lineWidth,
+                        lineStyle: lineStyle,
+                        lastValueVisible: naked,
+                        priceLineVisible: false,
+                        crosshairMarkerVisible: false,
+                        title: title,
                     });
-                    levelLines.push(line);
+
+                    series.setData([
+                        { time: startTime, value: l.price_level },
+                        { time: endTime, value: l.price_level },
+                    ]);
+
+                    levelSeriesList.push(series);
+                    visibleCount++;
                 });
+
+                // Update level count
+                const countEl = document.getElementById('level-count');
+                if (countEl) {
+                    let text = `${visibleCount} levels shown`;
+                    if (capped) text += ` (capped at ${MAX_LEVEL_SERIES}, use filters)`;
+                    countEl.textContent = text;
+                }
             })
             .catch(err => console.error('Failed to load levels:', err));
     }
@@ -191,11 +325,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Level toggle buttons
+    // Level type toggle buttons
     document.querySelectorAll('#level-toggles .btn').forEach(btn => {
         btn.addEventListener('click', function() {
             this.classList.toggle('active');
             enabledLevels[this.dataset.level] = this.classList.contains('active');
+            loadData();
+        });
+    });
+
+    // Source timeframe toggle buttons
+    document.querySelectorAll('#source-tf-toggles .btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            this.classList.toggle('active');
+            enabledSourceTfs[this.dataset.stf] = this.classList.contains('active');
+            loadData();
+        });
+    });
+
+    // Status toggle buttons (naked / touched)
+    document.querySelectorAll('#status-toggles .btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            this.classList.toggle('active');
+            enabledStatus[this.dataset.status] = this.classList.contains('active');
             loadData();
         });
     });
@@ -221,6 +373,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         predBtn.classList.add('active');
     }
+
+    // Sync button active states with URL params
+    document.querySelectorAll('#tf-selector .btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.tf === currentTf);
+    });
+    document.querySelectorAll('#count-selector .btn').forEach(b => {
+        b.classList.toggle('active', parseInt(b.dataset.count) === currentCount);
+    });
 
     // Responsive resize
     new ResizeObserver(entries => {

@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+{% block title %}Individual Level Backtests{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-bar-chart-steps"></i> Individual Level Backtests</h2>
+        <small class="text-muted">Testing each level type independently across all timeframes</small>
+    </div>
+    <a href="{{ url_for('backtest.index') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> ML Backtests
+    </a>
+</div>
+
+{% if backtests %}
+
+<!-- Strategy Explanation -->
+<div class="card mb-4 border-info">
+    <div class="card-header bg-info bg-opacity-10">
+        <h6 class="mb-0"><i class="bi bi-info-circle me-1"></i> Entry &amp; Exit Criteria Used (Run #1: Baseline)</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <h6 class="text-info">Entry Rule (all levels)</h6>
+                <p class="mb-1">For each <strong>naked level</strong> (not previously touched):</p>
+                <ul class="mb-0 small">
+                    <li><strong>LONG (bounce from support):</strong> Candle low touches level (within 2% tolerance) AND candle closes ABOVE the level.</li>
+                    <li><strong>SHORT (rejection from resistance):</strong> Candle high touches level (within 2% tolerance) AND candle closes BELOW the level.</li>
+                </ul>
+                <p class="mt-1 mb-0 small text-muted">The close confirmation is key: it proves the level held, not just that price touched it.</p>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-success">Exit Rules</h6>
+                <ul class="mb-1 small">
+                    <li><strong>Take Profit:</strong> +4% from entry price</li>
+                    <li><strong>Stop Loss:</strong> -2% from entry price (R:R = 2:1)</li>
+                    <li><strong>Timeout:</strong> 50 candles (if neither TP nor SL hit)</li>
+                </ul>
+                <p class="mb-0 small text-muted">Strategy: <code>fixed_percent</code> — SL and TP as fixed % of entry.</p>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-warning">Next Iterations</h6>
+                <p class="mb-1 small">This is the baseline. We plan to also test:</p>
+                <ul class="mb-0 small">
+                    <li><strong>ATR-based:</strong> SL/TP dynamic based on volatility</li>
+                    <li><strong>Level-based:</strong> TP at next level, SL at opposite level</li>
+                    <li><strong>Different tolerances:</strong> 1%, 2%, 3%</li>
+                    <li><strong>Different R:R ratios:</strong> 1:1, 2:1, 3:1</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    {% set best = backtests|sort(attribute='win_rate', reverse=true)|first %}
+    {% set most_trades = backtests|sort(attribute='total_trades', reverse=true)|first %}
+    {% set best_pf = backtests|sort(attribute='profit_factor', reverse=true)|first %}
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <small class="text-muted">Best Win Rate</small>
+                <h3 class="text-success mb-0">{{ '%.1f'|format(best.win_rate) }}%</h3>
+                <small>{{ best.level_type }} / {{ best.level_source_timeframe }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <small class="text-muted">Best Profit Factor</small>
+                <h3 class="text-info mb-0">{{ '%.2f'|format(best_pf.profit_factor) if best_pf.profit_factor and best_pf.profit_factor < 100 else 'INF' }}</h3>
+                <small>{{ best_pf.level_type }} / {{ best_pf.level_source_timeframe }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <small class="text-muted">Most Trades</small>
+                <h3 class="text-warning mb-0">{{ most_trades.total_trades }}</h3>
+                <small>{{ most_trades.level_type }} / {{ most_trades.level_source_timeframe }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <small class="text-muted">Total Backtests</small>
+                <h3 class="mb-0">{{ backtests|length }}</h3>
+                <small>level type / timeframe combos</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Full Expanded Chart — All Combinations -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0">All Level + Timeframe Combinations</h6>
+    </div>
+    <div class="card-body">
+        <canvas id="allCombosChart" height="350"></canvas>
+    </div>
+</div>
+
+<!-- Results Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">All Results</h5>
+        <div>
+            <select id="tf-filter" class="form-select form-select-sm d-inline-block" style="width:auto;">
+                <option value="">All Timeframes</option>
+                <option value="1d">Daily (1d)</option>
+                <option value="1w">Weekly (1w)</option>
+                <option value="1M">Monthly (1M)</option>
+            </select>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0" id="results-table">
+                <thead>
+                    <tr>
+                        <th>Level Type</th>
+                        <th>Source TF</th>
+                        <th class="text-end">Trades</th>
+                        <th class="text-end">Win Rate</th>
+                        <th class="text-end">Profit Factor</th>
+                        <th class="text-end">Total PnL</th>
+                        <th class="text-end">Avg Win</th>
+                        <th class="text-end">Avg Loss</th>
+                        <th class="text-end">Sharpe</th>
+                        <th class="text-end">Max DD</th>
+                        <th class="text-end">Avg Duration</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in backtests %}
+                    <tr data-tf="{{ b.level_source_timeframe }}">
+                        <td>
+                            <span class="badge
+                                {% if 'Fractal' in b.level_type %}bg-success
+                                {% elif 'HTF' in b.level_type %}bg-primary
+                                {% elif 'Fib' in b.level_type %}bg-warning text-dark
+                                {% elif 'VP' in b.level_type %}bg-info text-dark
+                                {% else %}bg-secondary{% endif %}">
+                                {{ b.level_type }}
+                            </span>
+                        </td>
+                        <td>{{ b.level_source_timeframe }}</td>
+                        <td class="text-end">{{ b.total_trades }}</td>
+                        <td class="text-end fw-bold {{ 'text-success' if b.win_rate and b.win_rate >= 50 else 'text-danger' }}">
+                            {{ '%.1f'|format(b.win_rate) if b.win_rate else 0 }}%
+                        </td>
+                        <td class="text-end {{ 'text-success' if b.profit_factor and b.profit_factor >= 1.0 else 'text-danger' }}">
+                            {{ '%.2f'|format(b.profit_factor) if b.profit_factor and b.profit_factor < 100 else 'INF' if b.profit_factor and b.profit_factor >= 100 else '0.00' }}
+                        </td>
+                        <td class="text-end {{ 'text-success' if b.total_pnl and b.total_pnl > 0 else 'text-danger' }}">
+                            ${{ '{:,.0f}'.format(b.total_pnl) if b.total_pnl else 0 }}
+                        </td>
+                        <td class="text-end text-success">${{ '{:,.0f}'.format(b.avg_win) if b.avg_win else 0 }}</td>
+                        <td class="text-end text-danger">${{ '{:,.0f}'.format(b.avg_loss) if b.avg_loss else 0 }}</td>
+                        <td class="text-end">{{ '%.2f'|format(b.sharpe_ratio) if b.sharpe_ratio else 'N/A' }}</td>
+                        <td class="text-end">{{ '%.1f'|format(b.max_drawdown) if b.max_drawdown else 0 }}%</td>
+                        <td class="text-end">{{ '%.0f'|format(b.avg_trade_duration) if b.avg_trade_duration else 0 }} candles</td>
+                        <td>
+                            <a href="{{ url_for('backtest.individual_level_detail', bt_id=b.id) }}"
+                               class="btn btn-sm btn-outline-primary" title="View trades">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No individual level backtests found.
+    Run backtests via the API or script first.
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Timeframe filter
+document.getElementById('tf-filter').addEventListener('change', function() {
+    const tf = this.value;
+    document.querySelectorAll('#results-table tbody tr').forEach(row => {
+        row.style.display = (!tf || row.dataset.tf === tf) ? '' : 'none';
+    });
+});
+
+{% if backtests %}
+const data = {{ backtests_json|tojson }};
+
+// Sort by win rate desc for the chart
+data.sort((a, b) => (b.win_rate || 0) - (a.win_rate || 0));
+
+// Build labels like "Fractal_Low / 1w"
+const labels = data.map(b => b.level_type + ' / ' + b.level_source_timeframe);
+const winRates = data.map(b => b.win_rate || 0);
+const profitFactors = data.map(b => (b.profit_factor && b.profit_factor < 100) ? b.profit_factor : 0);
+const trades = data.map(b => b.total_trades || 0);
+
+function getColor(label) {
+    if (label.includes('Fractal')) return 'rgba(40, 167, 69, 0.85)';
+    if (label.includes('HTF')) return 'rgba(13, 110, 253, 0.85)';
+    if (label.includes('Fib')) return 'rgba(255, 193, 7, 0.85)';
+    if (label.includes('VP')) return 'rgba(13, 202, 240, 0.85)';
+    return 'rgba(108, 117, 125, 0.85)';
+}
+const barColors = labels.map(getColor);
+
+new Chart(document.getElementById('allCombosChart'), {
+    type: 'bar',
+    data: {
+        labels: labels,
+        datasets: [
+            {
+                label: 'Win Rate %',
+                data: winRates,
+                backgroundColor: barColors,
+                yAxisID: 'y',
+                order: 2,
+            },
+            {
+                label: 'Profit Factor',
+                data: profitFactors,
+                type: 'line',
+                borderColor: '#ffc107',
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                pointRadius: 4,
+                pointBackgroundColor: '#ffc107',
+                yAxisID: 'y2',
+                order: 1,
+            },
+        ]
+    },
+    options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+            legend: { position: 'top' },
+            tooltip: {
+                callbacks: {
+                    afterBody: function(items) {
+                        const idx = items[0].dataIndex;
+                        return 'Trades: ' + trades[idx];
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: { maxRotation: 45, minRotation: 45, font: { size: 11 } }
+            },
+            y: {
+                beginAtZero: true,
+                max: 100,
+                position: 'left',
+                title: { display: true, text: 'Win Rate %' },
+                grid: { drawOnChartArea: true },
+            },
+            y2: {
+                beginAtZero: true,
+                position: 'right',
+                title: { display: true, text: 'Profit Factor' },
+                grid: { drawOnChartArea: false },
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

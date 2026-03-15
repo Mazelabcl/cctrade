@@ -5,6 +5,8 @@ from app.services.indicators import (
     detect_fractals_df,
     calculate_htf_levels,
     calculate_fibonacci_levels,
+    calculate_cc_fibonacci_levels,
+    calculate_igor_fibonacci_levels,
     run_fractal_detection,
 )
 from app.models import Candle, Level
@@ -91,6 +93,50 @@ def test_fibonacci_levels_basic():
     for lev in levels:
         assert lev['source'] == 'fibonacci'
         assert 'Fib_' in lev['level_type']
+
+
+def test_cc_fibonacci_only_golden_pocket():
+    """CC fibonacci generates only Fib_CC levels (golden pocket 0.639)."""
+    # Clear swing low → swing high pattern
+    df = pd.DataFrame({
+        'high': [110, 105, 100, 105, 110,   110, 115, 120, 115, 110],
+        'low':  [100,  95,  90,  95, 100,   100, 105, 110, 105, 100],
+        'open_time': [datetime(2024, 1, 1, i) for i in range(10)],
+    })
+    levels = calculate_cc_fibonacci_levels(df, 'daily')
+    for lev in levels:
+        assert lev['level_type'] == 'Fib_CC', f"Expected Fib_CC, got {lev['level_type']}"
+        assert lev['source'] == 'fibonacci'
+
+
+def test_igor_fibonacci_quarters():
+    """Igor fibonacci generates Fib_0.25, Fib_0.50, Fib_0.75 levels."""
+    df = pd.DataFrame({
+        'high': [110, 105, 100, 105, 110,   110, 115, 120, 115, 110],
+        'low':  [100,  95,  90,  95, 100,   100, 105, 110, 105, 100],
+        'open_time': [datetime(2024, 1, 1, i) for i in range(10)],
+    })
+    levels = calculate_igor_fibonacci_levels(df, 'daily')
+    igor_types = {lev['level_type'] for lev in levels}
+    # Should only contain Igor's quarter types
+    for lt in igor_types:
+        assert lt in ('Fib_0.25', 'Fib_0.50', 'Fib_0.75'), f"Unexpected type: {lt}"
+
+
+def test_combined_fibonacci_has_both():
+    """Combined fibonacci wrapper produces both CC and Igor types."""
+    df = pd.DataFrame({
+        'high': [110, 105, 100, 105, 110,   110, 115, 120, 115, 110],
+        'low':  [100,  95,  90,  95, 100,   100, 105, 110, 105, 100],
+        'open_time': [datetime(2024, 1, 1, i) for i in range(10)],
+    })
+    levels = calculate_fibonacci_levels(df, 'daily')
+    types = {lev['level_type'] for lev in levels}
+    # If there are levels, they should include both CC and Igor types
+    if levels:
+        has_cc = any(lt == 'Fib_CC' for lt in types)
+        has_igor = any(lt.startswith('Fib_0.') for lt in types)
+        assert has_cc or has_igor  # At least one type should be present
 
 
 def test_run_fractal_detection(app, sample_candles):

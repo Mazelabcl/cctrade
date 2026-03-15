@@ -1,155 +1,335 @@
 {% extends "base.html" %}
 {% block title %}Settings — Tradebot{% endblock %}
 
+{% block extra_head %}
+<style>
+    /* Step tracker */
+    .pipeline-steps { list-style: none; padding: 0; margin: 0; }
+    .pipeline-step {
+        display: flex; align-items: flex-start; gap: 0.75rem;
+        padding: 0.6rem 0; border-left: 3px solid #30363d; padding-left: 1rem;
+        margin-left: 0.5rem; transition: border-color 0.3s;
+    }
+    .pipeline-step:last-child { border-left-color: transparent; }
+    .pipeline-step .step-icon {
+        width: 24px; height: 24px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 50%; font-size: 0.75rem; margin-left: -1.85rem;
+        background: #21262d; border: 2px solid #30363d; color: #8b949e;
+    }
+    .pipeline-step.active { border-left-color: #0d6efd; }
+    .pipeline-step.active .step-icon {
+        background: #0d6efd; border-color: #0d6efd; color: #fff;
+    }
+    .pipeline-step.done { border-left-color: #198754; }
+    .pipeline-step.done .step-icon {
+        background: #198754; border-color: #198754; color: #fff;
+    }
+    .pipeline-step.error { border-left-color: #dc3545; }
+    .pipeline-step.error .step-icon {
+        background: #dc3545; border-color: #dc3545; color: #fff;
+    }
+    .pipeline-step .step-label { font-weight: 500; font-size: 0.9rem; }
+    .pipeline-step .step-detail {
+        font-size: 0.75rem; color: #8b949e; margin-top: 2px;
+        font-family: monospace; max-height: 60px; overflow-y: auto;
+    }
+    .pipeline-step.pending .step-label { color: #8b949e; }
+    .pipeline-step.active .step-label { color: #c9d1d9; }
+    .pipeline-step.done .step-label { color: #3fb950; }
+    .pipeline-step.error .step-label { color: #f85149; }
+
+    /* Log terminal */
+    .progress-log {
+        max-height: 200px; overflow-y: auto;
+        font-family: monospace; font-size: 0.75rem;
+        background: #0d1117; border: 1px solid #30363d;
+        border-radius: 6px; padding: 0.5rem 0.75rem;
+    }
+    .progress-log .log-entry { margin-bottom: 1px; }
+    .progress-log .log-time { color: #8b949e; }
+    .progress-log .log-msg { color: #c9d1d9; }
+    .progress-log .log-error { color: #f85149; }
+    .progress-log .log-done { color: #3fb950; }
+
+    /* Wizard steps */
+    .wizard-step.wizard-locked { opacity: 0.5; }
+    .wizard-step.wizard-done { border-left: 3px solid #198754; }
+    .wizard-step.wizard-running { border-left: 3px solid #0d6efd; }
+</style>
+{% endblock %}
+
 {% block content %}
 <h3 class="mb-4"><i class="bi bi-sliders me-2"></i>Settings</h3>
 
+<!-- API Keys (compact) -->
 <div class="row g-4">
-    <!-- API Keys -->
     <div class="col-lg-6">
         <div class="card">
-            <div class="card-header">
-                <i class="bi bi-key me-1"></i> Binance API Keys
-            </div>
+            <div class="card-header"><i class="bi bi-key me-1"></i> Binance API Keys</div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('settings.save') }}">
-                    <div class="mb-3">
-                        <label for="api_key" class="form-label">API Key</label>
-                        <input type="text" class="form-control font-monospace" id="api_key"
-                               name="api_key" value="{{ api_key }}"
-                               placeholder="Enter your Binance API key">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <input type="text" class="form-control form-control-sm font-monospace" id="api_key"
+                                   name="api_key" value="{{ api_key }}" placeholder="API Key">
+                        </div>
+                        <div class="col-12">
+                            <input type="password" class="form-control form-control-sm font-monospace" id="api_secret"
+                                   name="api_secret" value="{{ masked_secret }}" placeholder="API Secret">
+                            {% if has_secret %}<div class="form-text">Secret stored. Leave unchanged to keep.</div>{% endif %}
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="api_secret" class="form-label">API Secret</label>
-                        <input type="password" class="form-control font-monospace" id="api_secret"
-                               name="api_secret" value="{{ masked_secret }}"
-                               placeholder="Enter your Binance API secret">
-                        {% if has_secret %}
-                        <div class="form-text">Secret is stored. Leave unchanged to keep current value.</div>
-                        {% endif %}
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i>Save Keys
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" id="btnTestConnection">
-                            <i class="bi bi-plug me-1"></i>Test Connection
+                    <div class="d-flex gap-2 mt-2">
+                        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-check-lg me-1"></i>Save Keys</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnTestConnection">
+                            <i class="bi bi-plug me-1"></i>Test
                         </button>
                     </div>
                 </form>
-                <div id="connectionResult" class="mt-3" style="display:none;"></div>
+                <div id="connectionResult" class="mt-2" style="display:none;"></div>
             </div>
         </div>
     </div>
 
-    <!-- Live Sync -->
+    <!-- Live Sync (compact) -->
     <div class="col-lg-6">
         <div class="card">
-            <div class="card-header">
-                <i class="bi bi-arrow-repeat me-1"></i> Live Data Sync
-            </div>
+            <div class="card-header"><i class="bi bi-arrow-repeat me-1"></i> Live Data Sync <small class="text-muted">(for keeping data updated)</small></div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('settings.save') }}">
-                    <!-- Pass through current API key/secret so they aren't blanked -->
                     <input type="hidden" name="api_key" value="{{ api_key }}">
                     <input type="hidden" name="api_secret" value="{{ masked_secret }}">
-
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" id="live_sync_enabled"
-                               name="live_sync_enabled" {% if live_sync_enabled %}checked{% endif %}>
-                        <label class="form-check-label" for="live_sync_enabled">
-                            Enable automatic data fetching
-                        </label>
-                    </div>
-                    <div class="mb-3">
-                        <label for="live_sync_interval" class="form-label">Fetch interval</label>
-                        <select class="form-select" id="live_sync_interval" name="live_sync_interval">
-                            {% for val in [1, 5, 10, 15, 30] %}
-                            <option value="{{ val }}" {% if live_sync_interval|string == val|string %}selected{% endif %}>
-                                Every {{ val }} minute{{ 's' if val != 1 }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Timeframes</label>
-                        <div>
+                    <div class="row align-items-center g-2">
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="live_sync_enabled"
+                                       name="live_sync_enabled" {% if live_sync_enabled %}checked{% endif %}>
+                                <label class="form-check-label" for="live_sync_enabled">Auto-fetch</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <select class="form-select form-select-sm" name="live_sync_interval" style="width:auto">
+                                {% for val in [1, 5, 10, 15, 30] %}
+                                <option value="{{ val }}" {% if live_sync_interval|string == val|string %}selected{% endif %}>
+                                    {{ val }}min
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-auto">
                             {% for tf in available_timeframes %}
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="checkbox" name="sync_timeframes"
-                                       value="{{ tf }}" id="tf_{{ tf }}"
-                                       {% if tf in sync_timeframes %}checked{% endif %}>
+                                       value="{{ tf }}" id="tf_{{ tf }}" {% if tf in sync_timeframes %}checked{% endif %}>
                                 <label class="form-check-label" for="tf_{{ tf }}">{{ tf }}</label>
                             </div>
                             {% endfor %}
                         </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                        </div>
                     </div>
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" id="run_full_pipeline_on_sync"
-                               name="run_full_pipeline_on_sync" {% if run_pipeline %}checked{% endif %}>
-                        <label class="form-check-label" for="run_full_pipeline_on_sync">
-                            Run full pipeline after fetch
-                            <small class="text-muted d-block">Indicators + Features + Predictions</small>
-                        </label>
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-lg me-1"></i>Save Sync Settings
-                    </button>
                 </form>
-
-                <hr>
-                <h6>Sync Status</h6>
-                <div id="syncStatus">
-                    <span class="text-muted">Loading...</span>
-                </div>
-                <div class="mt-2">
-                    <button class="btn btn-sm btn-outline-success" id="btnStartSync" {% if live_sync_enabled %}style="display:none"{% endif %}>
-                        <i class="bi bi-play-fill me-1"></i>Start Now
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger" id="btnStopSync" {% if not live_sync_enabled %}style="display:none"{% endif %}>
-                        <i class="bi bi-stop-fill me-1"></i>Stop
-                    </button>
-                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Latest Signal + Sync History row -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- FOUNDATION CONFIG                                             -->
+<!-- ══════════════════════════════════════════════════════════════ -->
 <div class="row g-4 mt-0">
-    <!-- Latest Signal -->
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header">
-                <i class="bi bi-bullseye me-1"></i> Latest Signal
+    <div class="col-12">
+        <div class="card border-info">
+            <div class="card-header bg-info bg-opacity-10 d-flex align-items-center">
+                <span><i class="bi bi-bricks me-1"></i> <strong>Foundation Pipeline</strong></span>
+                <small class="text-muted ms-2">Configure data, detect levels, verify visually</small>
+                <button type="button" class="btn btn-sm btn-outline-info ms-auto" id="btnSaveConfig">
+                    <i class="bi bi-check-lg me-1"></i>Save Config
+                </button>
             </div>
-            <div class="card-body" id="latestSignal">
-                <span class="text-muted">Loading...</span>
+            <div class="card-body">
+                <form id="foundationForm">
+                    <div class="row g-3">
+                        <!-- Data Range -->
+                        <div class="col-lg-3">
+                            <h6 class="mb-2"><i class="bi bi-calendar-range me-1"></i> Data Range</h6>
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-0">Start</label>
+                                <input type="date" class="form-control form-control-sm" name="data_start_date"
+                                       value="{{ foundation.data_start_date }}">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-0">End</label>
+                                <input type="date" class="form-control form-control-sm" name="data_end_date"
+                                       value="{{ foundation.data_end_date }}">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-0">Train/Test Cutoff</label>
+                                <input type="date" class="form-control form-control-sm" name="train_test_cutoff"
+                                       value="{{ foundation.train_test_cutoff }}">
+                                <div class="form-text" style="font-size:0.7rem">Before = training. After = unseen test.</div>
+                            </div>
+                        </div>
+
+                        <!-- Fetch Timeframes -->
+                        <div class="col-lg-2">
+                            <h6 class="mb-2"><i class="bi bi-download me-1"></i> Fetch TFs</h6>
+                            <div class="form-text mb-1" style="font-size:0.7rem">Download from Binance</div>
+                            {% for tf in all_timeframes %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="fetch_timeframes"
+                                       value="{{ tf }}" id="fetch_tf_{{ tf }}"
+                                       {% if tf in foundation.fetch_timeframes %}checked{% endif %}>
+                                <label class="form-check-label" for="fetch_tf_{{ tf }}">{{ tf }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Level Detection -->
+                        <div class="col-lg-4">
+                            <h6 class="mb-2"><i class="bi bi-rulers me-1"></i> Level Detection per Type</h6>
+                            <table class="table table-sm table-borderless mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width:110px">Type</th>
+                                        {% for tf in ['1d', '1w', '1M'] %}
+                                        <th class="text-center">{{ tf }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% set level_types = [
+                                        ('htf', 'HTF Levels', 'primary'),
+                                        ('fractal', 'Fractals', 'danger'),
+                                        ('fibonacci', 'Fibonacci', 'warning'),
+                                        ('vp', 'Vol Profile', 'info')
+                                    ] %}
+                                    {% for key, label, color in level_types %}
+                                    <tr>
+                                        <td><span class="badge bg-{{ color }}">{{ label }}</span></td>
+                                        {% for tf in ['1d', '1w', '1M'] %}
+                                        <td class="text-center">
+                                            <input class="form-check-input" type="checkbox"
+                                                   name="{{ key }}_timeframes" value="{{ tf }}"
+                                                   {% if tf in foundation[key ~ '_timeframes'] %}checked{% endif %}>
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Run All (legacy) -->
+                        <div class="col-lg-3">
+                            <h6 class="mb-2"><i class="bi bi-fast-forward me-1"></i> Quick Run</h6>
+                            <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnRunAll">
+                                    <i class="bi bi-play-fill me-1"></i>Run All Steps
+                                </button>
+                                <small class="text-muted">Or use the step-by-step wizard below</small>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- WIZARD — Step-by-step foundation pipeline                     -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="row g-3 mt-0">
+    <!-- Step 1: Fetch Data -->
+    <div class="col-12">
+        <div class="card wizard-step" id="wizStep1">
+            <div class="card-header d-flex align-items-center">
+                <span class="badge bg-info me-2">1</span>
+                <strong>Fetch Data</strong>
+                <span class="wizard-status ms-auto" id="ws1-status"></span>
+            </div>
+            <div class="card-body">
+                <div id="ws1-preview" class="mb-2" style="font-size:0.85rem;"></div>
+                <div id="ws1-progress" style="display:none;">
+                    <div class="progress-log" id="ws1-log" style="max-height:120px;"></div>
+                </div>
+                <div id="ws1-result" style="display:none;"></div>
+                <div class="d-flex gap-2 mt-2">
+                    <button class="btn btn-sm btn-success" id="ws1-run">
+                        <i class="bi bi-download me-1"></i>Fetch from Binance
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" id="ws1-skip">Skip (data exists)</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Sync History -->
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header">
-                <i class="bi bi-clock-history me-1"></i> Sync History
+    <!-- Step 2: Detect Levels -->
+    <div class="col-12">
+        <div class="card wizard-step wizard-locked" id="wizStep2">
+            <div class="card-header d-flex align-items-center">
+                <span class="badge bg-warning text-dark me-2">2</span>
+                <strong>Detect Levels</strong>
+                <span class="wizard-status ms-auto" id="ws2-status"></span>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-sm table-striped mb-0">
-                        <thead>
-                            <tr>
-                                <th>Time</th>
-                                <th>Status</th>
-                                <th>Candles</th>
-                                <th>Duration</th>
-                            </tr>
-                        </thead>
-                        <tbody id="syncHistoryBody">
-                            <tr><td colspan="4" class="text-muted text-center">Loading...</td></tr>
-                        </tbody>
-                    </table>
+            <div class="card-body">
+                <div id="ws2-preview" class="mb-2" style="font-size:0.85rem;"></div>
+                <div id="ws2-progress" style="display:none;">
+                    <div class="progress-log" id="ws2-log" style="max-height:150px;"></div>
+                </div>
+                <div id="ws2-result" style="display:none;"></div>
+                <div class="d-flex gap-2 mt-2">
+                    <button class="btn btn-sm btn-success" id="ws2-run" disabled>
+                        <i class="bi bi-rulers me-1"></i>Detect Levels
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" id="ws2-skip" disabled>Skip (levels exist)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Touch Tracking -->
+    <div class="col-12">
+        <div class="card wizard-step wizard-locked" id="wizStep3">
+            <div class="card-header d-flex align-items-center">
+                <span class="badge bg-danger me-2">3</span>
+                <strong>Touch Tracking</strong>
+                <span class="wizard-status ms-auto" id="ws3-status"></span>
+            </div>
+            <div class="card-body">
+                <div id="ws3-preview" class="mb-2" style="font-size:0.85rem; color:#8b949e;">
+                    Counts how many times each level was touched by price action.
+                </div>
+                <div id="ws3-progress" style="display:none;">
+                    <div class="progress-log" id="ws3-log" style="max-height:120px;"></div>
+                </div>
+                <div id="ws3-result" style="display:none;"></div>
+                <div class="d-flex gap-2 mt-2">
+                    <button class="btn btn-sm btn-success" id="ws3-run" disabled>
+                        <i class="bi bi-hand-index me-1"></i>Run Touch Tracking
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" id="ws3-skip" disabled>Skip</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Visualize -->
+    <div class="col-12">
+        <div class="card wizard-step wizard-locked" id="wizStep4">
+            <div class="card-header d-flex align-items-center">
+                <span class="badge bg-success me-2">4</span>
+                <strong>Visualize</strong>
+            </div>
+            <div class="card-body text-center py-3">
+                <a href="/charts/?tf=1d&count=1000" class="btn btn-outline-info btn-lg" id="ws4-link" style="pointer-events:none; opacity:0.5;">
+                    <i class="bi bi-graph-up me-2"></i>Open Charts
+                </a>
+                <div class="mt-2 text-muted" style="font-size:0.8rem;">
+                    View all detected levels on the interactive chart
                 </div>
             </div>
         </div>
@@ -159,11 +339,12 @@
 
 {% block extra_js %}
 <script>
+// ── Test Connection ─────────────────────────────────────────────
 document.getElementById('btnTestConnection').addEventListener('click', function() {
     const btn = this;
     const result = document.getElementById('connectionResult');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Testing...';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>...';
     result.style.display = 'none';
 
     fetch('{{ url_for("settings.test_connection") }}', {method: 'POST'})
@@ -171,160 +352,263 @@ document.getElementById('btnTestConnection').addEventListener('click', function(
         .then(data => {
             result.style.display = 'block';
             if (data.status === 'ok') {
-                result.innerHTML = `<div class="alert alert-success mb-0">
-                    <i class="bi bi-check-circle me-1"></i>
-                    Connected! System: ${data.system_status}, Trading: ${data.can_trade ? 'Enabled' : 'Disabled'},
-                    Balances: ${data.balances} asset(s)
+                result.innerHTML = `<div class="alert alert-success alert-sm mb-0 py-1 px-2" style="font-size:0.8rem">
+                    <i class="bi bi-check-circle me-1"></i>Connected! ${data.system_status}, Trade: ${data.can_trade ? 'Yes' : 'No'}, ${data.balances} asset(s)
                 </div>`;
             } else {
-                result.innerHTML = `<div class="alert alert-danger mb-0">
+                result.innerHTML = `<div class="alert alert-danger alert-sm mb-0 py-1 px-2" style="font-size:0.8rem">
                     <i class="bi bi-x-circle me-1"></i> ${data.message}
                 </div>`;
             }
         })
         .catch(err => {
             result.style.display = 'block';
-            result.innerHTML = `<div class="alert alert-danger mb-0">
-                <i class="bi bi-x-circle me-1"></i> Connection failed: ${err.message}
-            </div>`;
+            result.innerHTML = `<div class="alert alert-danger mb-0 py-1 px-2" style="font-size:0.8rem">${err.message}</div>`;
         })
         .finally(() => {
             btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-plug me-1"></i>Test Connection';
+            btn.innerHTML = '<i class="bi bi-plug me-1"></i>Test';
         });
 });
 
-function formatDuration(start, end) {
-    if (!start || !end) return '—';
-    const ms = new Date(end) - new Date(start);
-    if (ms < 1000) return ms + 'ms';
-    return (ms / 1000).toFixed(1) + 's';
+// ── Save Config ────────────────────────────────────────────────
+document.getElementById('btnSaveConfig').addEventListener('click', function() {
+    const btn = this;
+    btn.disabled = true;
+    const formData = new FormData(document.getElementById('foundationForm'));
+    fetch('{{ url_for("settings.save_foundation") }}', {
+        method: 'POST', body: formData,
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+    })
+    .then(r => r.json())
+    .then(() => { btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Saved!'; })
+    .catch(() => { btn.innerHTML = '<i class="bi bi-x me-1"></i>Error'; })
+    .finally(() => {
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Save Config';
+        }, 1500);
+    });
+});
+
+// ── Wizard State ───────────────────────────────────────────────
+let wizardPollInterval = null;
+
+function saveConfigSilently() {
+    const formData = new FormData(document.getElementById('foundationForm'));
+    return fetch('{{ url_for("settings.save_foundation") }}', {
+        method: 'POST', body: formData,
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+    });
 }
 
-function formatTime(iso) {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    return d.toLocaleTimeString() + ' ' + d.toLocaleDateString();
+function addWizardLog(logEl, msg, isError) {
+    const time = new Date().toLocaleTimeString();
+    const cls = isError ? 'log-error' : msg.includes('done') || msg.includes('completed') ? 'log-done' : 'log-msg';
+    logEl.innerHTML += `<div class="log-entry"><span class="log-time">${time}</span> <span class="${cls}">${msg}</span></div>`;
+    logEl.scrollTop = logEl.scrollHeight;
 }
 
-function refreshSyncStatus() {
-    fetch('/api/sync-status')
-        .then(r => r.json())
-        .then(data => {
-            const el = document.getElementById('syncStatus');
-            const startBtn = document.getElementById('btnStartSync');
-            const stopBtn = document.getElementById('btnStopSync');
+function pollProgress(logEl, onDone) {
+    let lastLogCount = 0;
+    wizardPollInterval = setInterval(() => {
+        fetch('/api/foundation-progress').then(r => r.json()).then(state => {
+            if (state.log && state.log.length > lastLogCount) {
+                for (let i = lastLogCount; i < state.log.length; i++) {
+                    addWizardLog(logEl, state.log[i].msg, state.log[i].msg.includes('ERROR'));
+                }
+                lastLogCount = state.log.length;
+            }
+            if (!state.running) {
+                clearInterval(wizardPollInterval);
+                wizardPollInterval = null;
+                onDone(state.error, state.result);
+            }
+        }).catch(() => {});
+    }, 1000);
+}
 
-            if (data.enabled && data.job_active) {
-                el.innerHTML = `<span class="badge bg-success">Active</span>
-                    Interval: ${data.interval_minutes}m
-                    ${data.last_fetch ? '| Last fetch: ' + formatTime(data.last_fetch) : ''}`;
-                startBtn.style.display = 'none';
-                stopBtn.style.display = '';
+function unlockStep(n) {
+    const card = document.getElementById(`wizStep${n}`);
+    if (card) {
+        card.classList.remove('wizard-locked');
+        card.querySelectorAll('button').forEach(b => b.disabled = false);
+    }
+    if (n === 4) {
+        const link = document.getElementById('ws4-link');
+        if (link) { link.style.pointerEvents = ''; link.style.opacity = '1'; }
+    }
+}
+
+function markStepDone(n, statusHtml) {
+    const card = document.getElementById(`wizStep${n}`);
+    card.classList.add('wizard-done');
+    card.classList.remove('wizard-running');
+    const statusEl = document.getElementById(`ws${n}-status`);
+    statusEl.innerHTML = statusHtml || '<span class="badge bg-success">Done</span>';
+    unlockStep(n + 1);
+}
+
+function markStepRunning(n) {
+    const card = document.getElementById(`wizStep${n}`);
+    card.classList.add('wizard-running');
+    card.classList.remove('wizard-done');
+    const statusEl = document.getElementById(`ws${n}-status`);
+    statusEl.innerHTML = '<span class="spinner-border spinner-border-sm text-info"></span>';
+    document.getElementById(`ws${n}-progress`).style.display = '';
+    document.getElementById(`ws${n}-run`).disabled = true;
+    document.getElementById(`ws${n}-skip`).disabled = true;
+}
+
+// ── Step 1: Fetch Data ─────────────────────────────────────────
+document.getElementById('ws1-run').addEventListener('click', function() {
+    saveConfigSilently().then(() => {
+        markStepRunning(1);
+        const logEl = document.getElementById('ws1-log');
+        logEl.innerHTML = '';
+        addWizardLog(logEl, 'Starting fetch from Binance...', false);
+        fetch('/api/foundation/fetch', {method: 'POST'}).then(r => r.json()).then(() => {
+            pollProgress(logEl, (error, result) => {
+                if (error) {
+                    markStepDone(1, '<span class="badge bg-danger">Error</span>');
+                } else {
+                    let summary = '';
+                    if (result) {
+                        summary = Object.entries(result).map(([tf, cnt]) =>
+                            `${tf}: ${typeof cnt === 'number' ? cnt.toLocaleString() + ' candles' : cnt}`
+                        ).join(', ');
+                    }
+                    markStepDone(1, `<span class="badge bg-success">Done</span> <small class="text-muted ms-1">${summary}</small>`);
+                }
+                loadPreview();
+            });
+        });
+    });
+});
+
+document.getElementById('ws1-skip').addEventListener('click', function() {
+    markStepDone(1, '<span class="badge bg-secondary">Skipped</span>');
+});
+
+// ── Step 2: Detect Levels ──────────────────────────────────────
+document.getElementById('ws2-run').addEventListener('click', function() {
+    saveConfigSilently().then(() => {
+        markStepRunning(2);
+        const logEl = document.getElementById('ws2-log');
+        logEl.innerHTML = '';
+        addWizardLog(logEl, 'Starting level detection...', false);
+        fetch('/api/foundation/detect-levels', {method: 'POST'}).then(r => r.json()).then(() => {
+            pollProgress(logEl, (error, result) => {
+                if (error) {
+                    markStepDone(2, '<span class="badge bg-danger">Error</span>');
+                } else {
+                    let summary = '';
+                    if (result) {
+                        const parts = [];
+                        for (const [type, counts] of Object.entries(result)) {
+                            if (typeof counts === 'object' && counts !== null) {
+                                const total = Object.values(counts).reduce((a, b) => (typeof b === 'number' ? a + b : a), 0);
+                                if (total > 0) parts.push(`${type}: ${total}`);
+                            }
+                        }
+                        summary = parts.join(', ');
+                    }
+                    markStepDone(2, `<span class="badge bg-success">Done</span> <small class="text-muted ms-1">${summary}</small>`);
+                }
+                loadPreview();
+            });
+        });
+    });
+});
+
+document.getElementById('ws2-skip').addEventListener('click', function() {
+    markStepDone(2, '<span class="badge bg-secondary">Skipped</span>');
+});
+
+// ── Step 3: Touch Tracking ─────────────────────────────────────
+document.getElementById('ws3-run').addEventListener('click', function() {
+    markStepRunning(3);
+    const logEl = document.getElementById('ws3-log');
+    logEl.innerHTML = '';
+    addWizardLog(logEl, 'Resetting touches and re-scanning all candles...', false);
+    fetch('/api/foundation/touch-tracking', {method: 'POST'}).then(r => r.json()).then(() => {
+        pollProgress(logEl, (error, result) => {
+            if (error) {
+                markStepDone(3, '<span class="badge bg-danger">Error</span>');
             } else {
-                el.innerHTML = `<span class="badge bg-secondary">Inactive</span> Sync is not running.
-                    ${data.last_fetch ? '<br><small class="text-muted">Last fetch: ' + formatTime(data.last_fetch) + '</small>' : ''}`;
-                startBtn.style.display = '';
-                stopBtn.style.display = 'none';
+                let summary = '';
+                if (result) {
+                    summary = `${result.total_touches?.toLocaleString() || 0} touches (${result.naked || 0} naked, ${result.touched || 0} touched)`;
+                }
+                markStepDone(3, `<span class="badge bg-success">Done</span> <small class="text-muted ms-1">${summary}</small>`);
             }
-
-            // Populate sync history table
-            const tbody = document.getElementById('syncHistoryBody');
-            if (data.recent_syncs && data.recent_syncs.length > 0) {
-                tbody.innerHTML = data.recent_syncs.map(s => {
-                    const badge = s.status === 'completed'
-                        ? '<span class="badge bg-success">OK</span>'
-                        : s.status === 'failed'
-                        ? '<span class="badge bg-danger">Fail</span>'
-                        : '<span class="badge bg-warning">Running</span>';
-                    return `<tr>
-                        <td><small>${formatTime(s.started_at)}</small></td>
-                        <td>${badge}</td>
-                        <td>${s.rows_processed !== null ? s.rows_processed : '—'}</td>
-                        <td><small>${formatDuration(s.started_at, s.finished_at)}</small></td>
-                    </tr>`;
-                }).join('');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-muted text-center">No sync history yet.</td></tr>';
-            }
-        })
-        .catch(() => {
-            document.getElementById('syncStatus').innerHTML =
-                '<span class="text-muted">Could not fetch status.</span>';
         });
-}
-
-function refreshLatestSignal() {
-    fetch('/api/latest-signal')
-        .then(r => r.json())
-        .then(data => {
-            const el = document.getElementById('latestSignal');
-            if (data.status === 'no_data') {
-                el.innerHTML = '<span class="text-muted">No predictions yet. Run the pipeline first.</span>';
-                return;
-            }
-
-            const signalColors = {LONG: 'success', SHORT: 'danger', FLAT: 'secondary'};
-            const signalIcons = {LONG: 'arrow-up-circle-fill', SHORT: 'arrow-down-circle-fill', FLAT: 'dash-circle'};
-            const color = signalColors[data.signal] || 'secondary';
-            const icon = signalIcons[data.signal] || 'dash-circle';
-            const conf = (data.confidence * 100).toFixed(1);
-
-            let html = `
-                <div class="text-center mb-2">
-                    <i class="bi bi-${icon} text-${color}" style="font-size: 2rem;"></i>
-                    <h4 class="text-${color} mb-0">${data.signal}</h4>
-                    <div class="fs-5">${conf}% confidence</div>
-                </div>
-                <table class="table table-sm mb-0">
-                    <tr><td class="text-muted">Candle</td><td>${formatTime(data.candle_time)}</td></tr>
-                    <tr><td class="text-muted">Close</td><td>$${data.candle_close.toLocaleString()}</td></tr>`;
-
-            if (data.signal !== 'FLAT') {
-                if (data.stop_loss) html += `<tr><td class="text-muted">Stop Loss</td><td>$${data.stop_loss.toFixed(2)}</td></tr>`;
-                if (data.take_profit) html += `<tr><td class="text-muted">Take Profit</td><td>$${data.take_profit.toFixed(2)}</td></tr>`;
-            }
-
-            html += `<tr><td class="text-muted">Reason</td><td><small>${data.reason}</small></td></tr>`;
-
-            // Probability breakdown
-            const pBull = (data.prob_bullish * 100).toFixed(1);
-            const pBear = (data.prob_bearish * 100).toFixed(1);
-            const pFlat = (data.prob_no_fractal * 100).toFixed(1);
-            html += `<tr><td class="text-muted">Probabilities</td><td>
-                <small class="text-success">Bull ${pBull}%</small> |
-                <small class="text-danger">Bear ${pBear}%</small> |
-                <small class="text-muted">Flat ${pFlat}%</small>
-            </td></tr>`;
-
-            html += '</table>';
-            el.innerHTML = html;
-        })
-        .catch(() => {
-            document.getElementById('latestSignal').innerHTML =
-                '<span class="text-muted">Could not fetch signal.</span>';
-        });
-}
-
-document.getElementById('btnStartSync').addEventListener('click', function() {
-    fetch('/api/toggle-live-sync', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({enabled: true})
-    }).then(() => refreshSyncStatus());
+    });
 });
 
-document.getElementById('btnStopSync').addEventListener('click', function() {
-    fetch('/api/toggle-live-sync', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({enabled: false})
-    }).then(() => refreshSyncStatus());
+document.getElementById('ws3-skip').addEventListener('click', function() {
+    markStepDone(3, '<span class="badge bg-secondary">Skipped</span>');
 });
 
-refreshSyncStatus();
-refreshLatestSignal();
-setInterval(refreshSyncStatus, 30000);
-setInterval(refreshLatestSignal, 30000);
+// ── Run All (legacy) ───────────────────────────────────────────
+document.getElementById('btnRunAll').addEventListener('click', function() {
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Running...';
+
+    saveConfigSilently().then(() => {
+        fetch('/api/run-foundation', {method: 'POST'}).then(r => r.json()).then(() => {
+            // Mark all steps as running visually
+            [1,2,3].forEach(n => markStepRunning(n));
+            const logEl = document.getElementById('ws2-log');
+            pollProgress(logEl, (error) => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Run All Steps';
+                [1,2,3].forEach(n => markStepDone(n, error
+                    ? '<span class="badge bg-danger">Error</span>'
+                    : '<span class="badge bg-success">Done</span>'
+                ));
+                loadPreview();
+            });
+        });
+    });
+});
+
+// ── Preview (load on page init) ────────────────────────────────
+function loadPreview() {
+    fetch('/api/foundation/preview').then(r => r.json()).then(data => {
+        // Step 1 preview: existing candle data
+        const ws1 = document.getElementById('ws1-preview');
+        if (data.existing_candles && Object.keys(data.existing_candles).length > 0) {
+            let html = `<div class="text-muted mb-1">Range: ${data.date_range.start} to ${data.date_range.end} | Cutoff: ${data.train_test_cutoff}</div>`;
+            html += '<table class="table table-sm mb-0" style="font-size:0.8rem;"><thead><tr><th>TF</th><th>Candles</th><th>From</th><th>To</th></tr></thead><tbody>';
+            for (const [tf, info] of Object.entries(data.existing_candles)) {
+                const check = info.count > 0 ? '<i class="bi bi-check-circle-fill text-success me-1"></i>' : '<i class="bi bi-circle text-muted me-1"></i>';
+                html += `<tr><td>${check}<code>${tf}</code></td><td>${info.count.toLocaleString()}</td><td>${info.from ? info.from.split(' ')[0] : '—'}</td><td>${info.to ? info.to.split(' ')[0] : '—'}</td></tr>`;
+            }
+            html += '</tbody></table>';
+            if (!data.has_api_keys) html += '<div class="text-warning mt-1" style="font-size:0.8rem"><i class="bi bi-exclamation-triangle me-1"></i>No API keys — fetch will be skipped</div>';
+            ws1.innerHTML = html;
+        }
+
+        // Step 2 preview: existing levels
+        const ws2 = document.getElementById('ws2-preview');
+        if (data.existing_levels && Object.keys(data.existing_levels).length > 0) {
+            const parts = Object.entries(data.existing_levels).map(([type, cnt]) => `${type}: ${cnt}`);
+            ws2.innerHTML = `<span class="text-muted">Current levels: ${parts.join(', ')}</span>`;
+        } else {
+            ws2.innerHTML = '<span class="text-muted">No levels detected yet.</span>';
+        }
+
+        // Auto-unlock steps if data exists
+        const hasCandles = Object.values(data.existing_candles || {}).some(c => c.count > 0);
+        const hasLevels = Object.keys(data.existing_levels || {}).length > 0;
+        if (hasCandles) unlockStep(2);
+        if (hasLevels) unlockStep(3);
+        if (hasCandles && hasLevels) unlockStep(4);
+    }).catch(() => {});
+}
+
+loadPreview();
 </script>
 {% endblock %}

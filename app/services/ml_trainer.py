@@ -63,17 +63,22 @@ FEATURE_COLUMNS = [
 ]
 
 
-def _build_dataset(db: Session, target_column: str = 'target_bullish') -> tuple:
+def _build_dataset(db: Session, target_column: str = 'target_bullish',
+                    timeframe: str = None) -> tuple:
     """Build feature matrix and target vector from database.
 
     target_column: 'target_bullish' or 'target_bearish'
+    timeframe: if set, only use features from candles of this timeframe
     """
-    features = (
+    query = (
         db.query(Feature)
         .filter(getattr(Feature, target_column).isnot(None))
-        .order_by(Feature.candle_id)
-        .all()
     )
+    if timeframe:
+        query = query.join(Candle, Feature.candle_id == Candle.id).filter(
+            Candle.timeframe == timeframe
+        )
+    features = query.order_by(Feature.candle_id).all()
 
     if not features:
         return pd.DataFrame(), pd.Series(dtype=int)
@@ -126,10 +131,12 @@ def train_model(
     target_column: str = 'target_bullish',
     name: str = None,
     model_dir: str = 'instance/models',
+    timeframe: str = None,
 ) -> MLModel:
     """Train a model and persist to DB + disk.
 
     target_column: 'target_bullish' or 'target_bearish'
+    timeframe: if set, only train on features from this candle timeframe
     Returns the MLModel record.
     """
     run = PipelineRun(
@@ -144,7 +151,7 @@ def train_model(
     start_time = time.time()
 
     try:
-        X, y = _build_dataset(db, target_column)
+        X, y = _build_dataset(db, target_column, timeframe=timeframe)
         if X.empty:
             raise ValueError("No training data available. Compute features first.")
 
@@ -278,7 +285,7 @@ def train_enhanced_model(
     start_time = time.time()
 
     try:
-        X, y = _build_dataset(db, target_column)
+        X, y = _build_dataset(db, target_column, timeframe=timeframe)
         if X.empty:
             raise ValueError("No training data available. Compute features first.")
 

@@ -63,6 +63,12 @@
                         <i class="bi bi-bar-chart-steps me-2"></i> Level Backtests
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'backtest.level_performance' %}active{% endif %}"
+                       href="{{ url_for('backtest.level_performance') }}">
+                        <i class="bi bi-trophy me-2"></i> Level Performance
+                    </a>
+                </li>
             </ul>
             <hr class="text-secondary mx-3 my-0">
             <ul class="nav flex-column p-2">

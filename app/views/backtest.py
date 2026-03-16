@@ -1,5 +1,6 @@
 """Backtest views — run and review backtests."""
-from flask import Blueprint, render_template, jsonify, request, abort
+import threading
+from flask import Blueprint, render_template, jsonify, request, abort, current_app
 from ..extensions import db
 from ..models import MLModel, BacktestResult, IndividualLevelBacktest, IndividualLevelTrade
 
@@ -234,6 +235,110 @@ def individual_trade_chart(bt_id, trade_id):
                            bt=bt, trade=trade,
                            prev_trade=prev_trade, next_trade=next_trade)
 
+
+# ---------------------------------------------------------------------------
+# Level Performance Backtest routes  (DB-backed, wick SL, configurable RR)
+# ---------------------------------------------------------------------------
+
+@backtest_bp.route('/level-performance')
+def level_performance():
+    """Level performance backtest dashboard."""
+    # Fetch completed wick-RR backtests, newest first
+    backtests = (
+        IndividualLevelBacktest.query
+        .filter(IndividualLevelBacktest.strategy_name.like('wick_rr_%'))
+        .filter_by(status='completed')
+        .order_by(IndividualLevelBacktest.created_at.desc())
+        .all()
+    )
+    # Group into pivot: {(level_type, timeframe): {rr: record}}
+    pivot: dict[tuple, dict] = {}
+    rr_set: set[float] = set()
+    for bt in backtests:
+        try:
+            rr = float(bt.parameters.get('rr', 0)) if bt.parameters else 0
+        except (TypeError, ValueError):
+            rr = 0.0
+        key = (bt.level_type, bt.level_source_timeframe)
+        pivot.setdefault(key, {})[rr] = bt
+        rr_set.add(rr)
+    rr_list = sorted(rr_set)
+    rows = [
+        {'level_type': lt, 'timeframe': tf, 'by_rr': rr_map}
+        for (lt, tf), rr_map in sorted(pivot.items())
+    ]
+    return render_template('backtest/level_performance.html',
+                           rows=rows, rr_list=rr_list)
+
+
+@backtest_bp.route('/api/level-performance/run', methods=['POST'])
+def api_lp_run():
+    """Start a level performance backtest in a background thread."""
+    from ..services.level_trade_backtest_db import run_level_trade_backtest
+    from ..services import progress
+
+    data       = request.get_json(silent=True) or {}
+    exec_tf    = data.get('exec_timeframe', '1h')
+    rr_ratios  = [float(r) for r in data.get('rr_ratios', [1.0, 2.0, 3.0])]
+    tolerance  = float(data.get('tolerance_pct', 0.005))
+    timeout    = int(data.get('timeout', 100))
+    naked_only = bool(data.get('naked_only', True))
+
+    if progress.get_state()['running']:
+        return jsonify({'error': 'Another task is already running'}), 409
+
+    progress.start()
+    app = current_app._get_current_object()
+
+    def _run():
+        try:
+            with app.app_context():
+                def _cb(done, total, label):
+                    progress.update(f'{done}/{total}', label)
+
+                results = run_level_trade_backtest(
+                    db.session,
+                    exec_timeframe=exec_tf,
+                    rr_ratios=rr_ratios,
+                    tolerance_pct=tolerance,
+                    timeout=timeout,
+                    naked_only=naked_only,
+                    progress_cb=_cb,
+                )
+                progress.set_result({'count': len(results)})
+                progress.finish()
+        except Exception as exc:
+            progress.finish(error=str(exc))
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({'status': 'started', 'exec_timeframe': exec_tf, 'rr_ratios': rr_ratios})
+
+
+@backtest_bp.route('/api/level-performance/results')
+def api_lp_results():
+    """JSON: all completed wick-RR backtest results."""
+    backtests = (
+        IndividualLevelBacktest.query
+        .filter(IndividualLevelBacktest.strategy_name.like('wick_rr_%'))
+        .filter_by(status='completed')
+        .order_by(IndividualLevelBacktest.level_type,
+                  IndividualLevelBacktest.level_source_timeframe)
+        .all()
+    )
+    out = []
+    for bt in backtests:
+        d = bt.to_dict()
+        try:
+            d['rr'] = float(bt.parameters.get('rr', 0)) if bt.parameters else 0
+        except (TypeError, ValueError):
+            d['rr'] = 0.0
+        out.append(d)
+    return jsonify(out)
+
+
+# ---------------------------------------------------------------------------
+# CSV-based individual level backtest (legacy) — keep as-is
+# ---------------------------------------------------------------------------
 
 @backtest_bp.route('/api/individual-levels/run', methods=['POST'])
 def api_il_run():

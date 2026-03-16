@@ -339,12 +339,11 @@ def filter_levels_for_backtest(levels_df: pd.DataFrame,
         df = df[df['level_type'].str.contains('Fractal_Low', case=False)]
         df = df[df['timeframe'] == csv_timeframe]
     elif lt.startswith('FIB'):
-        # e.g. "Fib_0.618" → match level_type containing "Fib_0.639" or "Fib_0.618"
-        # Handle legacy naming: 0.639 in CSV = 0.618 conceptually
-        ratio = level_type.split('_')[1] if '_' in level_type else '0.618'
-        if ratio == '0.618':
-            # CSV uses 0.639 for golden pocket
-            df = df[df['level_type'].str.contains('Fib_0.639|Fib_0.618', case=False, regex=True)]
+        # e.g. "Fib_CC" → match level_type containing "Fib_CC" or legacy "Fib_0.639"
+        ratio = level_type.split('_')[1] if '_' in level_type else 'CC'
+        if ratio == 'CC':
+            # CC golden pocket: matches Fib_CC (DB) or legacy Fib_0.639 (CSV)
+            df = df[df['level_type'].str.contains('Fib_CC|Fib_0.639', case=False, regex=True)]
         else:
             df = df[df['level_type'].str.contains(f'Fib_{ratio}', case=False)]
         df = df[df['timeframe'] == csv_timeframe]
@@ -667,7 +666,7 @@ def run_individual_level_backtest(
 # All level types available in the CSV data
 ALL_LEVEL_TYPES = [
     'HTF', 'Fractal_High', 'Fractal_Low',
-    'Fib_0.50', 'Fib_0.618', 'Fib_0.75', 'Fib_0.786',
+    'Fib_0.50', 'Fib_CC', 'Fib_0.75', 'Fib_0.786',
     'VP_POC', 'VP_VAH', 'VP_VAL',
 ]
 

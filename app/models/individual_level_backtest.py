@@ -9,7 +9,7 @@ class IndividualLevelBacktest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
     # Level configuration
-    level_type = db.Column(db.String(50), nullable=False)  # "HTF", "Fractal_High", "Fib_0.618", etc.
+    level_type = db.Column(db.String(50), nullable=False)  # "HTF", "Fractal_High", "Fib_CC", etc.
     level_source_timeframe = db.Column(db.String(10), nullable=False)  # "1h", "4h", "1d", "1w"
     trade_execution_timeframe = db.Column(db.String(10), nullable=False)  # "1h", "4h", "1d"
 

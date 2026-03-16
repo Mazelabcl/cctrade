@@ -3,9 +3,8 @@ from datetime import datetime
 from app.extensions import db as _db
 from app.models import Candle, Level, Feature
 from app.services.feature_engine import (
-    _candle_ratios, _volume_ratios, _utc_block, _find_nearest_levels,
-    _compute_rsi, _compute_macd, _compute_bollinger_width,
-    _compute_atr, _compute_momentum,
+    _candle_ratios, _volume_ratios, _utc_block, _find_nearest_distances,
+    _compute_zone_features, _compute_atr, _compute_momentum,
     compute_features,
 )
 import numpy as np
@@ -69,8 +68,8 @@ def test_utc_block():
     assert _utc_block(datetime(2024, 1, 1, 23)) == 5
 
 
-def test_find_nearest_levels_support():
-    """Support zone detection."""
+def test_find_nearest_distances_basic():
+    """Distance to nearest support/resistance."""
     levels_df = pd.DataFrame({
         'price_level': [40000, 41000, 42000, 43000, 44000],
         'level_type': ['Fractal_Low'] * 5,
@@ -79,68 +78,42 @@ def test_find_nearest_levels_support():
         'support_touches': [0] * 5,
         'resistance_touches': [0] * 5,
     })
-    sup, res = _find_nearest_levels(42500, levels_df)
-    assert sup is not None
-    assert res is not None
-    assert sup['distance_pct'] > 0
-    assert res['distance_pct'] > 0
+    sup_dist, res_dist = _find_nearest_distances(42500, levels_df)
+    assert sup_dist is not None
+    assert res_dist is not None
+    assert sup_dist > 0
+    assert res_dist > 0
 
 
-def test_find_nearest_levels_empty():
+def test_find_nearest_distances_empty():
     """Empty levels DataFrame returns None."""
-    sup, res = _find_nearest_levels(42500, pd.DataFrame())
-    assert sup is None
-    assert res is None
+    sup_dist, res_dist = _find_nearest_distances(42500, pd.DataFrame())
+    assert sup_dist is None
+    assert res_dist is None
 
 
-def test_compute_rsi_basic():
-    """RSI with simple rising prices should be near 100."""
-    closes = np.arange(100.0, 120.0)  # 20 rising closes
-    rsi = _compute_rsi(closes, period=14)
-    assert rsi is not None
-    assert 90 <= rsi <= 100  # strongly bullish
+def test_compute_zone_features_basic():
+    """Zone features with levels in range."""
+    levels_df = pd.DataFrame({
+        'price_level': [41500, 41800, 42200, 42500],
+        'level_type': ['Fractal_Low', 'HTF', 'Fractal_High', 'HTF'],
+        'timeframe': ['daily', 'daily', 'daily', 'daily'],
+        'support_touches': [0, 1, 0, 0],
+        'resistance_touches': [0, 0, 0, 1],
+    })
+    cache = {('Fractal_Low', 'daily'): 0.6, ('HTF', 'daily'): 0.7}
+    result = _compute_zone_features(42000, levels_df, cache, zone_width=0.015)
+    assert result['support_confluence_score'] > 0
+    assert result['resistance_confluence_score'] > 0
+    assert 0 <= result['support_liquidity_consumed'] <= 1
+    assert 0 <= result['resistance_liquidity_consumed'] <= 1
 
 
-def test_compute_rsi_falling():
-    """RSI with falling prices should be near 0."""
-    closes = np.arange(120.0, 100.0, -1.0)  # 20 falling closes
-    rsi = _compute_rsi(closes, period=14)
-    assert rsi is not None
-    assert 0 <= rsi <= 10  # strongly bearish
-
-
-def test_compute_rsi_insufficient_data():
-    """RSI returns None with insufficient data."""
-    assert _compute_rsi(np.array([1, 2, 3]), period=14) is None
-
-
-def test_compute_macd_basic():
-    """MACD returns three values with sufficient data."""
-    closes = np.sin(np.linspace(0, 6 * np.pi, 100)) * 100 + 1000
-    ml, ms, mh = _compute_macd(closes)
-    assert ml is not None
-    assert ms is not None
-    assert mh is not None
-    assert abs(mh - (ml - ms)) < 0.001
-
-
-def test_compute_macd_insufficient():
-    """MACD returns None with insufficient data."""
-    ml, ms, mh = _compute_macd(np.array([1, 2, 3]))
-    assert ml is None
-
-
-def test_compute_bollinger_width():
-    """Bollinger width is positive for volatile data."""
-    closes = np.array([100, 102, 98, 104, 96, 106, 94, 108, 92, 110,
-                        100, 102, 98, 104, 96, 106, 94, 108, 92, 110])
-    bw = _compute_bollinger_width(closes, period=20)
-    assert bw is not None
-    assert bw > 0
-
-
-def test_compute_bollinger_width_insufficient():
-    assert _compute_bollinger_width(np.array([1, 2, 3]), period=20) is None
+def test_compute_zone_features_empty():
+    """Empty levels returns zeros."""
+    result = _compute_zone_features(42000, pd.DataFrame(), {})
+    assert result['support_confluence_score'] == 0.0
+    assert result['resistance_confluence_score'] == 0.0
 
 
 def test_compute_atr_basic():
@@ -183,6 +156,11 @@ def test_compute_features_basic(app, sample_candles, sample_levels):
         assert f.upper_wick_ratio is not None
         assert f.volume_short_ratio is not None
         assert f.utc_block is not None
+        # Check targets are set
+        assert f.target_bullish is not None
+        assert f.target_bearish is not None
+        assert f.target_bullish in (0, 1)
+        assert f.target_bearish in (0, 1)
 
 
 def test_compute_features_idempotent(app, sample_candles, sample_levels):

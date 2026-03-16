@@ -301,7 +301,7 @@ def train_model_endpoint():
 
     data = request.get_json() or {}
     algorithm = data.get('algorithm', 'random_forest')
-    horizon = data.get('horizon', 'day')
+    target = data.get('target', 'target_bullish')
     name = data.get('name')
 
     app = current_app._get_current_object()
@@ -312,7 +312,7 @@ def train_model_endpoint():
                                      'algorithm': algorithm})
             try:
                 model = _train(db.session, algorithm=algorithm,
-                               prediction_horizon=horizon, name=name)
+                               target_column=target, name=name)
                 publish_sse('pipeline', {
                     'status': 'completed', 'type': 'training',
                     'model_id': model.id, 'accuracy': model.accuracy,

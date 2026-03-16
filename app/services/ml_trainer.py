@@ -22,7 +22,6 @@ from sqlalchemy import func as sa_func
 from sqlalchemy.orm import Session
 
 from ..models import Candle, Feature, MLModel, PipelineRun
-from .target_builder import create_fractal_targets
 
 logger = logging.getLogger(__name__)
 
@@ -54,52 +53,43 @@ except ImportError:
 
 # Feature columns used for training
 FEATURE_COLUMNS = [
-    'support_distance_pct', 'support_daily_count', 'support_weekly_count',
-    'support_monthly_count', 'support_fib618_count', 'support_naked_count',
-    'resistance_distance_pct', 'resistance_daily_count', 'resistance_weekly_count',
-    'resistance_monthly_count', 'resistance_fib618_count', 'resistance_naked_count',
     'upper_wick_ratio', 'lower_wick_ratio', 'body_total_ratio', 'body_position_ratio',
     'volume_short_ratio', 'volume_long_ratio',
     'utc_block', 'candles_since_last_up', 'candles_since_last_down',
-    'total_support_touches', 'total_resistance_touches',
-    'rsi_14', 'macd_line', 'macd_signal', 'macd_histogram',
-    'bollinger_width', 'atr_14', 'momentum_12',
+    'support_distance_pct', 'resistance_distance_pct',
+    'atr_14', 'momentum_12',
+    'support_confluence_score', 'resistance_confluence_score',
+    'support_liquidity_consumed', 'resistance_liquidity_consumed',
 ]
 
 
-def _build_dataset(db: Session, prediction_horizon: str = 'day') -> tuple:
-    """Build feature matrix and target vector from database."""
-    targets_df = create_fractal_targets(db, prediction_horizon=prediction_horizon)
-    if targets_df.empty:
-        return pd.DataFrame(), pd.Series(dtype=int)
+def _build_dataset(db: Session, target_column: str = 'target_bullish') -> tuple:
+    """Build feature matrix and target vector from database.
 
-    candle_ids = targets_df['candle_id'].tolist()
+    target_column: 'target_bullish' or 'target_bearish'
+    """
     features = (
         db.query(Feature)
-        .filter(Feature.candle_id.in_(candle_ids))
+        .filter(getattr(Feature, target_column).isnot(None))
+        .order_by(Feature.candle_id)
         .all()
     )
 
     if not features:
         return pd.DataFrame(), pd.Series(dtype=int)
 
-    feat_map = {f.candle_id: f for f in features}
-
     rows = []
     y_vals = []
-    for _, row in targets_df.iterrows():
-        feat = feat_map.get(row['candle_id'])
-        if feat is None:
-            continue
+    for f in features:
         feat_dict = {}
         for col in FEATURE_COLUMNS:
-            val = getattr(feat, col, None)
+            val = getattr(f, col, None)
             feat_dict[col] = val if val is not None else 0.0
         rows.append(feat_dict)
-        y_vals.append(row['fractal_direction'])
+        y_vals.append(getattr(f, target_column))
 
     X = pd.DataFrame(rows)
-    y = pd.Series(y_vals, name='fractal_direction')
+    y = pd.Series(y_vals, name=target_column)
     return X, y
 
 
@@ -133,19 +123,20 @@ def _create_model(algorithm: str, random_state: int = 42):
 def train_model(
     db: Session,
     algorithm: str = 'random_forest',
-    prediction_horizon: str = 'day',
+    target_column: str = 'target_bullish',
     name: str = None,
     model_dir: str = 'instance/models',
 ) -> MLModel:
     """Train a model and persist to DB + disk.
 
+    target_column: 'target_bullish' or 'target_bearish'
     Returns the MLModel record.
     """
     run = PipelineRun(
         pipeline_type='training',
         status='running',
         started_at=datetime.now(timezone.utc),
-        metadata_json={'algorithm': algorithm, 'horizon': prediction_horizon},
+        metadata_json={'algorithm': algorithm, 'target': target_column},
     )
     db.add(run)
     db.commit()
@@ -153,7 +144,7 @@ def train_model(
     start_time = time.time()
 
     try:
-        X, y = _build_dataset(db, prediction_horizon)
+        X, y = _build_dataset(db, target_column)
         if X.empty:
             raise ValueError("No training data available. Compute features first.")
 
@@ -201,10 +192,10 @@ def train_model(
         os.makedirs(model_dir, exist_ok=True)
         version = (
             db.query(sa_func.max(MLModel.version))
-            .filter_by(algorithm=algorithm, prediction_horizon=prediction_horizon)
+            .filter_by(algorithm=algorithm, prediction_horizon=target_column)
             .scalar() or 0
         ) + 1
-        model_name = name or f"{algorithm}_{prediction_horizon}"
+        model_name = name or f"{algorithm}_{target_column}"
         file_name = f"{model_name}_v{version}.joblib"
         file_path = os.path.join(model_dir, file_name)
 
@@ -217,7 +208,7 @@ def train_model(
             name=model_name,
             algorithm=algorithm,
             version=version,
-            prediction_horizon=prediction_horizon,
+            prediction_horizon=target_column,
             file_path=file_path,
             feature_names=list(X.columns),
             accuracy=acc,
@@ -253,7 +244,7 @@ def train_model(
 
 def train_enhanced_model(
     db: Session,
-    prediction_horizon: str = 'day',
+    target_column: str = 'target_bullish',
     name: str = None,
     model_dir: str = 'instance/models',
     n_trials: int = 50,
@@ -264,6 +255,7 @@ def train_enhanced_model(
     Uses TimeSeriesSplit cross-validation, optional SMOTE oversampling for
     minority fractal classes, and a held-out test set for final evaluation.
 
+    target_column: 'target_bullish' or 'target_bearish'
     Returns the MLModel record.
     """
     if not LIGHTGBM_AVAILABLE:
@@ -277,7 +269,7 @@ def train_enhanced_model(
         pipeline_type='training',
         status='running',
         started_at=datetime.now(timezone.utc),
-        metadata_json={'algorithm': algorithm, 'horizon': prediction_horizon,
+        metadata_json={'algorithm': algorithm, 'target': target_column,
                        'n_trials': n_trials, 'smote': use_smote},
     )
     db.add(run)
@@ -286,7 +278,7 @@ def train_enhanced_model(
     start_time = time.time()
 
     try:
-        X, y = _build_dataset(db, prediction_horizon)
+        X, y = _build_dataset(db, target_column)
         if X.empty:
             raise ValueError("No training data available. Compute features first.")
 
@@ -386,10 +378,10 @@ def train_enhanced_model(
         os.makedirs(model_dir, exist_ok=True)
         version = (
             db.query(sa_func.max(MLModel.version))
-            .filter_by(algorithm=algorithm, prediction_horizon=prediction_horizon)
+            .filter_by(algorithm=algorithm, prediction_horizon=target_column)
             .scalar() or 0
         ) + 1
-        model_name = name or f"{algorithm}_{prediction_horizon}"
+        model_name = name or f"{algorithm}_{target_column}"
         file_name = f"{model_name}_v{version}.joblib"
         file_path = os.path.join(model_dir, file_name)
 
@@ -404,7 +396,7 @@ def train_enhanced_model(
             name=model_name,
             algorithm=algorithm,
             version=version,
-            prediction_horizon=prediction_horizon,
+            prediction_horizon=target_column,
             file_path=file_path,
             feature_names=list(X.columns),
             accuracy=acc,

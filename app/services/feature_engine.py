@@ -276,18 +276,20 @@ def compute_features(db: Session, timeframe: str = '1h',
             n1 = candles[i - 1]
             n2 = candles[i - 2]
 
+            # Fractal timing — based on N-2 to avoid leakage
+            # (N-1 is the target, N hasn't happened yet at prediction time)
+            if n2.bullish_fractal:
+                candles_since_up = 0
+            else:
+                candles_since_up += 1
+            if n2.bearish_fractal:
+                candles_since_down = 0
+            else:
+                candles_since_down += 1
+
             # Skip if already computed
             existing = db.query(Feature.id).filter_by(candle_id=candle.id).first()
             if existing:
-                # Still update timing state
-                if candle.bullish_fractal:
-                    candles_since_up = 0
-                else:
-                    candles_since_up += 1
-                if candle.bearish_fractal:
-                    candles_since_down = 0
-                else:
-                    candles_since_down += 1
                 continue
 
             # Candle ratios (on N-1)
@@ -298,16 +300,6 @@ def compute_features(db: Session, timeframe: str = '1h',
 
             # UTC block
             utc = _utc_block(candle.open_time)
-
-            # Fractal timing
-            if candle.bullish_fractal:
-                candles_since_up = 0
-            else:
-                candles_since_up += 1
-            if candle.bearish_fractal:
-                candles_since_down = 0
-            else:
-                candles_since_down += 1
 
             # Volatility / momentum (computed up to N-1)
             atr = _compute_atr(highs[:i], lows[:i], closes[:i], period=14)

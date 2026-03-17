@@ -1,0 +1,203 @@
+{
+  "timestamp": "2026-03-16T23:34:14.646902",
+  "results": [
+    {
+      "timeframe": "1h",
+      "candles": 73261,
+      "features": 73259,
+      "bull_acc": 0.8337,
+      "bull_f1": 0.731,
+      "bear_acc": 0.8093,
+      "bear_f1": 0.7045,
+      "level_weight_bull": 0.0627,
+      "level_weight_bear": 0.0644,
+      "top_features": [
+        [
+          "candles_since_last_up",
+          0.3375228473123303
+        ],
+        [
+          "lower_wick_ratio",
+          0.19478481199934086
+        ],
+        [
+          "upper_wick_ratio",
+          0.09663530664384448
+        ],
+        [
+          "volume_short_ratio",
+          0.09014342940186082
+        ],
+        [
+          "body_position_ratio",
+          0.05121923201688159
+        ]
+      ]
+    },
+    {
+      "timeframe": "4h",
+      "candles": 18332,
+      "features": 18330,
+      "bull_acc": 0.8735,
+      "bull_f1": 0.6594,
+      "bear_acc": 0.8564,
+      "bear_f1": 0.727,
+      "level_weight_bull": 0.1112,
+      "level_weight_bear": 0.1111,
+      "top_features": [
+        [
+          "candles_since_last_up",
+          0.2532363523245738
+        ],
+        [
+          "lower_wick_ratio",
+          0.18113064923468306
+        ],
+        [
+          "volume_short_ratio",
+          0.11746335947051986
+        ],
+        [
+          "upper_wick_ratio",
+          0.08467677011426075
+        ],
+        [
+          "volume_long_ratio",
+          0.05461967314306638
+        ]
+      ]
+    },
+    {
+      "timeframe": "6h",
+      "candles": 12227,
+      "features": 12225,
+      "bull_acc": 0.8528,
+      "bull_f1": 0.7251,
+      "bear_acc": 0.8244,
+      "bear_f1": 0.6938,
+      "level_weight_bull": 0.0907,
+      "level_weight_bear": 0.0789,
+      "top_features": [
+        [
+          "candles_since_last_up",
+          0.24978458870676723
+        ],
+        [
+          "lower_wick_ratio",
+          0.1631944454304027
+        ],
+        [
+          "upper_wick_ratio",
+          0.11330293646480685
+        ],
+        [
+          "volume_short_ratio",
+          0.10993985488401167
+        ],
+        [
+          "momentum_12",
+          0.055014147990218254
+        ]
+      ]
+    },
+    {
+      "timeframe": "8h",
+      "candles": 9172,
+      "features": 9170,
+      "bull_acc": 0.851,
+      "bull_f1": 0.6983,
+      "bear_acc": 0.8285,
+      "bear_f1": 0.6563,
+      "level_weight_bull": 0.0942,
+      "level_weight_bear": 0.0907,
+      "top_features": [
+        [
+          "candles_since_last_up",
+          0.251571430569809
+        ],
+        [
+          "lower_wick_ratio",
+          0.1682790512798443
+        ],
+        [
+          "upper_wick_ratio",
+          0.11010753096381018
+        ],
+        [
+          "volume_short_ratio",
+          0.09514870146930328
+        ],
+        [
+          "momentum_12",
+          0.06721629785121708
+        ]
+      ]
+    },
+    {
+      "timeframe": "12h",
+      "candles": 6116,
+      "features": 6114,
+      "bull_acc": 0.8584,
+      "bull_f1": 0.6949,
+      "bear_acc": 0.8584,
+      "bear_f1": 0.699,
+      "level_weight_bull": 0.0946,
+      "level_weight_bear": 0.091,
+      "top_features": [
+        [
+          "candles_since_last_up",
+          0.24040253284804117
+        ],
+        [
+          "lower_wick_ratio",
+          0.16036457212116256
+        ],
+        [
+          "volume_short_ratio",
+          0.10793417022575631
+        ],
+        [
+          "upper_wick_ratio",
+          0.10148933403354413
+        ],
+        [
+          "momentum_12",
+          0.07924624992996311
+        ]
+      ]
+    },
+    {
+      "timeframe": "1d",
+      "candles": 3059,
+      "features": 3057,
+      "bull_acc": 0.8584,
+      "bull_f1": 0.4619,
+      "bear_acc": 0.878,
+      "bear_f1": 0.6481,
+      "level_weight_bull": 0.1616,
+      "level_weight_bear": 0.1614,
+      "top_features": [
+        [
+          "candles_since_last_up",
+          0.22135065040596666
+        ],
+        [
+          "lower_wick_ratio",
+          0.1408271496092159
+        ],
+        [
+          "volume_short_ratio",
+          0.10652765069470126
+        ],
+        [
+          "upper_wick_ratio",
+          0.09208795629703077
+        ],
+        [
+          "momentum_12",
+          0.07233315114570116
+        ]
+      ]
+    }
+  ]
+}

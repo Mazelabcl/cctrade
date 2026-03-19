@@ -1,0 +1,470 @@
+[
+  {
+    "exec_tf": "all",
+    "total_trades": 107803,
+    "test_trades": 16171,
+    "bounce_rate": 0.32019517082084914,
+    "accuracy": 0.6601,
+    "f1_macro": 0.6025,
+    "precision_bounce": 0.441,
+    "recall_bounce": 0.4622,
+    "confusion_matrix": [
+      [
+        8413,
+        2866
+      ],
+      [
+        2631,
+        2261
+      ]
+    ],
+    "feature_importance": [
+      [
+        "rr_ratio",
+        0.1955
+      ],
+      [
+        "risk",
+        0.1709
+      ],
+      [
+        "level_type_code",
+        0.1665
+      ],
+      [
+        "strategy_rr",
+        0.1559
+      ],
+      [
+        "distance_to_level",
+        0.1295
+      ],
+      [
+        "day_of_week",
+        0.0454
+      ],
+      [
+        "utc_block",
+        0.0431
+      ],
+      [
+        "level_tf_strength",
+        0.0267
+      ],
+      [
+        "entry_volatility",
+        0.0163
+      ],
+      [
+        "is_long",
+        0.0147
+      ],
+      [
+        "exec_tf_hours",
+        0.0145
+      ],
+      [
+        "price_vs_level",
+        0.01
+      ],
+      [
+        "volume_ratio",
+        0.0087
+      ],
+      [
+        "zone_confluence",
+        0.0023
+      ]
+    ]
+  },
+  {
+    "exec_tf": "1h",
+    "total_trades": 75141,
+    "test_trades": 11272,
+    "bounce_rate": 0.31845463861274137,
+    "accuracy": 0.6525,
+    "f1_macro": 0.5971,
+    "precision_bounce": 0.4286,
+    "recall_bounce": 0.4687,
+    "confusion_matrix": [
+      [
+        5767,
+        2117
+      ],
+      [
+        1800,
+        1588
+      ]
+    ],
+    "feature_importance": [
+      [
+        "rr_ratio",
+        0.1956
+      ],
+      [
+        "risk",
+        0.1824
+      ],
+      [
+        "distance_to_level",
+        0.1498
+      ],
+      [
+        "strategy_rr",
+        0.1494
+      ],
+      [
+        "level_type_code",
+        0.1283
+      ],
+      [
+        "day_of_week",
+        0.0534
+      ],
+      [
+        "utc_block",
+        0.048
+      ],
+      [
+        "level_tf_strength",
+        0.0307
+      ],
+      [
+        "entry_volatility",
+        0.0201
+      ],
+      [
+        "is_long",
+        0.0157
+      ],
+      [
+        "price_vs_level",
+        0.0127
+      ],
+      [
+        "volume_ratio",
+        0.0111
+      ],
+      [
+        "zone_confluence",
+        0.0029
+      ],
+      [
+        "exec_tf_hours",
+        0.0
+      ]
+    ]
+  },
+  {
+    "exec_tf": "4h",
+    "total_trades": 32662,
+    "test_trades": 4900,
+    "bounce_rate": 0.3241993754209785,
+    "accuracy": 0.6806,
+    "f1_macro": 0.6052,
+    "precision_bounce": 0.4727,
+    "recall_bounce": 0.3991,
+    "confusion_matrix": [
+      [
+        2738,
+        666
+      ],
+      [
+        899,
+        597
+      ]
+    ],
+    "feature_importance": [
+      [
+        "risk",
+        0.2507
+      ],
+      [
+        "level_type_code",
+        0.1897
+      ],
+      [
+        "distance_to_level",
+        0.18
+      ],
+      [
+        "strategy_rr",
+        0.1078
+      ],
+      [
+        "rr_ratio",
+        0.0974
+      ],
+      [
+        "day_of_week",
+        0.0643
+      ],
+      [
+        "utc_block",
+        0.0605
+      ],
+      [
+        "level_tf_strength",
+        0.031
+      ],
+      [
+        "is_long",
+        0.0185
+      ],
+      [
+        "entry_volatility",
+        0.0
+      ],
+      [
+        "volume_ratio",
+        0.0
+      ],
+      [
+        "zone_confluence",
+        0.0
+      ],
+      [
+        "exec_tf_hours",
+        0.0
+      ],
+      [
+        "price_vs_level",
+        0.0
+      ]
+    ]
+  },
+  {
+    "exec_tf": "all_rr1.0",
+    "total_trades": 37666,
+    "test_trades": 5650,
+    "bounce_rate": 0.425688950246907,
+    "accuracy": 0.5952,
+    "f1_macro": 0.5648,
+    "precision_bounce": 0.5112,
+    "recall_bounce": 0.4016,
+    "confusion_matrix": [
+      [
+        2428,
+        894
+      ],
+      [
+        1393,
+        935
+      ]
+    ],
+    "feature_importance": [
+      [
+        "risk",
+        0.2616
+      ],
+      [
+        "distance_to_level",
+        0.2119
+      ],
+      [
+        "level_type_code",
+        0.1663
+      ],
+      [
+        "day_of_week",
+        0.0805
+      ],
+      [
+        "utc_block",
+        0.0697
+      ],
+      [
+        "entry_volatility",
+        0.044
+      ],
+      [
+        "price_vs_level",
+        0.0367
+      ],
+      [
+        "volume_ratio",
+        0.0355
+      ],
+      [
+        "level_tf_strength",
+        0.0337
+      ],
+      [
+        "is_long",
+        0.0215
+      ],
+      [
+        "exec_tf_hours",
+        0.0211
+      ],
+      [
+        "rr_ratio",
+        0.01
+      ],
+      [
+        "zone_confluence",
+        0.0075
+      ],
+      [
+        "strategy_rr",
+        0.0
+      ]
+    ]
+  },
+  {
+    "exec_tf": "all_rr2.0",
+    "total_trades": 35690,
+    "test_trades": 5354,
+    "bounce_rate": 0.29963575231157186,
+    "accuracy": 0.6604,
+    "f1_macro": 0.5308,
+    "precision_bounce": 0.3571,
+    "recall_bounce": 0.2361,
+    "confusion_matrix": [
+      [
+        3175,
+        650
+      ],
+      [
+        1168,
+        361
+      ]
+    ],
+    "feature_importance": [
+      [
+        "risk",
+        0.2878
+      ],
+      [
+        "distance_to_level",
+        0.2448
+      ],
+      [
+        "level_type_code",
+        0.2278
+      ],
+      [
+        "day_of_week",
+        0.0791
+      ],
+      [
+        "utc_block",
+        0.072
+      ],
+      [
+        "level_tf_strength",
+        0.0429
+      ],
+      [
+        "is_long",
+        0.0246
+      ],
+      [
+        "exec_tf_hours",
+        0.021
+      ],
+      [
+        "entry_volatility",
+        0.0
+      ],
+      [
+        "volume_ratio",
+        0.0
+      ],
+      [
+        "zone_confluence",
+        0.0
+      ],
+      [
+        "rr_ratio",
+        0.0
+      ],
+      [
+        "strategy_rr",
+        0.0
+      ],
+      [
+        "price_vs_level",
+        0.0
+      ]
+    ]
+  },
+  {
+    "exec_tf": "all_rr3.0",
+    "total_trades": 34447,
+    "test_trades": 5168,
+    "bounce_rate": 0.22614451185879758,
+    "accuracy": 0.7171,
+    "f1_macro": 0.5255,
+    "precision_bounce": 0.2515,
+    "recall_bounce": 0.2019,
+    "confusion_matrix": [
+      [
+        3495,
+        628
+      ],
+      [
+        834,
+        211
+      ]
+    ],
+    "feature_importance": [
+      [
+        "level_type_code",
+        0.2822
+      ],
+      [
+        "risk",
+        0.2692
+      ],
+      [
+        "distance_to_level",
+        0.2222
+      ],
+      [
+        "day_of_week",
+        0.0796
+      ],
+      [
+        "utc_block",
+        0.0725
+      ],
+      [
+        "level_tf_strength",
+        0.0354
+      ],
+      [
+        "is_long",
+        0.0216
+      ],
+      [
+        "exec_tf_hours",
+        0.0173
+      ],
+      [
+        "entry_volatility",
+        0.0
+      ],
+      [
+        "volume_ratio",
+        0.0
+      ],
+      [
+        "zone_confluence",
+        0.0
+      ],
+      [
+        "rr_ratio",
+        0.0
+      ],
+      [
+        "strategy_rr",
+        0.0
+      ],
+      [
+        "price_vs_level",
+        0.0
+      ]
+    ]
+  }
+]

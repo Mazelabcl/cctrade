@@ -1,4 +1,5 @@
-"""Indicator computation service — fractal detection, HTF levels, Fibonacci, Volume Profile.
+"""Indicator computation service — fractal detection, HTF levels, Fibonacci, Volume Profile,
+Previous Session levels, VWAP.
 
 Pure Python + SQLAlchemy, no Flask dependency. Algorithms preserved from legacy/indicators.py.
 """
@@ -6,6 +7,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 from sqlalchemy.orm import Session
 
@@ -341,6 +343,182 @@ def calculate_volume_profile_levels(df_1min: pd.DataFrame, timeframe: str,
 
 
 # ---------------------------------------------------------------------------
+# Previous Session levels
+# ---------------------------------------------------------------------------
+
+def calculate_previous_session_levels(df: pd.DataFrame, timeframe: str) -> list[dict]:
+    """Calculate previous session levels from higher-timeframe candles.
+
+    For each candle (starting from the 2nd), create levels from the PREVIOUS
+    candle's session: high, low, equilibrium (50%), and 25%/75% quartiles.
+
+    Args:
+        df: DataFrame with columns [open_time, open, high, low, close, volume]
+        timeframe: Level timeframe label (e.g., 'daily', 'weekly', 'monthly')
+    """
+    if len(df) < 2:
+        return []
+
+    levels = []
+    for i in range(1, len(df)):
+        prev = df.iloc[i - 1]
+        curr = df.iloc[i]
+
+        prev_high = float(prev['high'])
+        prev_low = float(prev['low'])
+        prev_range = prev_high - prev_low
+        created = curr['open_time']  # level becomes valid when new session opens
+
+        # Session high & low
+        levels.append({
+            'price_level': prev_high,
+            'level_type': 'PrevSession_High',
+            'timeframe': timeframe,
+            'source': 'previous_session',
+            'created_at': created,
+            'metadata': {'session_open_time': str(prev['open_time'])},
+        })
+        levels.append({
+            'price_level': prev_low,
+            'level_type': 'PrevSession_Low',
+            'timeframe': timeframe,
+            'source': 'previous_session',
+            'created_at': created,
+            'metadata': {'session_open_time': str(prev['open_time'])},
+        })
+
+        if prev_range > 0:
+            # Equilibrium (50%)
+            levels.append({
+                'price_level': prev_low + prev_range * 0.5,
+                'level_type': 'PrevSession_EQ',
+                'timeframe': timeframe,
+                'source': 'previous_session',
+                'created_at': created,
+                'metadata': {'session_open_time': str(prev['open_time'])},
+            })
+            # 25% and 75%
+            levels.append({
+                'price_level': prev_low + prev_range * 0.25,
+                'level_type': 'PrevSession_25',
+                'timeframe': timeframe,
+                'source': 'previous_session',
+                'created_at': created,
+                'metadata': {'session_open_time': str(prev['open_time'])},
+            })
+            levels.append({
+                'price_level': prev_low + prev_range * 0.75,
+                'level_type': 'PrevSession_75',
+                'timeframe': timeframe,
+                'source': 'previous_session',
+                'created_at': created,
+                'metadata': {'session_open_time': str(prev['open_time'])},
+            })
+
+    return levels
+
+
+def calculate_previous_session_vp_levels(df_1min: pd.DataFrame,
+                                          timeframe: str,
+                                          period_group: str,
+                                          bin_size: int = 10) -> list[dict]:
+    """Calculate Previous Session VP levels (POC/VAH/VAL).
+
+    Same as calculate_volume_profile_levels but the created_at is set to
+    the NEXT period's start, so the level only becomes available after the
+    session closes.
+    """
+    if df_1min.empty:
+        return []
+
+    df = df_1min.copy()
+    df['period'] = df['open_time'].dt.to_period(period_group[0])
+
+    periods = sorted(df['period'].unique())
+    levels = []
+
+    for i, period in enumerate(periods):
+        group = df[df['period'] == period]
+        vp = calculate_volume_profile(group, bin_size=bin_size)
+        if not vp:
+            continue
+
+        # Created at = start of NEXT period (when this data becomes "previous")
+        if i + 1 < len(periods):
+            next_group = df[df['period'] == periods[i + 1]]
+            created_at = next_group['open_time'].iloc[0]
+        else:
+            continue  # skip last period — no "next" yet
+
+        for vp_type in ['poc', 'vah', 'val']:
+            levels.append({
+                'price_level': float(vp[vp_type]),
+                'level_type': f'PrevSession_VP_{vp_type.upper()}',
+                'timeframe': timeframe,
+                'source': 'previous_session',
+                'created_at': created_at,
+                'metadata': {
+                    'period': str(period),
+                    'vp_type': vp_type,
+                },
+            })
+
+    return levels
+
+
+# ---------------------------------------------------------------------------
+# VWAP (Volume-Weighted Average Price)
+# ---------------------------------------------------------------------------
+
+def calculate_vwap_levels(df_1min: pd.DataFrame, timeframe: str,
+                           period_group: str) -> list[dict]:
+    """Calculate session VWAP from 1-minute data.
+
+    VWAP = cumulative(typical_price * volume) / cumulative(volume)
+    where typical_price = (high + low + close) / 3
+
+    Creates a level at the final VWAP of each completed session.
+    The level becomes valid at the start of the NEXT session.
+    """
+    if df_1min.empty:
+        return []
+
+    df = df_1min.copy()
+    df['period'] = df['open_time'].dt.to_period(period_group[0])
+    df['tp'] = (df['high'] + df['low'] + df['close']) / 3.0
+    df['tp_vol'] = df['tp'] * df['volume']
+
+    periods = sorted(df['period'].unique())
+    levels = []
+
+    for i, period in enumerate(periods):
+        group = df[df['period'] == period]
+        total_vol = group['volume'].sum()
+        if total_vol == 0:
+            continue
+
+        vwap = group['tp_vol'].sum() / total_vol
+
+        # Level valid from next period start
+        if i + 1 < len(periods):
+            next_group = df[df['period'] == periods[i + 1]]
+            created_at = next_group['open_time'].iloc[0]
+        else:
+            continue
+
+        levels.append({
+            'price_level': float(vwap),
+            'level_type': 'PrevSession_VWAP',
+            'timeframe': timeframe,
+            'source': 'vwap',
+            'created_at': created_at,
+            'metadata': {'period': str(period)},
+        })
+
+    return levels
+
+
+# ---------------------------------------------------------------------------
 # Orchestrator — run all indicators for a timeframe
 # ---------------------------------------------------------------------------
 
@@ -503,6 +681,71 @@ def run_indicators_multi(db: Session, symbol: str = 'BTCUSDT',
     # VP is handled separately (needs 1-min data from Binance)
     # summary['vp'] populated by caller
 
+    return summary
+
+
+def run_previous_session_levels(db: Session, symbol: str = 'BTCUSDT',
+                                 timeframes: list[str] = None) -> dict:
+    """Calculate and store Previous Session levels for given HTF timeframes.
+
+    For each timeframe (e.g., '1d', '1w', '1M'), creates levels from the
+    previous session's high, low, EQ, 25%, 75%.
+
+    Args:
+        timeframes: List of candle timeframes to process (default: ['1d', '1w', '1M'])
+    """
+    timeframes = timeframes or ['1d', '1w', '1M']
+    summary = {}
+
+    for tf in timeframes:
+        candles = _load_candle_df(db, symbol, tf)
+        if candles.empty:
+            continue
+
+        tf_label = _tf_label(tf)
+        levels = calculate_previous_session_levels(candles, tf_label)
+        added = _add_levels(db, levels, skip_duplicates=True)
+        summary[tf] = {'session_levels': added}
+        logger.info("Previous Session [%s]: %d new levels", tf, added)
+
+    db.commit()
+    return summary
+
+
+def run_vwap_and_session_vp(db: Session, symbol: str = 'BTCUSDT',
+                             period_configs: list[tuple] = None) -> dict:
+    """Calculate VWAP + Previous Session VP from 1-minute data.
+
+    Args:
+        period_configs: List of (timeframe_label, period_group) tuples.
+            Default: [('daily', 'D'), ('weekly', 'W'), ('monthly', 'ME')]
+    """
+    period_configs = period_configs or [
+        ('daily', 'D'), ('weekly', 'W'), ('monthly', 'ME'),
+    ]
+
+    # Load all 1-min candles
+    candles_1m = _load_candle_df(db, symbol, '1m')
+    if candles_1m.empty:
+        logger.warning("No 1-minute candles found for VWAP/VP calculation")
+        return {}
+
+    summary = {}
+    for tf_label, period_group in period_configs:
+        # VWAP
+        vwap_levels = calculate_vwap_levels(candles_1m, tf_label, period_group)
+        vwap_added = _add_levels(db, vwap_levels, skip_duplicates=True)
+
+        # Previous Session VP
+        vp_levels = calculate_previous_session_vp_levels(
+            candles_1m, tf_label, period_group,
+        )
+        vp_added = _add_levels(db, vp_levels, skip_duplicates=True)
+
+        summary[tf_label] = {'vwap': vwap_added, 'session_vp': vp_added}
+        logger.info("VWAP+SessionVP [%s]: %d VWAP, %d VP levels", tf_label, vwap_added, vp_added)
+
+    db.commit()
     return summary
 
 

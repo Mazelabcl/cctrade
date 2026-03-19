@@ -64,11 +64,14 @@ FEATURE_COLUMNS = [
 
 
 def _build_dataset(db: Session, target_column: str = 'target_bullish',
-                    timeframe: str = None) -> tuple:
+                    timeframe: str = None,
+                    proximity_threshold: float = None) -> tuple:
     """Build feature matrix and target vector from database.
 
     target_column: 'target_bullish' or 'target_bearish'
     timeframe: if set, only use features from candles of this timeframe
+    proximity_threshold: if set, only include rows where min distance to
+        a level is below this value (e.g. 0.01 = 1%)
     """
     query = (
         db.query(Feature)
@@ -95,6 +98,15 @@ def _build_dataset(db: Session, target_column: str = 'target_bullish',
 
     X = pd.DataFrame(rows)
     y = pd.Series(y_vals, name=target_column)
+
+    if proximity_threshold and 'support_distance_pct' in X.columns and 'resistance_distance_pct' in X.columns:
+        min_dist = X[['support_distance_pct', 'resistance_distance_pct']].fillna(float('inf')).min(axis=1)
+        mask = min_dist < proximity_threshold
+        original_len = len(X)
+        X = X[mask].reset_index(drop=True)
+        y = y[mask].reset_index(drop=True)
+        logger.info("Proximity filter (%.1f%%): %d → %d rows", proximity_threshold * 100, original_len, len(X))
+
     return X, y
 
 
@@ -132,6 +144,7 @@ def train_model(
     name: str = None,
     model_dir: str = 'instance/models',
     timeframe: str = None,
+    proximity_threshold: float = None,
 ) -> MLModel:
     """Train a model and persist to DB + disk.
 
@@ -151,7 +164,8 @@ def train_model(
     start_time = time.time()
 
     try:
-        X, y = _build_dataset(db, target_column, timeframe=timeframe)
+        X, y = _build_dataset(db, target_column, timeframe=timeframe,
+                              proximity_threshold=proximity_threshold)
         if X.empty:
             raise ValueError("No training data available. Compute features first.")
 

@@ -217,7 +217,8 @@ def _build_win_rate_cache(db):
 # ---------------------------------------------------------------------------
 
 def compute_features(db: Session, timeframe: str = '1h',
-                     symbol: str = 'BTCUSDT') -> int:
+                     symbol: str = 'BTCUSDT',
+                     level_filter: str = 'htf_no_igor') -> int:
     """Compute ML features for all candles and store in features table.
 
     Returns number of features computed.
@@ -245,17 +246,30 @@ def compute_features(db: Session, timeframe: str = '1h',
             db.commit()
             return 0
 
-        # Load levels into a DataFrame for zone detection
-        levels = db.query(Level).filter(Level.invalidated_at.is_(None)).all()
+        # Load HTF levels (D/W/M only) into a DataFrame for zone detection
+        level_query = db.query(Level).filter(
+            Level.timeframe.in_(['daily', 'weekly', 'monthly'])
+        )
+        if level_filter == 'htf_no_igor':
+            level_query = level_query.filter(
+                Level.level_type.notin_(['Fib_0.25', 'Fib_0.50', 'Fib_0.75'])
+            )
+        elif level_filter == 'htf_no_fibs':
+            level_query = level_query.filter(~Level.level_type.like('Fib_%'))
+        # else 'htf_all' = all D/W/M types
+
+        levels = level_query.all()
         levels_df = pd.DataFrame([{
             'price_level': l.price_level,
             'level_type': l.level_type,
             'timeframe': l.timeframe,
             'source': l.source,
             'created_at': l.created_at,
+            'first_touched_at': l.first_touched_at,
             'support_touches': l.support_touches,
             'resistance_touches': l.resistance_touches,
         } for l in levels]) if levels else pd.DataFrame()
+        logger.info("Loaded %d levels (filter=%s)", len(levels), level_filter)
 
         # Build win-rate cache from backtest results
         win_rate_cache = _build_win_rate_cache(db)
@@ -314,7 +328,11 @@ def compute_features(db: Session, timeframe: str = '1h',
                 'resistance_liquidity_consumed': 0.0,
             }
             if not levels_df.empty:
-                valid = levels_df[levels_df['created_at'] <= n2.open_time]
+                # Only levels that existed AND were still naked at N-2 time
+                valid = levels_df[
+                    (levels_df['created_at'] <= n2.open_time) &
+                    (levels_df['first_touched_at'].isna() | (levels_df['first_touched_at'] > n2.open_time))
+                ]
                 sup_dist, res_dist = _find_nearest_distances(n2.close, valid)
                 zone_feats = _compute_zone_features(n2.close, valid, win_rate_cache)
 

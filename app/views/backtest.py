@@ -207,6 +207,212 @@ def api_il_trade_chart(trade_id):
     })
 
 
+# ---------------------------------------------------------------------------
+# Trade Explorer — visual trade browser with scoring
+# ---------------------------------------------------------------------------
+
+@backtest_bp.route('/trade-explorer')
+def trade_explorer():
+    """Trade Explorer: visually browse trades with chart, levels, and scoring."""
+    return render_template('backtest/trade_explorer.html')
+
+
+@backtest_bp.route('/api/trade-explorer/trades')
+def api_trade_explorer_list():
+    """JSON: filtered list of trades for the explorer."""
+    from ..models import Candle, Level
+
+    exec_tf = request.args.get('exec_tf', '4h')
+    strategy = request.args.get('strategy', 'wick_rr_1.0')
+    min_score = request.args.get('min_score', 0, type=float)
+    level_type = request.args.get('level_type')
+    result_filter = request.args.get('result')  # 'win', 'loss', or None
+    offset = request.args.get('offset', 0, type=int)
+    limit = request.args.get('limit', 50, type=int)
+
+    # Build win rate cache for scoring
+    from sqlalchemy import func as sa_func
+    wr_results = (
+        db.session.query(
+            IndividualLevelBacktest.level_type,
+            IndividualLevelBacktest.level_source_timeframe,
+            sa_func.avg(IndividualLevelBacktest.win_rate),
+        )
+        .filter(
+            IndividualLevelBacktest.status == 'completed',
+            IndividualLevelBacktest.total_trades >= 10,
+            IndividualLevelBacktest.strategy_name == 'wick_rr_1.0',
+        )
+        .group_by(
+            IndividualLevelBacktest.level_type,
+            IndividualLevelBacktest.level_source_timeframe,
+        )
+        .all()
+    )
+    wr_cache = {(lt, tf): wr / 100.0 for lt, tf, wr in wr_results}
+
+    # Query trades
+    q = (
+        db.session.query(IndividualLevelTrade, IndividualLevelBacktest)
+        .join(IndividualLevelBacktest)
+        .filter(
+            IndividualLevelBacktest.trade_execution_timeframe == exec_tf,
+            IndividualLevelBacktest.status == 'completed',
+            IndividualLevelBacktest.strategy_name == strategy,
+            IndividualLevelTrade.exit_reason.in_(['TP_HIT', 'SL_HIT']),
+        )
+    )
+
+    if level_type:
+        q = q.filter(IndividualLevelBacktest.level_type == level_type)
+    if result_filter == 'win':
+        q = q.filter(IndividualLevelTrade.exit_reason == 'TP_HIT')
+    elif result_filter == 'loss':
+        q = q.filter(IndividualLevelTrade.exit_reason == 'SL_HIT')
+
+    q = q.order_by(IndividualLevelTrade.entry_time.desc())
+    all_trades = q.all()
+
+    # Score each trade and filter
+    scored = []
+    for trade, bt in all_trades:
+        key = (bt.level_type, bt.level_source_timeframe)
+        level_wr = wr_cache.get(key, 0.35)
+        level_score = level_wr * 10.0
+
+        # Wick score (need candle data)
+        wick_score = 0
+        vol_score = 0
+        if trade.volume_ratio:
+            vol_score = min(max(trade.volume_ratio - 0.5, 0) * 0.8, 2.0)
+
+        conf_score = min((trade.zone_confluence or 1) - 1, 3) * 1.0
+        dist = trade.distance_to_level or 0
+        prec_score = max(0, 2.0 - dist * 400)
+
+        total_score = level_score + wick_score + vol_score + conf_score + prec_score
+
+        if total_score >= min_score:
+            scored.append({
+                'id': trade.id,
+                'entry_time': trade.entry_time.isoformat() if trade.entry_time else None,
+                'exit_time': trade.exit_time.isoformat() if trade.exit_time else None,
+                'entry_price': trade.entry_price,
+                'exit_price': trade.exit_price,
+                'level_price': getattr(trade, 'level_price', None) or trade.entry_price,
+                'direction': trade.direction,
+                'exit_reason': trade.exit_reason,
+                'pnl_pct': round(trade.pnl_pct * 100, 2) if trade.pnl_pct else 0,
+                'stop_loss': trade.stop_loss,
+                'take_profit': trade.take_profit,
+                'level_type': bt.level_type,
+                'level_tf': bt.level_source_timeframe,
+                'candles_held': trade.candles_held,
+                'score': round(total_score, 1),
+                'score_breakdown': {
+                    'level': round(level_score, 1),
+                    'volume': round(vol_score, 1),
+                    'confluence': round(conf_score, 1),
+                    'precision': round(prec_score, 1),
+                },
+                'volume_ratio': round(trade.volume_ratio, 2) if trade.volume_ratio else None,
+                'distance_pct': round(dist * 100, 3),
+                'confluence': trade.zone_confluence,
+            })
+
+    total = len(scored)
+    page = scored[offset:offset + limit]
+
+    return jsonify({
+        'total': total,
+        'offset': offset,
+        'trades': page,
+    })
+
+
+@backtest_bp.route('/api/trade-explorer/<int:trade_id>/chart')
+def api_trade_explorer_chart(trade_id):
+    """JSON: candle + level data around a specific trade for charting."""
+    from ..models import Candle, Level
+    import pandas as pd
+
+    trade = db.session.get(IndividualLevelTrade, trade_id)
+    if trade is None:
+        abort(404)
+
+    bt = db.session.get(IndividualLevelBacktest, trade.backtest_id)
+    exec_tf = bt.trade_execution_timeframe if bt else '4h'
+
+    entry = trade.entry_time
+    exit_t = trade.exit_time or entry
+
+    # Load candles: 40 before entry, trade duration, 20 after exit
+    from datetime import timedelta
+    tf_hours = {'1h': 1, '4h': 4, '6h': 6, '8h': 8, '12h': 12, '1d': 24}
+    h = tf_hours.get(exec_tf, 4)
+    margin_before = timedelta(hours=h * 40)
+    margin_after = timedelta(hours=h * 20)
+
+    candles = (
+        Candle.query
+        .filter(
+            Candle.timeframe == exec_tf,
+            Candle.open_time >= entry - margin_before,
+            Candle.open_time <= exit_t + margin_after,
+        )
+        .order_by(Candle.open_time)
+        .all()
+    )
+
+    chart_candles = [{
+        'time': int(c.open_time.timestamp()),
+        'open': c.open,
+        'high': c.high,
+        'low': c.low,
+        'close': c.close,
+    } for c in candles]
+
+    # Load nearby levels (D/W/M, near the trade price range)
+    price = trade.entry_price
+    price_range = price * 0.05  # 5% around entry
+    nearby_levels = (
+        Level.query
+        .filter(
+            Level.timeframe.in_(['daily', 'weekly', 'monthly']),
+            Level.price_level.between(price - price_range, price + price_range),
+            Level.created_at <= entry,
+        )
+        .all()
+    )
+
+    chart_levels = [{
+        'price': l.price_level,
+        'type': l.level_type,
+        'tf': l.timeframe,
+        'created': int(l.created_at.timestamp()) if l.created_at else None,
+        'touched': int(l.first_touched_at.timestamp()) if l.first_touched_at else None,
+    } for l in nearby_levels]
+
+    return jsonify({
+        'candles': chart_candles,
+        'levels': chart_levels,
+        'trade': {
+            'entry_time': int(entry.timestamp()),
+            'entry_price': trade.entry_price,
+            'exit_time': int(exit_t.timestamp()),
+            'exit_price': trade.exit_price,
+            'stop_loss': trade.stop_loss,
+            'take_profit': trade.take_profit,
+            'direction': trade.direction,
+            'exit_reason': trade.exit_reason,
+            'level_price': getattr(trade, 'level_price', None) or trade.entry_price,
+            'level_type': bt.level_type if bt else None,
+            'level_tf': bt.level_source_timeframe if bt else None,
+            'pnl_pct': round(trade.pnl_pct * 100, 2) if trade.pnl_pct else 0,
+        },
+    })
+
+
 @backtest_bp.route('/individual-levels/<int:bt_id>/trade/<int:trade_id>')
 def individual_trade_chart(bt_id, trade_id):
     """Individual trade chart visualization page."""

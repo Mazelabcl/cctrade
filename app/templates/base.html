@@ -69,6 +69,12 @@
                         <i class="bi bi-trophy me-2"></i> Level Performance
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'backtest.trade_explorer' %}active{% endif %}"
+                       href="{{ url_for('backtest.trade_explorer') }}">
+                        <i class="bi bi-binoculars me-2"></i> Trade Explorer
+                    </a>
+                </li>
             </ul>
             <hr class="text-secondary mx-3 my-0">
             <ul class="nav flex-column p-2">

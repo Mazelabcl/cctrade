@@ -372,16 +372,23 @@ def api_trade_explorer_chart(trade_id):
         'close': c.close,
     } for c in candles]
 
-    # Load nearby levels (D/W/M, near the trade price range)
+    # Load nearby levels (D/W/M, near the trade price, naked at entry time)
     price = trade.entry_price
-    price_range = price * 0.05  # 5% around entry
+    price_range = price * 0.02  # 2% around entry
     nearby_levels = (
         Level.query
         .filter(
             Level.timeframe.in_(['daily', 'weekly', 'monthly']),
+            Level.level_type.notin_(['Fib_0.25', 'Fib_0.50', 'Fib_0.75']),
             Level.price_level.between(price - price_range, price + price_range),
             Level.created_at <= entry,
+            db.or_(
+                Level.first_touched_at.is_(None),
+                Level.first_touched_at > entry,
+            ),
         )
+        .order_by(db.func.abs(Level.price_level - price))
+        .limit(50)
         .all()
     )
 

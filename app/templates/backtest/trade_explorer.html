@@ -3,8 +3,8 @@
 
 {% block content %}
 <div class="container-fluid px-3">
-  <!-- Filters -->
-  <div class="row g-2 mb-3">
+  <!-- Filters row -->
+  <div class="row g-2 mb-2">
     <div class="col-auto">
       <label class="form-label mb-0 small">Exec TF</label>
       <select id="execTf" class="form-select form-select-sm" style="width:80px">
@@ -32,14 +32,11 @@
         <option value="Fractal_resistance">Fractal Resistance</option>
         <option value="HTF_level">HTF Level</option>
         <option value="Fib_CC">Fib CC</option>
-        <option value="Fib_0.50">Fib 0.50</option>
-        <option value="VP_POC">VP POC</option>
         <option value="VP_VAH">VP VAH</option>
         <option value="VP_VAL">VP VAL</option>
         <option value="PrevSession_High">PrevSession High</option>
         <option value="PrevSession_Low">PrevSession Low</option>
         <option value="PrevSession_VWAP">PrevSession VWAP</option>
-        <option value="PrevSession_VP_POC">PrevSession VP POC</option>
       </select>
     </div>
     <div class="col-auto">
@@ -52,8 +49,14 @@
     </div>
     <div class="col-auto d-flex align-items-end">
       <button id="btnLoad" class="btn btn-primary btn-sm">Load</button>
-      <button id="btnRandom" class="btn btn-outline-secondary btn-sm ms-1" title="Random trade">
+      <button id="btnRandom" class="btn btn-outline-secondary btn-sm ms-1" title="Random (R)">
         <i class="bi bi-shuffle"></i>
+      </button>
+      <button id="btnCenter" class="btn btn-outline-info btn-sm ms-1" title="Center on trade (C)">
+        <i class="bi bi-crosshair"></i>
+      </button>
+      <button id="btnToggleLevels" class="btn btn-outline-warning btn-sm ms-1" title="Toggle levels (L)">
+        <i class="bi bi-layers"></i>
       </button>
     </div>
     <div class="col-auto d-flex align-items-end ms-auto">
@@ -65,62 +68,91 @@
   <div class="row g-2">
     <!-- Chart -->
     <div class="col-lg-9">
-      <div id="chart-container" style="height:500px; background:#1a1a2e; border-radius:8px;"></div>
-      <!-- Trade navigation -->
-      <div class="d-flex justify-content-between align-items-center mt-2">
+      <div id="chart-container" style="height:520px; background:#1a1a2e; border-radius:8px; position:relative;">
+        <!-- Manual exit overlay -->
+        <div id="manualExitInfo" style="display:none; position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.85); padding:8px 12px; border-radius:6px; z-index:10; font-size:0.8rem; color:#e0e0e0; border:1px solid #444;">
+          <strong>Manual Exit Mode</strong> (click chart to set exit)<br>
+          <span id="manualExitDetails">-</span>
+          <br><button id="btnExitManual" class="btn btn-outline-secondary btn-sm mt-1" style="font-size:0.7rem">Exit mode (Esc)</button>
+        </div>
+      </div>
+      <!-- Navigation -->
+      <div class="d-flex justify-content-between align-items-center mt-1">
         <button id="btnPrev" class="btn btn-outline-secondary btn-sm" disabled>
-          <i class="bi bi-chevron-left"></i> Previous
+          <i class="bi bi-chevron-left"></i> Prev
         </button>
-        <span id="tradeCounter" class="text-muted small">-</span>
+        <div>
+          <span id="tradeCounter" class="text-muted small">-</span>
+          <button id="btnManualExit" class="btn btn-outline-success btn-sm ms-3" title="Manual exit mode (M)">
+            <i class="bi bi-cursor"></i> Manual Exit
+          </button>
+        </div>
         <button id="btnNext" class="btn btn-outline-secondary btn-sm" disabled>
           Next <i class="bi bi-chevron-right"></i>
         </button>
       </div>
     </div>
 
-    <!-- Sidebar: score + trade details -->
+    <!-- Sidebar -->
     <div class="col-lg-3">
       <!-- Score gauge -->
       <div class="card bg-dark text-white mb-2">
-        <div class="card-body p-3 text-center">
-          <h5 class="mb-1">Score</h5>
-          <div id="scoreGauge" style="font-size:3rem; font-weight:bold; line-height:1">-</div>
-          <div id="scoreLabel" class="text-muted small">-</div>
+        <div class="card-body p-2 text-center">
+          <div class="d-flex justify-content-center align-items-baseline gap-2">
+            <div id="scoreGauge" style="font-size:2.5rem; font-weight:bold; line-height:1">-</div>
+            <div>
+              <div id="scoreLabel" class="small">-</div>
+              <div id="levelWR" class="text-muted" style="font-size:0.7rem">-</div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Score breakdown -->
       <div class="card bg-dark text-white mb-2">
         <div class="card-body p-2">
-          <h6 class="mb-2">Score Breakdown</h6>
-          <div id="scoreBreakdown">
-            <div class="d-flex justify-content-between small"><span>Level type</span><span id="sbLevel">-</span></div>
-            <div class="d-flex justify-content-between small"><span>Volume</span><span id="sbVolume">-</span></div>
-            <div class="d-flex justify-content-between small"><span>Confluence</span><span id="sbConfluence">-</span></div>
-            <div class="d-flex justify-content-between small"><span>Precision</span><span id="sbPrecision">-</span></div>
-          </div>
+          <h6 class="mb-1" style="font-size:0.85rem">Score Breakdown</h6>
+          <table class="table table-sm table-dark mb-0" style="font-size:0.75rem">
+            <tr><td>Level type</td><td id="sbLevel" class="text-end">-</td></tr>
+            <tr><td>Volume <span class="text-muted">(0-2)</span></td><td id="sbVolume" class="text-end">-</td></tr>
+            <tr><td>Confluence <span class="text-muted">(0-3)</span></td><td id="sbConfluence" class="text-end">-</td></tr>
+            <tr><td>Precision <span class="text-muted">(0-2)</span></td><td id="sbPrecision" class="text-end">-</td></tr>
+          </table>
         </div>
       </div>
 
       <!-- Trade details -->
       <div class="card bg-dark text-white mb-2">
         <div class="card-body p-2">
-          <h6 class="mb-2">Trade Details</h6>
-          <table class="table table-sm table-dark mb-0" style="font-size:0.8rem">
+          <h6 class="mb-1" style="font-size:0.85rem">Trade Details</h6>
+          <table class="table table-sm table-dark mb-0" style="font-size:0.75rem">
             <tbody>
-              <tr><td>Direction</td><td id="tdDirection">-</td></tr>
-              <tr><td>Level</td><td id="tdLevel">-</td></tr>
-              <tr><td>Entry</td><td id="tdEntry">-</td></tr>
-              <tr><td>SL</td><td id="tdSL">-</td></tr>
-              <tr><td>TP</td><td id="tdTP">-</td></tr>
-              <tr><td>Result</td><td id="tdResult">-</td></tr>
-              <tr><td>PnL</td><td id="tdPnL">-</td></tr>
-              <tr><td>Candles</td><td id="tdCandles">-</td></tr>
-              <tr><td>Volume</td><td id="tdVolume">-</td></tr>
-              <tr><td>Confluence</td><td id="tdConfluenceVal">-</td></tr>
-              <tr><td>Distance</td><td id="tdDistance">-</td></tr>
-              <tr><td>Date</td><td id="tdDate">-</td></tr>
+              <tr><td>Direction</td><td id="tdDirection" class="text-end">-</td></tr>
+              <tr><td>Level</td><td id="tdLevel" class="text-end">-</td></tr>
+              <tr><td>Entry</td><td id="tdEntry" class="text-end">-</td></tr>
+              <tr><td>SL</td><td id="tdSL" class="text-end">-</td></tr>
+              <tr><td>TP (RR 1:1)</td><td id="tdTP" class="text-end">-</td></tr>
+              <tr><td>Risk</td><td id="tdRisk" class="text-end">-</td></tr>
+              <tr><td>Result</td><td id="tdResult" class="text-end">-</td></tr>
+              <tr><td>PnL</td><td id="tdPnL" class="text-end">-</td></tr>
+              <tr><td>Candles held</td><td id="tdCandles" class="text-end">-</td></tr>
+              <tr><td>Volume ratio</td><td id="tdVolume" class="text-end">-</td></tr>
+              <tr><td>Confluence</td><td id="tdConfluenceVal" class="text-end">-</td></tr>
+              <tr><td>Touch dist</td><td id="tdDistance" class="text-end">-</td></tr>
+              <tr><td>Date</td><td id="tdDate" class="text-end">-</td></tr>
             </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Manual exit result -->
+      <div id="manualExitCard" class="card bg-dark text-white mb-2" style="display:none; border:1px solid #00e676;">
+        <div class="card-body p-2">
+          <h6 class="mb-1 text-success" style="font-size:0.85rem"><i class="bi bi-cursor"></i> Manual Exit</h6>
+          <table class="table table-sm table-dark mb-0" style="font-size:0.75rem">
+            <tr><td>Exit price</td><td id="mePrice" class="text-end">-</td></tr>
+            <tr><td>PnL</td><td id="mePnL" class="text-end">-</td></tr>
+            <tr><td>RR achieved</td><td id="meRR" class="text-end">-</td></tr>
           </table>
         </div>
       </div>
@@ -136,12 +168,16 @@ let chart, candleSeries;
 let trades = [];
 let currentIdx = 0;
 let levelSeries = [];
+let levelsVisible = true;
+let manualExitMode = false;
+let currentTradeData = null;  // chart data for current trade
+let manualExitSeries = null;
 
 function initChart() {
     const container = document.getElementById('chart-container');
     chart = LightweightCharts.createChart(container, {
         width: container.clientWidth,
-        height: 500,
+        height: 520,
         layout: { background: { color: '#1a1a2e' }, textColor: '#e0e0e0' },
         grid: { vertLines: { color: '#2a2a4a' }, horzLines: { color: '#2a2a4a' } },
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
@@ -155,6 +191,32 @@ function initChart() {
     window.addEventListener('resize', () => {
         chart.applyOptions({ width: container.clientWidth });
     });
+
+    // Manual exit: click on chart to set custom exit
+    chart.subscribeCrosshairMove(param => {
+        if (!manualExitMode || !currentTradeData || !param.point) return;
+        const price = candleSeries.coordinateToPrice(param.point.y);
+        if (price) updateManualExit(price);
+    });
+    chart.subscribeClick(param => {
+        if (!manualExitMode || !currentTradeData || !param.point) return;
+        const price = candleSeries.coordinateToPrice(param.point.y);
+        if (price) {
+            setManualExit(price);
+        }
+    });
+}
+
+function centerOnTrade() {
+    if (!currentTradeData) return;
+    const t = currentTradeData.trade;
+    const entryTime = t.entry_time;
+    const exitTime = t.exit_time || entryTime;
+    // Set visible range: 10 bars before entry to 10 bars after exit
+    const tf_secs = {'1h': 3600, '4h': 14400, '6h': 21600, '8h': 28800, '12h': 43200}[document.getElementById('execTf').value] || 14400;
+    const from = entryTime - tf_secs * 10;
+    const to = exitTime + tf_secs * 10;
+    chart.timeScale().setVisibleRange({ from, to });
 }
 
 async function loadTrades() {
@@ -179,23 +241,36 @@ async function showTrade(idx) {
     currentIdx = idx;
     const trade = trades[idx];
     updateNav();
+    exitManualMode();
 
-    // Load chart data
     const resp = await fetch(`/backtest/api/trade-explorer/${trade.id}/chart`);
     const data = await resp.json();
+    currentTradeData = data;
 
-    // Set candles
     candleSeries.setData(data.candles);
 
-    // Clear old levels
-    levelSeries.forEach(s => chart.removeSeries(s));
+    // Clear old series
+    levelSeries.forEach(s => { try { chart.removeSeries(s); } catch(e) {} });
     levelSeries = [];
 
-    // Draw levels
+    drawLevels(data);
+    drawTradelines(data);
+    drawMarkers(data);
+
+    // Center on trade
+    centerOnTrade();
+
+    updateSidebar(trade);
+}
+
+function drawLevels(data) {
+    if (!levelsVisible || data.candles.length === 0) return;
+    const tStart = data.candles[0].time;
+    const tEnd = data.candles[data.candles.length - 1].time;
+
     const levelColors = {
         'Fractal_support': '#00ff88', 'Fractal_resistance': '#ff4444',
         'HTF_level': '#00bcd4', 'Fib_CC': '#ffd700',
-        'Fib_0.25': '#ff6b6b', 'Fib_0.50': '#ffd700', 'Fib_0.75': '#ff6b6b',
         'VP_POC': '#ff1744', 'VP_VAH': '#448aff', 'VP_VAL': '#448aff',
         'PrevSession_High': '#ff9800', 'PrevSession_Low': '#ff9800',
         'PrevSession_VWAP': '#e040fb', 'PrevSession_EQ': '#ff9800',
@@ -204,75 +279,64 @@ async function showTrade(idx) {
         'PrevSession_75': '#ff6b6b',
     };
 
-    if (data.candles.length > 0) {
-        const tStart = data.candles[0].time;
-        const tEnd = data.candles[data.candles.length - 1].time;
+    data.levels.forEach(lv => {
+        const color = levelColors[lv.type] || '#888888';
+        const from = Math.max(lv.created || tStart, tStart);
+        const to = lv.touched ? Math.min(lv.touched, tEnd) : tEnd;
+        if (from > tEnd || to < tStart) return;
 
-        data.levels.forEach(lv => {
-            const color = levelColors[lv.type] || '#888888';
-            const from = Math.max(lv.created || tStart, tStart);
-            const to = lv.touched ? Math.min(lv.touched, tEnd) : tEnd;
-            if (from > tEnd || to < tStart) return;
-
-            const series = chart.addLineSeries({
-                color: color, lineWidth: 1,
-                lineStyle: lv.touched ? 2 : 0,
-                priceLineVisible: false,
-                lastValueVisible: false,
-                crosshairMarkerVisible: false,
-            });
-            series.setData([
-                { time: from, value: lv.price },
-                { time: to, value: lv.price },
-            ]);
-            levelSeries.push(series);
+        const series = chart.addLineSeries({
+            color: color, lineWidth: 1,
+            lineStyle: lv.touched ? 2 : 0,
+            priceLineVisible: false, lastValueVisible: false,
+            crosshairMarkerVisible: false,
+            title: lv.type + ' (' + lv.tf + ')',
         });
-    }
+        series.setData([
+            { time: from, value: lv.price },
+            { time: to, value: lv.price },
+        ]);
+        levelSeries.push(series);
+    });
 
-    // Draw entry level (thick)
-    if (data.trade.level_price && data.candles.length > 0) {
-        const tStart = data.candles[0].time;
-        const tEnd = data.candles[data.candles.length - 1].time;
-        const lvSeries = chart.addLineSeries({
+    // Entry level (white thick)
+    if (data.trade.level_price) {
+        const lv = chart.addLineSeries({
             color: '#ffffff', lineWidth: 2,
             priceLineVisible: false, lastValueVisible: false,
+            title: 'ENTRY LEVEL',
         });
-        lvSeries.setData([
+        lv.setData([
             { time: tStart, value: data.trade.level_price },
             { time: tEnd, value: data.trade.level_price },
         ]);
-        levelSeries.push(lvSeries);
+        levelSeries.push(lv);
     }
+}
 
-    // Draw SL/TP lines
-    if (data.candles.length > 0) {
-        const tEntry = data.trade.entry_time;
-        const tEnd = data.candles[data.candles.length - 1].time;
+function drawTradelines(data) {
+    if (data.candles.length === 0) return;
+    const tEntry = data.trade.entry_time;
+    const tEnd = data.candles[data.candles.length - 1].time;
 
-        // SL line (red dashed)
-        const slSeries = chart.addLineSeries({
-            color: '#ff1744', lineWidth: 1, lineStyle: 2,
-            priceLineVisible: false, lastValueVisible: false,
-        });
-        slSeries.setData([
-            { time: tEntry, value: data.trade.stop_loss },
-            { time: tEnd, value: data.trade.stop_loss },
-        ]);
-        levelSeries.push(slSeries);
+    // SL (red dashed)
+    const sl = chart.addLineSeries({
+        color: '#ff1744', lineWidth: 1, lineStyle: 2,
+        priceLineVisible: false, lastValueVisible: false, title: 'SL',
+    });
+    sl.setData([{ time: tEntry, value: data.trade.stop_loss }, { time: tEnd, value: data.trade.stop_loss }]);
+    levelSeries.push(sl);
 
-        // TP line (green dashed)
-        const tpSeries = chart.addLineSeries({
-            color: '#00e676', lineWidth: 1, lineStyle: 2,
-            priceLineVisible: false, lastValueVisible: false,
-        });
-        tpSeries.setData([
-            { time: tEntry, value: data.trade.take_profit },
-            { time: tEnd, value: data.trade.take_profit },
-        ]);
-        levelSeries.push(tpSeries);
-    }
+    // TP (green dashed)
+    const tp = chart.addLineSeries({
+        color: '#00e676', lineWidth: 1, lineStyle: 2,
+        priceLineVisible: false, lastValueVisible: false, title: 'TP',
+    });
+    tp.setData([{ time: tEntry, value: data.trade.take_profit }, { time: tEnd, value: data.trade.take_profit }]);
+    levelSeries.push(tp);
+}
 
-    // Entry/exit markers
+function drawMarkers(data) {
     const markers = [];
     markers.push({
         time: data.trade.entry_time,
@@ -284,20 +348,98 @@ async function showTrade(idx) {
     if (data.trade.exit_time) {
         markers.push({
             time: data.trade.exit_time,
-            position: 'aboveBar',
+            position: data.trade.exit_reason === 'TP_HIT' ? 'aboveBar' : 'belowBar',
             color: data.trade.exit_reason === 'TP_HIT' ? '#00e676' : '#ff1744',
             shape: 'circle',
-            text: data.trade.exit_reason === 'TP_HIT' ? 'TP' : 'SL',
+            text: data.trade.exit_reason === 'TP_HIT' ? 'WIN' : 'LOSS',
         });
     }
     markers.sort((a, b) => a.time - b.time);
     candleSeries.setMarkers(markers);
+}
 
-    // Zoom to trade area
-    chart.timeScale().fitContent();
+function toggleLevels() {
+    levelsVisible = !levelsVisible;
+    const btn = document.getElementById('btnToggleLevels');
+    btn.classList.toggle('active', levelsVisible);
+    // Redraw
+    if (currentTradeData) {
+        levelSeries.forEach(s => { try { chart.removeSeries(s); } catch(e) {} });
+        levelSeries = [];
+        drawLevels(currentTradeData);
+        drawTradelines(currentTradeData);
+    }
+}
 
-    // Update sidebar
-    updateSidebar(trade);
+// ---- Manual exit mode ----
+function enterManualMode() {
+    if (!currentTradeData) return;
+    manualExitMode = true;
+    document.getElementById('manualExitInfo').style.display = 'block';
+    document.getElementById('manualExitCard').style.display = 'block';
+    document.getElementById('btnManualExit').classList.add('active');
+}
+
+function exitManualMode() {
+    manualExitMode = false;
+    document.getElementById('manualExitInfo').style.display = 'none';
+    document.getElementById('btnManualExit').classList.remove('active');
+    if (manualExitSeries) {
+        try { chart.removeSeries(manualExitSeries); } catch(e) {}
+        manualExitSeries = null;
+    }
+}
+
+function updateManualExit(price) {
+    if (!currentTradeData) return;
+    const t = currentTradeData.trade;
+    const entry = t.entry_price;
+    const sl = t.stop_loss;
+    const risk = Math.abs(entry - sl);
+    const isLong = t.direction === 'LONG';
+    const pnl = isLong ? (price - entry) : (entry - price);
+    const pnlPct = (pnl / entry * 100).toFixed(2);
+    const rr = risk > 0 ? (pnl / risk).toFixed(2) : '0';
+    const win = pnl > 0;
+
+    document.getElementById('manualExitDetails').innerHTML =
+        `Exit @ <strong>$${price.toLocaleString(undefined, {maximumFractionDigits:0})}</strong> | ` +
+        `PnL: <span class="${win ? 'text-success' : 'text-danger'}">${pnl > 0 ? '+' : ''}${pnlPct}%</span> | ` +
+        `RR: <span class="${win ? 'text-success' : 'text-danger'}">${rr}</span>`;
+}
+
+function setManualExit(price) {
+    if (!currentTradeData) return;
+    const t = currentTradeData.trade;
+    const entry = t.entry_price;
+    const sl = t.stop_loss;
+    const risk = Math.abs(entry - sl);
+    const isLong = t.direction === 'LONG';
+    const pnl = isLong ? (price - entry) : (entry - price);
+    const pnlPct = (pnl / entry * 100).toFixed(2);
+    const rr = risk > 0 ? (pnl / risk).toFixed(2) : '0';
+    const win = pnl > 0;
+
+    // Draw manual exit line (cyan)
+    if (manualExitSeries) {
+        try { chart.removeSeries(manualExitSeries); } catch(e) {}
+    }
+    const tStart = currentTradeData.candles[0].time;
+    const tEnd = currentTradeData.candles[currentTradeData.candles.length - 1].time;
+    manualExitSeries = chart.addLineSeries({
+        color: '#00bcd4', lineWidth: 2, lineStyle: 1,
+        priceLineVisible: false, lastValueVisible: false, title: 'MANUAL EXIT',
+    });
+    manualExitSeries.setData([{ time: tStart, value: price }, { time: tEnd, value: price }]);
+
+    // Update card
+    document.getElementById('mePrice').textContent = `$${price.toLocaleString(undefined, {maximumFractionDigits:0})}`;
+    const mePnl = document.getElementById('mePnL');
+    mePnl.textContent = `${pnl > 0 ? '+' : ''}${pnlPct}%`;
+    mePnl.className = 'text-end ' + (win ? 'text-success fw-bold' : 'text-danger fw-bold');
+    const meRR = document.getElementById('meRR');
+    meRR.textContent = `${rr}R`;
+    meRR.className = 'text-end ' + (win ? 'text-success fw-bold' : 'text-danger fw-bold');
 }
 
 function updateSidebar(t) {
@@ -312,36 +454,47 @@ function updateSidebar(t) {
     const label = t.score >= 9 ? 'Excellent' : t.score >= 8 ? 'Good' : t.score >= 7 ? 'OK' : 'Weak';
     document.getElementById('scoreLabel').textContent = label;
 
+    // Show WR% for this level type
+    const wrPct = (t.score_breakdown.level / 10 * 100).toFixed(0);
+    document.getElementById('levelWR').textContent = `${t.level_type}/${t.level_tf} = ${wrPct}% WR`;
+
     // Breakdown
     const sb = t.score_breakdown;
-    document.getElementById('sbLevel').textContent = `${sb.level} (${t.level_type}/${t.level_tf})`;
-    document.getElementById('sbVolume').textContent = sb.volume.toFixed(1);
-    document.getElementById('sbConfluence').textContent = sb.confluence.toFixed(1);
-    document.getElementById('sbPrecision').textContent = sb.precision.toFixed(1);
+    document.getElementById('sbLevel').innerHTML = `<strong>${sb.level.toFixed(1)}</strong> <span class="text-muted">(${wrPct}% WR)</span>`;
+    document.getElementById('sbVolume').textContent = t.volume_ratio ? `${sb.volume.toFixed(1)} (${t.volume_ratio}x vol)` : `${sb.volume.toFixed(1)} (no data)`;
+    document.getElementById('sbConfluence').textContent = t.confluence ? `${sb.confluence.toFixed(1)} (${t.confluence} levels)` : `${sb.confluence.toFixed(1)} (no data)`;
+    document.getElementById('sbPrecision').textContent = `${sb.precision.toFixed(1)} (${t.distance_pct}% dist)`;
 
     // Trade details
     const dir = document.getElementById('tdDirection');
     dir.textContent = t.direction;
-    dir.className = t.direction === 'LONG' ? 'text-success' : 'text-danger';
+    dir.className = 'text-end ' + (t.direction === 'LONG' ? 'text-success fw-bold' : 'text-danger fw-bold');
 
     document.getElementById('tdLevel').textContent = `${t.level_type} (${t.level_tf})`;
     document.getElementById('tdEntry').textContent = `$${t.entry_price.toLocaleString()}`;
     document.getElementById('tdSL').textContent = `$${t.stop_loss.toLocaleString()}`;
     document.getElementById('tdTP').textContent = `$${t.take_profit.toLocaleString()}`;
 
+    // Risk %
+    const riskPct = (Math.abs(t.entry_price - t.stop_loss) / t.entry_price * 100).toFixed(2);
+    document.getElementById('tdRisk').textContent = `${riskPct}%`;
+
     const res = document.getElementById('tdResult');
     res.textContent = t.exit_reason === 'TP_HIT' ? 'WIN' : 'LOSS';
-    res.className = t.exit_reason === 'TP_HIT' ? 'text-success fw-bold' : 'text-danger fw-bold';
+    res.className = 'text-end ' + (t.exit_reason === 'TP_HIT' ? 'text-success fw-bold' : 'text-danger fw-bold');
 
     const pnl = document.getElementById('tdPnL');
     pnl.textContent = `${t.pnl_pct > 0 ? '+' : ''}${t.pnl_pct}%`;
-    pnl.className = t.pnl_pct > 0 ? 'text-success' : 'text-danger';
+    pnl.className = 'text-end ' + (t.pnl_pct > 0 ? 'text-success' : 'text-danger');
 
     document.getElementById('tdCandles').textContent = t.candles_held || '-';
-    document.getElementById('tdVolume').textContent = t.volume_ratio ? `${t.volume_ratio}x` : '-';
-    document.getElementById('tdConfluenceVal').textContent = t.confluence || '-';
+    document.getElementById('tdVolume').textContent = t.volume_ratio ? `${t.volume_ratio}x` : 'N/A';
+    document.getElementById('tdConfluenceVal').textContent = t.confluence || 'N/A';
     document.getElementById('tdDistance').textContent = `${t.distance_pct}%`;
     document.getElementById('tdDate').textContent = t.entry_time ? t.entry_time.substring(0, 10) : '-';
+
+    // Hide manual exit card when switching trades
+    document.getElementById('manualExitCard').style.display = 'none';
 }
 
 function updateNav() {
@@ -356,16 +509,26 @@ document.getElementById('btnLoad').addEventListener('click', loadTrades);
 document.getElementById('btnPrev').addEventListener('click', () => showTrade(currentIdx - 1));
 document.getElementById('btnNext').addEventListener('click', () => showTrade(currentIdx + 1));
 document.getElementById('btnRandom').addEventListener('click', () => {
-    if (trades.length > 0) {
-        showTrade(Math.floor(Math.random() * trades.length));
-    }
+    if (trades.length > 0) showTrade(Math.floor(Math.random() * trades.length));
 });
+document.getElementById('btnCenter').addEventListener('click', centerOnTrade);
+document.getElementById('btnToggleLevels').addEventListener('click', toggleLevels);
+document.getElementById('btnManualExit').addEventListener('click', () => {
+    if (manualExitMode) exitManualMode();
+    else enterManualMode();
+});
+document.getElementById('btnExitManual').addEventListener('click', exitManualMode);
 
-// Keyboard navigation
+// Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
     if (e.key === 'ArrowLeft') showTrade(currentIdx - 1);
     if (e.key === 'ArrowRight') showTrade(currentIdx + 1);
     if (e.key === 'r') document.getElementById('btnRandom').click();
+    if (e.key === 'c') centerOnTrade();
+    if (e.key === 'l') toggleLevels();
+    if (e.key === 'm') document.getElementById('btnManualExit').click();
+    if (e.key === 'Escape') exitManualMode();
 });
 
 // Init

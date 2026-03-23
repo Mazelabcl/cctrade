@@ -121,3 +121,33 @@ Model the coach's exit criteria. Currently we model ENTRY well (Fractals 80% WR)
 - "VAL to VAH rotation" — price tends to rotate between value area extremes
 - Partial TPs at structure levels, trail the rest
 - Compound on confirmed trend continuation
+
+### MFE Key Discovery (Sprint 3.1)
+**48,083 trades analyzed (4h, RR 1:1)**
+
+Trades reaching each RR threshold:
+- >= 1:1 => 42.8%, >= 5:1 => 16.2%, >= 10:1 => 9.8%, >= 20:1 => 5.5%, >= 50:1 => 3.1%
+
+By level type (median max RR):
+- Fractal_support: **4.0:1** median, 43% reach >=5:1, avg 892 candles to max
+- Fractal_resistance: **4.6:1** median, 48% reach >=5:1, avg 144 candles to max
+- PrevSession/VP: **0.3-0.8:1** median — confirms they're noise for swing trades
+
+**Conclusion**: Fractals are swing trades (hold days-weeks), PrevSession are scalps.
+Two completely different systems should be built, not one mixed scoring engine.
+
+---
+
+## Ideas Backlog ("Volas")
+
+Ideas for future exploration, not prioritized yet:
+
+1. **Sniper Timeframe Optimization**: If 4h Fractal gives 4:1 median RR with 2% SL, detecting the same signal on 1h (0.5% SL) gives 16:1 RR for the same price move. Descending through timeframes (4h -> 1h -> 30m -> 15m) for precision entry while using HTF for direction.
+
+2. **Fractal-to-Fractal System**: Use bullish fractal as entry, bearish fractal as exit. Pure structure-based trading without fixed RR.
+
+3. **Volume Divergence as Exit Signal**: Track if volume at TP point diverges from entry volume. Possible pattern: "exit when sell volume reaches 30% of entry buy volume."
+
+4. **AutoResearch Loop**: Karpathy-inspired overnight experiment runner. Agent modifies exit rules, runs backtest, evaluates, keeps or discards. 100 experiments/night.
+
+5. **Two-System Architecture**: System A (Fractal Swings) — few trades, high RR, trail stop. System B (Session Rotations) — many trades, low RR, fixed TP. Never mix them.

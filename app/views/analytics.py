@@ -271,3 +271,72 @@ def api_scoring_analysis():
         equity_curves[str(threshold)] = curve
 
     return jsonify({'trades': trades, 'equity_curves': equity_curves})
+
+
+# ---------------------------------------------------------------------------
+# Tab 5: MFE Analysis (Maximum Favorable Excursion)
+# ---------------------------------------------------------------------------
+
+@analytics_bp.route('/api/mfe')
+def api_mfe():
+    """JSON: MFE analysis data from saved results files."""
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent.parent
+    data = {}
+
+    for tf in ['4h', '1h']:
+        fpath = root / f'scripts/mfe_results{"_" + tf if tf != "4h" else ""}.json'
+        if not fpath.exists():
+            fpath = root / f'scripts/mfe_results_{tf}.json'
+        if not fpath.exists() and tf == '4h':
+            fpath = root / 'scripts/mfe_results.json'
+        if fpath.exists():
+            with open(fpath) as f:
+                results = json.load(f)
+
+            df = pd.DataFrame(results)
+            if df.empty:
+                continue
+
+            # RR distribution
+            rr_thresholds = [1, 2, 3, 5, 10, 15, 20, 30, 50]
+            rr_dist = []
+            for rr in rr_thresholds:
+                count = int((df['max_rr'] >= rr).sum())
+                pct = round((df['max_rr'] >= rr).mean() * 100, 1)
+                rr_dist.append({'rr': rr, 'count': count, 'pct': pct})
+
+            # By level type
+            by_type = df.groupby('level_type').agg(
+                trades=('max_rr', 'count'),
+                avg_max_rr=('max_rr', 'mean'),
+                median_max_rr=('max_rr', 'median'),
+                pct_above_5=('max_rr', lambda x: round((x >= 5).mean() * 100, 1)),
+                pct_above_10=('max_rr', lambda x: round((x >= 10).mean() * 100, 1)),
+                avg_candles=('candles_to_max', 'mean'),
+            ).reset_index().sort_values('avg_max_rr', ascending=False)
+
+            # Sample max_rr values for histogram
+            sample = df['max_rr'].clip(upper=100).tolist()
+
+            # Money left on table for winners
+            winners = df[df['original_exit'] == 'TP_HIT']
+            money_left = winners['money_left'].tolist() if not winners.empty else []
+
+            data[tf] = {
+                'total_trades': len(df),
+                'sl_hit_pct': round((df['final_exit'] == 'SL_HIT').mean() * 100, 1),
+                'mean_max_rr': round(df['max_rr'].mean(), 1),
+                'median_max_rr': round(df['max_rr'].median(), 1),
+                'p90_max_rr': round(df['max_rr'].quantile(0.90), 1),
+                'rr_distribution': rr_dist,
+                'by_level_type': by_type.to_dict('records'),
+                'max_rr_histogram': sample[:5000],
+                'money_left': money_left[:5000],
+                'mean_candles_to_max': round(df['candles_to_max'].mean(), 0),
+                'median_candles_to_max': round(df['candles_to_max'].median(), 0),
+            }
+
+    return jsonify(data)

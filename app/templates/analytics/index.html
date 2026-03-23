@@ -28,6 +28,9 @@
   <li class="nav-item">
     <a class="nav-link" data-bs-toggle="tab" href="#tab-scoring">Scoring Analysis</a>
   </li>
+  <li class="nav-item">
+    <a class="nav-link" data-bs-toggle="tab" href="#tab-mfe">MFE Analysis</a>
+  </li>
 </ul>
 
 <div class="tab-content">
@@ -76,6 +79,25 @@
       </div>
       <div class="col-12">
         <div id="typeBreakdownChart" class="plotly-chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 5: MFE Analysis -->
+  <div class="tab-pane fade" id="tab-mfe">
+    <div id="mfeStats" class="row g-2 mb-3"></div>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div id="mfeRRDistChart" class="plotly-chart"></div>
+      </div>
+      <div class="col-md-6">
+        <div id="mfeHistChart" class="plotly-chart"></div>
+      </div>
+      <div class="col-12">
+        <div id="mfeByTypeChart" class="plotly-chart" style="min-height:500px"></div>
+      </div>
+      <div class="col-12">
+        <div id="mfeMoneyLeftChart" class="plotly-chart"></div>
       </div>
     </div>
   </div>
@@ -308,14 +330,139 @@ async function loadScoring() {
   }));
 }
 
+// ---- TAB 5: MFE ----
+async function loadMFE() {
+  const resp = await fetch('/analytics/api/mfe');
+  const data = await resp.json();
+
+  // Render for each timeframe available
+  const tfs = Object.keys(data);
+  if (tfs.length === 0) {
+    document.getElementById('mfeStats').innerHTML = '<div class="col-12"><div class="alert alert-warning">No MFE data found. Run: python scripts/mfe_analysis.py</div></div>';
+    return;
+  }
+
+  // Stats cards (show both TFs side by side)
+  let statsHtml = '';
+  tfs.forEach(tf => {
+    const d = data[tf];
+    statsHtml += `
+      <div class="col-12"><h5 class="text-info mt-2">${tf.toUpperCase()} Timeframe</h5></div>
+      <div class="col-auto"><div class="stat-card"><div class="value">${d.total_trades.toLocaleString()}</div><div class="label">Trades</div></div></div>
+      <div class="col-auto"><div class="stat-card"><div class="value">${d.mean_max_rr}:1</div><div class="label">Avg Max RR</div></div></div>
+      <div class="col-auto"><div class="stat-card"><div class="value">${d.median_max_rr}:1</div><div class="label">Median Max RR</div></div></div>
+      <div class="col-auto"><div class="stat-card"><div class="value">${d.p90_max_rr}:1</div><div class="label">P90 Max RR</div></div></div>
+      <div class="col-auto"><div class="stat-card"><div class="value">${d.sl_hit_pct}%</div><div class="label">Eventually SL Hit</div></div></div>
+      <div class="col-auto"><div class="stat-card"><div class="value">${d.median_candles_to_max}</div><div class="label">Med Candles to Max</div></div></div>
+    `;
+  });
+  document.getElementById('mfeStats').innerHTML = statsHtml;
+
+  // RR Distribution: "How many trades reach each RR?"
+  const rrTraces = [];
+  const colors4h1h = { '4h': '#00e676', '1h': '#448aff' };
+  tfs.forEach(tf => {
+    const d = data[tf].rr_distribution;
+    rrTraces.push({
+      x: d.map(r => `${r.rr}:1`),
+      y: d.map(r => r.pct),
+      name: tf,
+      type: 'bar',
+      marker: { color: colors4h1h[tf] || '#fff' },
+      text: d.map(r => `${r.pct}%`),
+      textposition: 'outside',
+    });
+  });
+  Plotly.newPlot('mfeRRDistChart', rrTraces, darkLayout('Trades Reaching Each RR Threshold (%)', {
+    barmode: 'group',
+    xaxis: { ...DARK.xaxis, title: 'RR Target' },
+    yaxis: { ...DARK.yaxis, title: '% of Trades' },
+    legend: { x: 0.7, y: 0.95 },
+  }));
+
+  // Histogram of max_rr (capped at 50 for readability)
+  const histTraces = [];
+  tfs.forEach(tf => {
+    histTraces.push({
+      x: data[tf].max_rr_histogram.filter(v => v <= 50),
+      type: 'histogram',
+      name: tf,
+      marker: { color: colors4h1h[tf] || '#fff' },
+      opacity: 0.7,
+      nbinsx: 50,
+    });
+  });
+  Plotly.newPlot('mfeHistChart', histTraces, darkLayout('Max RR Distribution (capped at 50:1)', {
+    barmode: 'overlay',
+    xaxis: { ...DARK.xaxis, title: 'Max RR Achieved' },
+    yaxis: { ...DARK.yaxis, title: 'Count' },
+    legend: { x: 0.7, y: 0.95 },
+  }));
+
+  // By Level Type: avg max RR + % reaching 5:1 (use first TF with data)
+  const primaryTf = tfs[0];
+  const bt = data[primaryTf].by_level_type;
+  Plotly.newPlot('mfeByTypeChart', [
+    {
+      x: bt.map(r => r.level_type),
+      y: bt.map(r => r.median_max_rr),
+      name: 'Median Max RR',
+      type: 'bar',
+      marker: { color: bt.map(r => r.median_max_rr >= 3 ? '#00e676' : r.median_max_rr >= 1 ? '#ffd740' : '#ff5252') },
+      text: bt.map(r => `${r.median_max_rr.toFixed(1)}:1`),
+      textposition: 'outside',
+    },
+    {
+      x: bt.map(r => r.level_type),
+      y: bt.map(r => r.pct_above_5),
+      name: '% reaching 5:1',
+      type: 'scatter',
+      mode: 'lines+markers',
+      yaxis: 'y2',
+      line: { color: '#e040fb', width: 2 },
+      marker: { size: 8 },
+    },
+  ], darkLayout(`Max RR by Level Type (${primaryTf})`, {
+    barmode: 'group',
+    xaxis: { ...DARK.xaxis, tickangle: -45 },
+    yaxis: { ...DARK.yaxis, title: 'Median Max RR' },
+    yaxis2: { title: '% >= 5:1', overlaying: 'y', side: 'right', gridcolor: 'transparent', color: '#e040fb' },
+    legend: { x: 0.01, y: 0.99 },
+  }));
+
+  // Money left on table histogram (winners only)
+  const moneyTraces = [];
+  tfs.forEach(tf => {
+    if (data[tf].money_left.length > 0) {
+      moneyTraces.push({
+        x: data[tf].money_left.filter(v => v <= 50 && v >= 0),
+        type: 'histogram',
+        name: tf,
+        marker: { color: colors4h1h[tf] || '#fff' },
+        opacity: 0.7,
+        nbinsx: 50,
+      });
+    }
+  });
+  if (moneyTraces.length > 0) {
+    Plotly.newPlot('mfeMoneyLeftChart', moneyTraces, darkLayout('Money Left on Table (Winners: max_rr - original_rr)', {
+      barmode: 'overlay',
+      xaxis: { ...DARK.xaxis, title: 'Additional RR Available', range: [0, 30] },
+      yaxis: { ...DARK.yaxis, title: 'Count' },
+      legend: { x: 0.7, y: 0.95 },
+    }));
+  }
+}
+
 // Tab switching: lazy-load data
-let loaded = { backtests: false, features: false, density: false, scoring: false };
+let loaded = { backtests: false, features: false, density: false, scoring: false, mfe: false };
 document.querySelectorAll('#analyticsTabs a').forEach(tab => {
   tab.addEventListener('shown.bs.tab', e => {
     const id = e.target.getAttribute('href');
     if (id === '#tab-features' && !loaded.features) { loadFeatures(); loaded.features = true; }
     if (id === '#tab-density' && !loaded.density) { loadDensity(); loaded.density = true; }
     if (id === '#tab-scoring' && !loaded.scoring) { loadScoring(); loaded.scoring = true; }
+    if (id === '#tab-mfe' && !loaded.mfe) { loadMFE(); loaded.mfe = true; }
   });
 });
 

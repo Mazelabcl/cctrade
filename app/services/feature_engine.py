@@ -271,6 +271,31 @@ def compute_features(db: Session, timeframe: str = '1h',
         } for l in levels]) if levels else pd.DataFrame()
         logger.info("Loaded %d levels (filter=%s)", len(levels), level_filter)
 
+        # Pre-compute mobile level filtering:
+        # PrevSession/VP levels are "session-relative" — only the MOST RECENT
+        # per (level_type, timeframe) should be active at any time.
+        # We mark when each is superseded by a newer level of the same type.
+        if not levels_df.empty:
+            mobile_mask = (
+                levels_df['level_type'].str.startswith('PrevSession') |
+                levels_df['level_type'].str.startswith('VP_')
+            ).fillna(False)
+            structural_mask = ~mobile_mask
+
+            levels_df['superseded_at'] = pd.NaT
+            if mobile_mask.any():
+                mobile = levels_df[mobile_mask].sort_values('created_at')
+                superseded = mobile.groupby(
+                    ['level_type', 'timeframe']
+                )['created_at'].shift(-1)
+                levels_df.loc[superseded.index, 'superseded_at'] = superseded
+
+            levels_df['_is_structural'] = structural_mask
+            logger.info(
+                "Levels: %d structural, %d mobile (PrevSession/VP)",
+                structural_mask.sum(), mobile_mask.sum(),
+            )
+
         # Build win-rate cache from backtest results
         win_rate_cache = _build_win_rate_cache(db)
 
@@ -328,11 +353,24 @@ def compute_features(db: Session, timeframe: str = '1h',
                 'resistance_liquidity_consumed': 0.0,
             }
             if not levels_df.empty:
-                # Only levels that existed AND were still naked at N-2 time
-                valid = levels_df[
-                    (levels_df['created_at'] <= n2.open_time) &
-                    (levels_df['first_touched_at'].isna() | (levels_df['first_touched_at'] > n2.open_time))
-                ]
+                # Structural levels: naked at N-2 time (first_touched_at works)
+                # Mobile levels (PrevSession/VP): only the most recent per (type,tf)
+                #   i.e., not yet superseded by a newer level at N-2 time
+                t = n2.open_time
+                created_ok = levels_df['created_at'] <= t
+
+                structural_valid = (
+                    levels_df['_is_structural'] &
+                    created_ok &
+                    (levels_df['first_touched_at'].isna() | (levels_df['first_touched_at'] > t))
+                )
+                mobile_valid = (
+                    ~levels_df['_is_structural'] &
+                    created_ok &
+                    (levels_df['superseded_at'].isna() | (levels_df['superseded_at'] > t))
+                )
+                valid = levels_df[structural_valid | mobile_valid]
+
                 sup_dist, res_dist = _find_nearest_distances(n2.close, valid)
                 zone_feats = _compute_zone_features(n2.close, valid, win_rate_cache)
 

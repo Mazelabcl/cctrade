@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block title %}Analytics Dashboard{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+  .stat-card { background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 12px; text-align: center; }
+  .stat-card .value { font-size: 1.8rem; font-weight: bold; }
+  .stat-card .label { font-size: 0.75rem; color: #aaa; }
+  .plotly-chart { min-height: 400px; }
+  .tab-pane { padding-top: 16px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-graph-up"></i> Analytics Dashboard</h4>
+
+<ul class="nav nav-tabs" id="analyticsTabs">
+  <li class="nav-item">
+    <a class="nav-link active" data-bs-toggle="tab" href="#tab-backtests">Backtest Results</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" data-bs-toggle="tab" href="#tab-features">Feature Distribution</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" data-bs-toggle="tab" href="#tab-density">Level Density</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" data-bs-toggle="tab" href="#tab-scoring">Scoring Analysis</a>
+  </li>
+</ul>
+
+<div class="tab-content">
+  <!-- TAB 1: Backtest Results -->
+  <div class="tab-pane fade show active" id="tab-backtests">
+    <div class="d-flex gap-2 mb-3">
+      <select id="strategySelect" class="form-select form-select-sm" style="width:180px">
+        <option value="wick_rr_1.0" selected>RR 1:1</option>
+      </select>
+      <button id="btnLoadBT" class="btn btn-primary btn-sm">Load</button>
+    </div>
+    <div class="row g-3">
+      <div class="col-12">
+        <div id="heatmapChart" class="plotly-chart"></div>
+      </div>
+      <div class="col-md-6">
+        <div id="barWRChart" class="plotly-chart"></div>
+      </div>
+      <div class="col-md-6">
+        <div id="barTradesChart" class="plotly-chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: Feature Distribution -->
+  <div class="tab-pane fade" id="tab-features">
+    <div id="featureStats" class="row g-2 mb-3"></div>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div id="distHistChart" class="plotly-chart"></div>
+      </div>
+      <div class="col-md-6">
+        <div id="confHistChart" class="plotly-chart"></div>
+      </div>
+      <div class="col-12">
+        <div id="scatterChart" class="plotly-chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: Level Density -->
+  <div class="tab-pane fade" id="tab-density">
+    <div class="row g-3">
+      <div class="col-12">
+        <div id="densityTimeChart" class="plotly-chart"></div>
+      </div>
+      <div class="col-12">
+        <div id="typeBreakdownChart" class="plotly-chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: Scoring Analysis -->
+  <div class="tab-pane fade" id="tab-scoring">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div id="scoreScatterChart" class="plotly-chart"></div>
+      </div>
+      <div class="col-md-6">
+        <div id="scoreViolinChart" class="plotly-chart"></div>
+      </div>
+      <div class="col-12">
+        <div id="equityCurveChart" class="plotly-chart"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const DARK = { paper_bgcolor: '#1a1a2e', plot_bgcolor: '#1a1a2e', font: { color: '#e0e0e0' },
+  xaxis: { gridcolor: '#2a2a4a' }, yaxis: { gridcolor: '#2a2a4a' }, margin: { t: 40, r: 20, b: 50, l: 60 } };
+
+function darkLayout(title, extra={}) {
+  return { ...DARK, title: { text: title, font: { size: 14 } }, ...extra };
+}
+
+// ---- TAB 1: Backtest Results ----
+async function loadBacktests() {
+  const strategy = document.getElementById('strategySelect').value;
+  const resp = await fetch(`/analytics/api/backtest-summary?strategy=${strategy}`);
+  const { data, strategies } = await resp.json();
+
+  // Populate strategy selector
+  const sel = document.getElementById('strategySelect');
+  if (sel.options.length <= 1) {
+    sel.innerHTML = '';
+    strategies.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s; opt.textContent = s.replace('wick_rr_', 'RR '); sel.appendChild(opt);
+    });
+  }
+
+  // Heatmap: level_type x timeframe -> WR
+  const types = [...new Set(data.map(d => d.level_type))];
+  const tfs = [...new Set(data.map(d => d.timeframe))];
+  const z = types.map(lt => tfs.map(tf => {
+    const row = data.find(d => d.level_type === lt && d.timeframe === tf);
+    return row ? row.win_rate : null;
+  }));
+  const text_vals = types.map(lt => tfs.map(tf => {
+    const row = data.find(d => d.level_type === lt && d.timeframe === tf);
+    return row ? `${row.win_rate}%\n${row.total_trades}t` : '';
+  }));
+
+  Plotly.newPlot('heatmapChart', [{
+    z, x: tfs, y: types, type: 'heatmap',
+    colorscale: [[0,'#ff1744'],[0.4,'#ff9800'],[0.5,'#ffd740'],[0.6,'#66bb6a'],[1,'#00e676']],
+    zmin: 20, zmax: 70,
+    text: text_vals, texttemplate: '%{text}', hoverinfo: 'all',
+  }], darkLayout('Win Rate by Level Type x Timeframe'));
+
+  // Bar: WR by level type (avg across TFs)
+  const byType = {};
+  data.forEach(d => {
+    if (!byType[d.level_type]) byType[d.level_type] = { wr: [], trades: 0 };
+    byType[d.level_type].wr.push(d.win_rate);
+    byType[d.level_type].trades += d.total_trades;
+  });
+  const sorted = Object.entries(byType).sort((a,b) => {
+    const avgA = a[1].wr.reduce((s,v)=>s+v,0)/a[1].wr.length;
+    const avgB = b[1].wr.reduce((s,v)=>s+v,0)/b[1].wr.length;
+    return avgB - avgA;
+  });
+  Plotly.newPlot('barWRChart', [{
+    x: sorted.map(s => s[0]),
+    y: sorted.map(s => s[1].wr.reduce((a,b)=>a+b,0)/s[1].wr.length),
+    type: 'bar',
+    marker: { color: sorted.map(s => {
+      const avg = s[1].wr.reduce((a,b)=>a+b,0)/s[1].wr.length;
+      return avg >= 50 ? '#00e676' : avg >= 40 ? '#ffd740' : '#ff5252';
+    })},
+    text: sorted.map(s => `${(s[1].wr.reduce((a,b)=>a+b,0)/s[1].wr.length).toFixed(1)}%`),
+    textposition: 'outside',
+  }], darkLayout('Avg Win Rate by Level Type', { yaxis: { ...DARK.yaxis, title: 'Win Rate %' } }));
+
+  Plotly.newPlot('barTradesChart', [{
+    x: sorted.map(s => s[0]),
+    y: sorted.map(s => s[1].trades),
+    type: 'bar',
+    marker: { color: '#448aff' },
+    text: sorted.map(s => s[1].trades.toLocaleString()),
+    textposition: 'outside',
+  }], darkLayout('Total Trades by Level Type', { yaxis: { ...DARK.yaxis, title: 'Trades' } }));
+}
+
+// ---- TAB 2: Features ----
+async function loadFeatures() {
+  const resp = await fetch('/analytics/api/feature-distribution');
+  const data = await resp.json();
+
+  // Stats cards
+  const stats = data.stats;
+  const pcts = data.distance_pcts;
+  document.getElementById('featureStats').innerHTML = `
+    <div class="col-auto"><div class="stat-card"><div class="value">${stats.total.toLocaleString()}</div><div class="label">Features</div></div></div>
+    <div class="col-auto"><div class="stat-card"><div class="value">${stats.avg_sup_dist}%</div><div class="label">Avg Sup Dist</div></div></div>
+    <div class="col-auto"><div class="stat-card"><div class="value">${stats.avg_res_dist}%</div><div class="label">Avg Res Dist</div></div></div>
+    <div class="col-auto"><div class="stat-card"><div class="value">${stats.avg_sup_conf}</div><div class="label">Avg Sup Conf</div></div></div>
+    <div class="col-auto"><div class="stat-card"><div class="value">${stats.avg_res_conf}</div><div class="label">Avg Res Conf</div></div></div>
+    <div class="col-auto"><div class="stat-card"><div class="value">${pcts.within_01}%</div><div class="label">Within 0.1%</div></div></div>
+    <div class="col-auto"><div class="stat-card"><div class="value">${pcts.within_05}%</div><div class="label">Within 0.5%</div></div></div>
+  `;
+
+  // Distance histogram
+  Plotly.newPlot('distHistChart', [
+    { x: data.support_distance.map(v => v*100), type: 'histogram', name: 'Support', marker: { color: '#00e676' }, opacity: 0.7, nbinsx: 50 },
+    { x: data.resistance_distance.map(v => v*100), type: 'histogram', name: 'Resistance', marker: { color: '#ff5252' }, opacity: 0.7, nbinsx: 50 },
+  ], darkLayout('Distance to Nearest Level (%)', {
+    barmode: 'overlay',
+    xaxis: { ...DARK.xaxis, title: 'Distance %', range: [0, 5] },
+    yaxis: { ...DARK.yaxis, title: 'Count' },
+    legend: { x: 0.7, y: 0.95 },
+  }));
+
+  // Confluence histogram
+  Plotly.newPlot('confHistChart', [
+    { x: data.support_confluence, type: 'histogram', name: 'Support', marker: { color: '#00e676' }, opacity: 0.7, nbinsx: 20 },
+    { x: data.resistance_confluence, type: 'histogram', name: 'Resistance', marker: { color: '#ff5252' }, opacity: 0.7, nbinsx: 20 },
+  ], darkLayout('Confluence Score Distribution', {
+    barmode: 'overlay',
+    xaxis: { ...DARK.xaxis, title: 'Confluence Score' },
+    yaxis: { ...DARK.yaxis, title: 'Count' },
+    legend: { x: 0.7, y: 0.95 },
+  }));
+
+  // Scatter: distance vs confluence colored by fractal
+  const colors = data.is_bullish.map((b, i) => b ? '#00e676' : (data.is_bearish[i] ? '#ff5252' : '#555'));
+  Plotly.newPlot('scatterChart', [{
+    x: data.support_distance.map(v => v*100),
+    y: data.support_confluence,
+    mode: 'markers',
+    marker: { color: colors, size: 3, opacity: 0.5 },
+    text: data.is_bullish.map((b, i) => b ? 'Bullish fractal' : (data.is_bearish[i] ? 'Bearish fractal' : 'No fractal')),
+  }], darkLayout('Support Distance vs Confluence (colored by fractal)', {
+    xaxis: { ...DARK.xaxis, title: 'Distance %', range: [0, 3] },
+    yaxis: { ...DARK.yaxis, title: 'Confluence Score' },
+  }));
+}
+
+// ---- TAB 3: Level Density ----
+async function loadDensity() {
+  const resp = await fetch('/analytics/api/level-density');
+  const data = await resp.json();
+
+  const d = data.density_over_time;
+  Plotly.newPlot('densityTimeChart', [
+    { x: d.map(r=>r.month), y: d.map(r=>r.structural), name: 'Structural (Fractal/HTF/CC)', type: 'scatter', mode: 'lines+markers', line: { color: '#00e676' } },
+    { x: d.map(r=>r.month), y: d.map(r=>r.mobile), name: 'Mobile (PrevSession/VP)', type: 'scatter', mode: 'lines+markers', line: { color: '#ff9800' } },
+    { x: d.map(r=>r.month), y: d.map(r=>r.total), name: 'Total', type: 'scatter', mode: 'lines+markers', line: { color: '#448aff', dash: 'dot' } },
+  ], darkLayout('Active Naked Levels Over Time', {
+    xaxis: { ...DARK.xaxis, title: 'Month' },
+    yaxis: { ...DARK.yaxis, title: 'Active Levels' },
+    legend: { x: 0.01, y: 0.99 },
+  }));
+
+  // Type breakdown bar
+  const bd = data.type_breakdown;
+  Plotly.newPlot('typeBreakdownChart', [
+    { x: bd.map(r=>`${r.type} (${r.tf})`), y: bd.map(r=>r.total), name: 'Total', type: 'bar', marker: { color: '#448aff' } },
+    { x: bd.map(r=>`${r.type} (${r.tf})`), y: bd.map(r=>r.touched), name: 'Touched', type: 'bar', marker: { color: '#ff9800' } },
+  ], darkLayout('Level Count by Type (Total vs Touched)', {
+    barmode: 'group',
+    xaxis: { ...DARK.xaxis, tickangle: -45 },
+    yaxis: { ...DARK.yaxis, title: 'Count' },
+    legend: { x: 0.01, y: 0.99 },
+  }));
+}
+
+// ---- TAB 4: Scoring ----
+async function loadScoring() {
+  const resp = await fetch('/analytics/api/scoring-analysis');
+  const data = await resp.json();
+  const t = data.trades;
+
+  // Scatter: score vs PnL
+  const wins = t.filter(x => x.result === 'WIN');
+  const losses = t.filter(x => x.result === 'LOSS');
+  Plotly.newPlot('scoreScatterChart', [
+    { x: wins.map(w=>w.score), y: wins.map(w=>w.pnl_pct), mode: 'markers', name: 'WIN',
+      marker: { color: '#00e676', size: 4, opacity: 0.5 } },
+    { x: losses.map(l=>l.score), y: losses.map(l=>l.pnl_pct), mode: 'markers', name: 'LOSS',
+      marker: { color: '#ff5252', size: 4, opacity: 0.5 } },
+  ], darkLayout('Score vs PnL%', {
+    xaxis: { ...DARK.xaxis, title: 'Score' },
+    yaxis: { ...DARK.yaxis, title: 'PnL %' },
+    legend: { x: 0.01, y: 0.99 },
+  }));
+
+  // Violin: score distribution by result
+  Plotly.newPlot('scoreViolinChart', [
+    { y: wins.map(w=>w.score), type: 'violin', name: 'WIN', side: 'positive',
+      line: { color: '#00e676' }, meanline: { visible: true } },
+    { y: losses.map(l=>l.score), type: 'violin', name: 'LOSS', side: 'negative',
+      line: { color: '#ff5252' }, meanline: { visible: true } },
+  ], darkLayout('Score Distribution: WIN vs LOSS', {
+    yaxis: { ...DARK.yaxis, title: 'Score' },
+    violinmode: 'overlay',
+  }));
+
+  // Equity curves by threshold
+  const ec = data.equity_curves;
+  const traces = [];
+  const colors = { '0': '#555', '7': '#ffd740', '8': '#66bb6a', '9': '#00e676', '10': '#00bcd4' };
+  Object.entries(ec).forEach(([th, curve]) => {
+    if (curve.length > 0) {
+      traces.push({
+        y: curve, mode: 'lines', name: `Score >= ${th}`,
+        line: { color: colors[th] || '#fff' },
+      });
+    }
+  });
+  Plotly.newPlot('equityCurveChart', traces, darkLayout('Cumulative PnL% by Score Threshold', {
+    xaxis: { ...DARK.xaxis, title: 'Trade #' },
+    yaxis: { ...DARK.yaxis, title: 'Cumulative PnL %' },
+    legend: { x: 0.01, y: 0.99 },
+  }));
+}
+
+// Tab switching: lazy-load data
+let loaded = { backtests: false, features: false, density: false, scoring: false };
+document.querySelectorAll('#analyticsTabs a').forEach(tab => {
+  tab.addEventListener('shown.bs.tab', e => {
+    const id = e.target.getAttribute('href');
+    if (id === '#tab-features' && !loaded.features) { loadFeatures(); loaded.features = true; }
+    if (id === '#tab-density' && !loaded.density) { loadDensity(); loaded.density = true; }
+    if (id === '#tab-scoring' && !loaded.scoring) { loadScoring(); loaded.scoring = true; }
+  });
+});
+
+document.getElementById('btnLoadBT').addEventListener('click', loadBacktests);
+
+// Auto-load first tab
+loadBacktests();
+loaded.backtests = true;
+</script>
+{% endblock %}

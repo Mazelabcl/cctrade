@@ -281,8 +281,23 @@ def scan_for_setups(
     if all_levels.empty:
         return []
 
+    # Pre-compute mobile level supersession for PrevSession/VP
+    mobile_mask = (
+        all_levels['level_type'].str.startswith('PrevSession') |
+        all_levels['level_type'].str.startswith('VP_')
+    ).fillna(False)
+    structural_mask = ~mobile_mask
+
+    all_levels['superseded_at'] = pd.NaT
+    if mobile_mask.any():
+        mobile = all_levels[mobile_mask].sort_values('created_at')
+        superseded = mobile.groupby(
+            ['level_type', 'timeframe']
+        )['created_at'].shift(-1)
+        all_levels.loc[superseded.index, 'superseded_at'] = superseded
+    all_levels['_is_structural'] = structural_mask
+
     setups = []
-    level_prices = all_levels['price_level'].values
 
     for candle in candles:
         c_dict = {
@@ -294,14 +309,22 @@ def scan_for_setups(
             'volume': candle.volume,
         }
 
-        # Filter levels: created before this candle AND still naked
-        mask = (all_levels['created_at'] <= candle.open_time)
-        if 'first_touched_at' in all_levels.columns:
-            mask &= (
-                all_levels['first_touched_at'].isna() |
-                (all_levels['first_touched_at'] > candle.open_time)
-            )
-        valid_levels = all_levels[mask]
+        # Structural levels: created before candle AND still naked
+        # Mobile levels (PrevSession/VP): created before candle AND not superseded
+        t = candle.open_time
+        created_ok = all_levels['created_at'] <= t
+
+        structural_valid = (
+            all_levels['_is_structural'] &
+            created_ok &
+            (all_levels['first_touched_at'].isna() | (all_levels['first_touched_at'] > t))
+        )
+        mobile_valid = (
+            ~all_levels['_is_structural'] &
+            created_ok &
+            (all_levels['superseded_at'].isna() | (all_levels['superseded_at'] > t))
+        )
+        valid_levels = all_levels[structural_valid | mobile_valid]
 
         if valid_levels.empty:
             continue

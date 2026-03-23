@@ -74,7 +74,11 @@ def load_candles_db(session: Session,
 
 def load_levels_db(session: Session,
                    symbol: str = 'BTCUSDT') -> pd.DataFrame:
-    """Load all non-invalidated levels from SQLite (fast raw-SQL path)."""
+    """Load all non-invalidated levels from SQLite (fast raw-SQL path).
+
+    For PrevSession/VP levels, adds a 'superseded_at' column indicating when
+    a newer level of the same (type, timeframe) replaces this one.
+    """
     df = _query_to_df(
         session,
         "SELECT id, price_level, level_type, timeframe, source, created_at "
@@ -84,6 +88,21 @@ def load_levels_db(session: Session,
     )
     if not df.empty:
         df['created_at'] = pd.to_datetime(df['created_at'])
+
+        # PrevSession/VP are session-relative: only the most recent per
+        # (level_type, timeframe) should be active at any time.
+        # Mark when each is superseded by a newer level of the same type.
+        mobile_mask = (
+            df['level_type'].str.startswith('PrevSession') |
+            df['level_type'].str.startswith('VP_')
+        ).fillna(False)
+        df['superseded_at'] = pd.NaT
+        if mobile_mask.any():
+            mobile_idx = df[mobile_mask].sort_values('created_at').index
+            superseded = df.loc[mobile_idx].groupby(
+                ['level_type', 'timeframe']
+            )['created_at'].shift(-1)
+            df.loc[superseded.index, 'superseded_at'] = superseded
     return df
 
 
@@ -122,6 +141,16 @@ def _simulate_multi_rr(candles: pd.DataFrame,
     lev_created = pd.to_datetime(levels['created_at']).values
     lev_ids     = levels['id'].values.astype(int)
     n_levels    = len(lev_prices)
+
+    # Mobile level supersession: PrevSession/VP levels expire when replaced
+    has_superseded = 'superseded_at' in levels.columns
+    if has_superseded:
+        sup_vals = pd.to_datetime(levels['superseded_at']).values
+        # A level is "superseded" if superseded_at <= current candle time
+        lev_superseded_valid = ~pd.isna(sup_vals)
+    else:
+        lev_superseded_valid = np.zeros(n_levels, dtype=bool)
+        sup_vals = None
 
     # Shared touch tracker
     level_touched = np.zeros(n_levels, dtype=bool)
@@ -202,10 +231,16 @@ def _simulate_multi_rr(candles: pd.DataFrame,
         dist      = np.abs(lev_prices - cl) / cl
         dist_mask = dist < 0.15
 
-        if naked_only:
-            mask = time_mask & dist_mask & ~level_touched
+        # Exclude superseded mobile levels (PrevSession/VP replaced by newer)
+        if has_superseded:
+            not_superseded = ~(lev_superseded_valid & (sup_vals <= ct))
         else:
-            mask = time_mask & dist_mask
+            not_superseded = np.ones(n_levels, dtype=bool)
+
+        if naked_only:
+            mask = time_mask & dist_mask & ~level_touched & not_superseded
+        else:
+            mask = time_mask & dist_mask & not_superseded
 
         candidates = np.where(mask)[0]
         if candidates.size == 0:

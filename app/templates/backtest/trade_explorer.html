@@ -34,9 +34,11 @@
         <option value="Fib_CC">Fib CC</option>
         <option value="VP_VAH">VP VAH</option>
         <option value="VP_VAL">VP VAL</option>
+        <option value="VP_POC">VP POC</option>
         <option value="PrevSession_High">PrevSession High</option>
         <option value="PrevSession_Low">PrevSession Low</option>
         <option value="PrevSession_VWAP">PrevSession VWAP</option>
+        <option value="PrevSession_EQ">PrevSession EQ</option>
       </select>
     </div>
     <div class="col-auto">
@@ -55,9 +57,6 @@
       <button id="btnCenter" class="btn btn-outline-info btn-sm ms-1" title="Center on trade (C)">
         <i class="bi bi-crosshair"></i>
       </button>
-      <button id="btnToggleLevels" class="btn btn-outline-warning btn-sm ms-1" title="Toggle levels (L)">
-        <i class="bi bi-layers"></i>
-      </button>
     </div>
     <div class="col-auto d-flex align-items-end ms-auto">
       <span id="tradeInfo" class="text-muted small"></span>
@@ -69,8 +68,15 @@
     <!-- Chart -->
     <div class="col-lg-9">
       <div id="chart-container" style="height:520px; background:#1a1a2e; border-radius:8px; position:relative;">
+        <!-- Entry/Exit explanation overlay -->
+        <div id="tradeExplanation" style="display:none; position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.88); padding:8px 12px; border-radius:6px; z-index:10; font-size:0.75rem; color:#e0e0e0; border:1px solid #555; max-width:60%;">
+          <div id="entryExpl" class="mb-1"></div>
+          <div id="exitExpl"></div>
+        </div>
+        <!-- Zone info overlay -->
+        <div id="zoneInfo" style="display:none; position:absolute; bottom:8px; left:8px; background:rgba(0,0,0,0.88); padding:6px 10px; border-radius:6px; z-index:10; font-size:0.72rem; color:#ffeb3b; border:1px solid rgba(255,235,59,0.3);"></div>
         <!-- Manual exit overlay -->
-        <div id="manualExitInfo" style="display:none; position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.85); padding:8px 12px; border-radius:6px; z-index:10; font-size:0.8rem; color:#e0e0e0; border:1px solid #444;">
+        <div id="manualExitInfo" style="display:none; position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.85); padding:8px 12px; border-radius:6px; z-index:10; font-size:0.8rem; color:#e0e0e0; border:1px solid #444;">
           <strong>Manual Exit Mode</strong> (click chart to set exit)<br>
           <span id="manualExitDetails">-</span>
           <br><button id="btnExitManual" class="btn btn-outline-secondary btn-sm mt-1" style="font-size:0.7rem">Exit mode (Esc)</button>
@@ -85,6 +91,9 @@
           <span id="tradeCounter" class="text-muted small">-</span>
           <button id="btnManualExit" class="btn btn-outline-success btn-sm ms-3" title="Manual exit mode (M)">
             <i class="bi bi-cursor"></i> Manual Exit
+          </button>
+          <button id="btnToggleZone" class="btn btn-outline-warning btn-sm ms-1" title="Toggle analysis zone (Z)">
+            <i class="bi bi-bounding-box"></i> Zone
           </button>
         </div>
         <button id="btnNext" class="btn btn-outline-secondary btn-sm" disabled>
@@ -121,6 +130,16 @@
         </div>
       </div>
 
+      <!-- Level visibility toggles -->
+      <div class="card bg-dark text-white mb-2">
+        <div class="card-body p-2">
+          <h6 class="mb-1" style="font-size:0.85rem">Visible Levels <button id="btnToggleAll" class="btn btn-outline-secondary btn-sm float-end py-0 px-1" style="font-size:0.65rem">All/None</button></h6>
+          <div id="levelToggles" style="font-size:0.72rem; max-height:180px; overflow-y:auto;">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+
       <!-- Trade details -->
       <div class="card bg-dark text-white mb-2">
         <div class="card-body p-2">
@@ -128,10 +147,11 @@
           <table class="table table-sm table-dark mb-0" style="font-size:0.75rem">
             <tbody>
               <tr><td>Direction</td><td id="tdDirection" class="text-end">-</td></tr>
-              <tr><td>Level</td><td id="tdLevel" class="text-end">-</td></tr>
+              <tr><td>Ref Level</td><td id="tdLevel" class="text-end">-</td></tr>
+              <tr><td>Level Price</td><td id="tdLevelPrice" class="text-end">-</td></tr>
               <tr><td>Entry</td><td id="tdEntry" class="text-end">-</td></tr>
               <tr><td>SL</td><td id="tdSL" class="text-end">-</td></tr>
-              <tr><td>TP (RR 1:1)</td><td id="tdTP" class="text-end">-</td></tr>
+              <tr><td>TP (RR)</td><td id="tdTP" class="text-end">-</td></tr>
               <tr><td>Risk</td><td id="tdRisk" class="text-end">-</td></tr>
               <tr><td>Result</td><td id="tdResult" class="text-end">-</td></tr>
               <tr><td>PnL</td><td id="tdPnL" class="text-end">-</td></tr>
@@ -167,11 +187,40 @@
 let chart, candleSeries;
 let trades = [];
 let currentIdx = 0;
-let levelSeries = [];
-let levelsVisible = true;
+let levelSeriesMap = {};     // {type: [series...]}
+let extraSeries = [];        // SL, TP, entry level, zone series
 let manualExitMode = false;
-let currentTradeData = null;  // chart data for current trade
+let currentTradeData = null;
 let manualExitSeries = null;
+let zoneVisible = false;
+let zoneSeries = [];
+
+// Level type config: color + default visibility
+const LEVEL_CONFIG = {
+    'Fractal_support':      { color: '#00ff88', label: 'Fractal Support',   on: true,  group: 'Fractal' },
+    'Fractal_resistance':   { color: '#ff4444', label: 'Fractal Resistance',on: true,  group: 'Fractal' },
+    'HTF_level':            { color: '#00bcd4', label: 'HTF Level',         on: true,  group: 'HTF' },
+    'Fib_CC':               { color: '#ffd700', label: 'Fib CC',            on: true,  group: 'Fibonacci' },
+    'Fib_0.25':             { color: '#b8860b', label: 'Fib 0.25 (Igor)',   on: false, group: 'Fibonacci' },
+    'Fib_0.50':             { color: '#b8860b', label: 'Fib 0.50 (Igor)',   on: false, group: 'Fibonacci' },
+    'Fib_0.75':             { color: '#b8860b', label: 'Fib 0.75 (Igor)',   on: false, group: 'Fibonacci' },
+    'VP_POC':               { color: '#ff1744', label: 'VP POC',            on: false, group: 'Volume Profile' },
+    'VP_VAH':               { color: '#448aff', label: 'VP VAH',            on: true,  group: 'Volume Profile' },
+    'VP_VAL':               { color: '#448aff', label: 'VP VAL',            on: true,  group: 'Volume Profile' },
+    'PrevSession_High':     { color: '#ff9800', label: 'Prev High',         on: true,  group: 'PrevSession' },
+    'PrevSession_Low':      { color: '#ff9800', label: 'Prev Low',          on: true,  group: 'PrevSession' },
+    'PrevSession_EQ':       { color: '#ffb74d', label: 'Prev EQ',           on: false, group: 'PrevSession' },
+    'PrevSession_25':       { color: '#ff6b6b', label: 'Prev 25%',          on: false, group: 'PrevSession' },
+    'PrevSession_75':       { color: '#ff6b6b', label: 'Prev 75%',          on: false, group: 'PrevSession' },
+    'PrevSession_VWAP':     { color: '#e040fb', label: 'Prev VWAP',         on: true,  group: 'PrevSession' },
+    'PrevSession_VP_POC':   { color: '#ff1744', label: 'Prev VP POC',       on: false, group: 'PrevSession' },
+    'PrevSession_VP_VAH':   { color: '#448aff', label: 'Prev VP VAH',       on: false, group: 'PrevSession' },
+    'PrevSession_VP_VAL':   { color: '#448aff', label: 'Prev VP VAL',       on: false, group: 'PrevSession' },
+};
+
+// Track which level types are visible
+let levelVisibility = {};
+Object.keys(LEVEL_CONFIG).forEach(k => { levelVisibility[k] = LEVEL_CONFIG[k].on; });
 
 function initChart() {
     const container = document.getElementById('chart-container');
@@ -192,7 +241,7 @@ function initChart() {
         chart.applyOptions({ width: container.clientWidth });
     });
 
-    // Manual exit: click on chart to set custom exit
+    // Manual exit: click on chart
     chart.subscribeCrosshairMove(param => {
         if (!manualExitMode || !currentTradeData || !param.point) return;
         const price = candleSeries.coordinateToPrice(param.point.y);
@@ -201,22 +250,64 @@ function initChart() {
     chart.subscribeClick(param => {
         if (!manualExitMode || !currentTradeData || !param.point) return;
         const price = candleSeries.coordinateToPrice(param.point.y);
-        if (price) {
-            setManualExit(price);
+        if (price) setManualExit(price);
+    });
+
+    buildLevelToggles();
+}
+
+function buildLevelToggles() {
+    const container = document.getElementById('levelToggles');
+    let html = '';
+    let currentGroup = '';
+
+    Object.entries(LEVEL_CONFIG).forEach(([type, cfg]) => {
+        if (cfg.group !== currentGroup) {
+            currentGroup = cfg.group;
+            html += `<div class="text-muted mt-1 mb-0" style="font-size:0.65rem; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px">${cfg.group}</div>`;
         }
+        const checked = levelVisibility[type] ? 'checked' : '';
+        html += `<div class="form-check form-check-inline mb-0" style="min-width:100%">
+            <input class="form-check-input level-toggle" type="checkbox" id="lt_${type}" value="${type}" ${checked} style="transform:scale(0.8)">
+            <label class="form-check-label" for="lt_${type}" style="cursor:pointer">
+                <span style="display:inline-block; width:10px; height:10px; background:${cfg.color}; border-radius:2px; margin-right:3px"></span>
+                ${cfg.label}
+            </label>
+        </div>`;
+    });
+    container.innerHTML = html;
+
+    // Event listeners for toggles
+    container.querySelectorAll('.level-toggle').forEach(cb => {
+        cb.addEventListener('change', () => {
+            levelVisibility[cb.value] = cb.checked;
+            if (currentTradeData) redrawLevels();
+        });
     });
 }
 
 function centerOnTrade() {
-    if (!currentTradeData) return;
+    if (!currentTradeData || !currentTradeData.candles.length) return;
     const t = currentTradeData.trade;
     const entryTime = t.entry_time;
     const exitTime = t.exit_time || entryTime;
-    // Set visible range: 10 bars before entry to 10 bars after exit
     const tf_secs = {'1h': 3600, '4h': 14400, '6h': 21600, '8h': 28800, '12h': 43200}[document.getElementById('execTf').value] || 14400;
-    const from = entryTime - tf_secs * 10;
-    const to = exitTime + tf_secs * 10;
-    chart.timeScale().setVisibleRange({ from, to });
+    // Wide padding: 15 bars before entry, 15 after exit
+    const from = entryTime - tf_secs * 15;
+    const to = exitTime + tf_secs * 15;
+
+    // Use setTimeout to ensure chart has finished rendering data
+    setTimeout(() => {
+        try {
+            chart.timeScale().setVisibleRange({ from, to });
+        } catch(e) {
+            // Fallback: fitContent then try again
+            chart.timeScale().fitContent();
+            setTimeout(() => {
+                try { chart.timeScale().setVisibleRange({ from, to }); } catch(e2) {}
+            }, 50);
+        }
+    }, 50);
 }
 
 async function loadTrades() {
@@ -249,13 +340,19 @@ async function showTrade(idx) {
 
     candleSeries.setData(data.candles);
 
-    // Clear old series
-    levelSeries.forEach(s => { try { chart.removeSeries(s); } catch(e) {} });
-    levelSeries = [];
+    // Clear everything
+    clearAllSeries();
 
     drawLevels(data);
     drawTradelines(data);
     drawMarkers(data);
+    showExplanation(data);
+
+    // Hide zone info from prev trade
+    const zoneInfo = document.getElementById('zoneInfo');
+    if (zoneInfo) zoneInfo.style.display = 'none';
+
+    if (zoneVisible) drawZone(data);
 
     // Center on trade
     centerOnTrade();
@@ -263,55 +360,74 @@ async function showTrade(idx) {
     updateSidebar(trade);
 }
 
+function clearAllSeries() {
+    Object.values(levelSeriesMap).forEach(arr => {
+        arr.forEach(s => { try { chart.removeSeries(s); } catch(e) {} });
+    });
+    levelSeriesMap = {};
+    extraSeries.forEach(s => { try { chart.removeSeries(s); } catch(e) {} });
+    extraSeries = [];
+    zoneSeries.forEach(s => { try { chart.removeSeries(s); } catch(e) {} });
+    zoneSeries = [];
+    if (manualExitSeries) {
+        try { chart.removeSeries(manualExitSeries); } catch(e) {}
+        manualExitSeries = null;
+    }
+}
+
 function drawLevels(data) {
-    if (!levelsVisible || data.candles.length === 0) return;
+    if (data.candles.length === 0) return;
     const tStart = data.candles[0].time;
     const tEnd = data.candles[data.candles.length - 1].time;
 
-    const levelColors = {
-        'Fractal_support': '#00ff88', 'Fractal_resistance': '#ff4444',
-        'HTF_level': '#00bcd4', 'Fib_CC': '#ffd700',
-        'VP_POC': '#ff1744', 'VP_VAH': '#448aff', 'VP_VAL': '#448aff',
-        'PrevSession_High': '#ff9800', 'PrevSession_Low': '#ff9800',
-        'PrevSession_VWAP': '#e040fb', 'PrevSession_EQ': '#ff9800',
-        'PrevSession_VP_POC': '#ff1744', 'PrevSession_VP_VAH': '#448aff',
-        'PrevSession_VP_VAL': '#448aff', 'PrevSession_25': '#ff6b6b',
-        'PrevSession_75': '#ff6b6b',
-    };
-
     data.levels.forEach(lv => {
-        const color = levelColors[lv.type] || '#888888';
+        const cfg = LEVEL_CONFIG[lv.type];
+        if (!cfg) return;  // unknown type
+        const color = cfg.color;
         const from = Math.max(lv.created || tStart, tStart);
         const to = lv.touched ? Math.min(lv.touched, tEnd) : tEnd;
         if (from > tEnd || to < tStart) return;
 
+        const visible = levelVisibility[lv.type] !== false;
         const series = chart.addLineSeries({
             color: color, lineWidth: 1,
             lineStyle: lv.touched ? 2 : 0,
             priceLineVisible: false, lastValueVisible: false,
             crosshairMarkerVisible: false,
             title: lv.type + ' (' + lv.tf + ')',
+            visible: visible,
         });
         series.setData([
             { time: from, value: lv.price },
             { time: to, value: lv.price },
         ]);
-        levelSeries.push(series);
+        if (!levelSeriesMap[lv.type]) levelSeriesMap[lv.type] = [];
+        levelSeriesMap[lv.type].push(series);
     });
 
-    // Entry level (white thick)
+    // Reference level (white thick) — the level that triggered the trade
     if (data.trade.level_price) {
         const lv = chart.addLineSeries({
             color: '#ffffff', lineWidth: 2,
             priceLineVisible: false, lastValueVisible: false,
-            title: 'ENTRY LEVEL',
+            title: `REF: ${data.trade.level_type} (${data.trade.level_tf})`,
         });
         lv.setData([
             { time: tStart, value: data.trade.level_price },
             { time: tEnd, value: data.trade.level_price },
         ]);
-        levelSeries.push(lv);
+        extraSeries.push(lv);
     }
+}
+
+function redrawLevels() {
+    // Toggle visibility of level series without reloading data
+    Object.entries(levelSeriesMap).forEach(([type, seriesArr]) => {
+        const visible = levelVisibility[type] !== false;
+        seriesArr.forEach(s => {
+            try { s.applyOptions({ visible: visible }); } catch(e) {}
+        });
+    });
 }
 
 function drawTradelines(data) {
@@ -325,7 +441,7 @@ function drawTradelines(data) {
         priceLineVisible: false, lastValueVisible: false, title: 'SL',
     });
     sl.setData([{ time: tEntry, value: data.trade.stop_loss }, { time: tEnd, value: data.trade.stop_loss }]);
-    levelSeries.push(sl);
+    extraSeries.push(sl);
 
     // TP (green dashed)
     const tp = chart.addLineSeries({
@@ -333,42 +449,123 @@ function drawTradelines(data) {
         priceLineVisible: false, lastValueVisible: false, title: 'TP',
     });
     tp.setData([{ time: tEntry, value: data.trade.take_profit }, { time: tEnd, value: data.trade.take_profit }]);
-    levelSeries.push(tp);
+    extraSeries.push(tp);
 }
 
 function drawMarkers(data) {
     const markers = [];
+    // Entry marker with explanation
+    const dir = data.trade.direction;
     markers.push({
         time: data.trade.entry_time,
-        position: data.trade.direction === 'LONG' ? 'belowBar' : 'aboveBar',
-        color: data.trade.direction === 'LONG' ? '#26a69a' : '#ef5350',
-        shape: data.trade.direction === 'LONG' ? 'arrowUp' : 'arrowDown',
-        text: 'ENTRY',
+        position: dir === 'LONG' ? 'belowBar' : 'aboveBar',
+        color: dir === 'LONG' ? '#26a69a' : '#ef5350',
+        shape: dir === 'LONG' ? 'arrowUp' : 'arrowDown',
+        text: `ENTRY ${dir}`,
     });
     if (data.trade.exit_time) {
+        const isWin = data.trade.exit_reason === 'TP_HIT';
         markers.push({
             time: data.trade.exit_time,
-            position: data.trade.exit_reason === 'TP_HIT' ? 'aboveBar' : 'belowBar',
-            color: data.trade.exit_reason === 'TP_HIT' ? '#00e676' : '#ff1744',
+            position: isWin ? (dir === 'LONG' ? 'aboveBar' : 'belowBar') : (dir === 'LONG' ? 'belowBar' : 'aboveBar'),
+            color: isWin ? '#00e676' : '#ff1744',
             shape: 'circle',
-            text: data.trade.exit_reason === 'TP_HIT' ? 'WIN' : 'LOSS',
+            text: isWin ? 'TP HIT' : 'SL HIT',
         });
     }
     markers.sort((a, b) => a.time - b.time);
     candleSeries.setMarkers(markers);
 }
 
-function toggleLevels() {
-    levelsVisible = !levelsVisible;
-    const btn = document.getElementById('btnToggleLevels');
-    btn.classList.toggle('active', levelsVisible);
-    // Redraw
-    if (currentTradeData) {
-        levelSeries.forEach(s => { try { chart.removeSeries(s); } catch(e) {} });
-        levelSeries = [];
-        drawLevels(currentTradeData);
-        drawTradelines(currentTradeData);
+function drawZone(data) {
+    const t = data.trade;
+    if (!t.zone_inner || !t.zone_outer) return;
+    if (data.candles.length === 0) return;
+    const tStart = data.candles[0].time;
+    const tEnd = data.candles[data.candles.length - 1].time;
+
+    const zoneLabel = t.direction === 'LONG' ? 'Support Zone -1.5%' : 'Resistance Zone +1.5%';
+
+    // Inner boundary (at the level)
+    const zoneInner = chart.addLineSeries({
+        color: 'rgba(255,235,59,0.5)', lineWidth: 1, lineStyle: 3,
+        priceLineVisible: false, lastValueVisible: false,
+        title: 'Zone (level)',
+    });
+    zoneInner.setData([{ time: tStart, value: t.zone_inner }, { time: tEnd, value: t.zone_inner }]);
+    zoneSeries.push(zoneInner);
+
+    // Outer boundary
+    const zoneOuter = chart.addLineSeries({
+        color: 'rgba(255,235,59,0.5)', lineWidth: 1, lineStyle: 3,
+        priceLineVisible: false, lastValueVisible: false,
+        title: zoneLabel,
+    });
+    zoneOuter.setData([{ time: tStart, value: t.zone_outer }, { time: tEnd, value: t.zone_outer }]);
+    zoneSeries.push(zoneOuter);
+
+    // Fill between inner and outer using multiple thin lines to simulate a band
+    const steps = 5;
+    const lo = Math.min(t.zone_inner, t.zone_outer);
+    const hi = Math.max(t.zone_inner, t.zone_outer);
+    for (let s = 1; s < steps; s++) {
+        const val = lo + (hi - lo) * s / steps;
+        const fill = chart.addLineSeries({
+            color: 'rgba(255,235,59,0.08)', lineWidth: 1, lineStyle: 0,
+            priceLineVisible: false, lastValueVisible: false,
+            crosshairMarkerVisible: false,
+        });
+        fill.setData([{ time: tStart, value: val }, { time: tEnd, value: val }]);
+        zoneSeries.push(fill);
     }
+
+    // Show zone info text
+    const zoneInfo = document.getElementById('zoneInfo');
+    if (zoneInfo) {
+        zoneInfo.style.display = 'block';
+        zoneInfo.innerHTML =
+            `<strong>Zone 1.5% (${t.direction === 'LONG' ? 'support' : 'resistance'}):</strong> ` +
+            `$${lo.toLocaleString(undefined, {maximumFractionDigits:0})} — ` +
+            `$${hi.toLocaleString(undefined, {maximumFractionDigits:0})}<br>` +
+            `Levels in zone: <strong>${t.zone_level_count || 0}</strong> ` +
+            `(structural: ${t.zone_structural || 0}, PrevSession: ${t.zone_prevsession || 0}, VP: ${t.zone_vp || 0})`;
+    }
+}
+
+function toggleZone() {
+    zoneVisible = !zoneVisible;
+    document.getElementById('btnToggleZone').classList.toggle('active', zoneVisible);
+    if (zoneVisible && currentTradeData) {
+        drawZone(currentTradeData);
+    } else {
+        zoneSeries.forEach(s => { try { chart.removeSeries(s); } catch(e) {} });
+        zoneSeries = [];
+        const zoneInfo = document.getElementById('zoneInfo');
+        if (zoneInfo) zoneInfo.style.display = 'none';
+    }
+}
+
+function showExplanation(data) {
+    const expl = document.getElementById('tradeExplanation');
+    if (data.trade.entry_explanation) {
+        document.getElementById('entryExpl').innerHTML =
+            `<i class="bi bi-arrow-right-circle text-info"></i> <strong>Entry:</strong> ${data.trade.entry_explanation}`;
+        document.getElementById('exitExpl').innerHTML =
+            `<i class="bi bi-x-circle text-warning"></i> <strong>Exit:</strong> ${data.trade.exit_explanation || ''}`;
+        expl.style.display = 'block';
+    } else {
+        expl.style.display = 'none';
+    }
+}
+
+function toggleAllLevels() {
+    // Check if most are on → turn all off, else turn all on
+    const vals = Object.values(levelVisibility);
+    const mostOn = vals.filter(v => v).length > vals.length / 2;
+    const newState = !mostOn;
+    Object.keys(levelVisibility).forEach(k => { levelVisibility[k] = newState; });
+    document.querySelectorAll('.level-toggle').forEach(cb => { cb.checked = newState; });
+    if (currentTradeData) redrawLevels();
 }
 
 // ---- Manual exit mode ----
@@ -420,7 +617,6 @@ function setManualExit(price) {
     const rr = risk > 0 ? (pnl / risk).toFixed(2) : '0';
     const win = pnl > 0;
 
-    // Draw manual exit line (cyan)
     if (manualExitSeries) {
         try { chart.removeSeries(manualExitSeries); } catch(e) {}
     }
@@ -432,7 +628,6 @@ function setManualExit(price) {
     });
     manualExitSeries.setData([{ time: tStart, value: price }, { time: tEnd, value: price }]);
 
-    // Update card
     document.getElementById('mePrice').textContent = `$${price.toLocaleString(undefined, {maximumFractionDigits:0})}`;
     const mePnl = document.getElementById('mePnL');
     mePnl.textContent = `${pnl > 0 ? '+' : ''}${pnlPct}%`;
@@ -454,7 +649,6 @@ function updateSidebar(t) {
     const label = t.score >= 9 ? 'Excellent' : t.score >= 8 ? 'Good' : t.score >= 7 ? 'OK' : 'Weak';
     document.getElementById('scoreLabel').textContent = label;
 
-    // Show WR% for this level type
     const wrPct = (t.score_breakdown.level / 10 * 100).toFixed(0);
     document.getElementById('levelWR').textContent = `${t.level_type}/${t.level_tf} = ${wrPct}% WR`;
 
@@ -471,11 +665,11 @@ function updateSidebar(t) {
     dir.className = 'text-end ' + (t.direction === 'LONG' ? 'text-success fw-bold' : 'text-danger fw-bold');
 
     document.getElementById('tdLevel').textContent = `${t.level_type} (${t.level_tf})`;
+    document.getElementById('tdLevelPrice').textContent = `$${(t.level_price || t.entry_price).toLocaleString()}`;
     document.getElementById('tdEntry').textContent = `$${t.entry_price.toLocaleString()}`;
     document.getElementById('tdSL').textContent = `$${t.stop_loss.toLocaleString()}`;
     document.getElementById('tdTP').textContent = `$${t.take_profit.toLocaleString()}`;
 
-    // Risk %
     const riskPct = (Math.abs(t.entry_price - t.stop_loss) / t.entry_price * 100).toFixed(2);
     document.getElementById('tdRisk').textContent = `${riskPct}%`;
 
@@ -493,7 +687,6 @@ function updateSidebar(t) {
     document.getElementById('tdDistance').textContent = `${t.distance_pct}%`;
     document.getElementById('tdDate').textContent = t.entry_time ? t.entry_time.substring(0, 10) : '-';
 
-    // Hide manual exit card when switching trades
     document.getElementById('manualExitCard').style.display = 'none';
 }
 
@@ -512,7 +705,8 @@ document.getElementById('btnRandom').addEventListener('click', () => {
     if (trades.length > 0) showTrade(Math.floor(Math.random() * trades.length));
 });
 document.getElementById('btnCenter').addEventListener('click', centerOnTrade);
-document.getElementById('btnToggleLevels').addEventListener('click', toggleLevels);
+document.getElementById('btnToggleZone').addEventListener('click', toggleZone);
+document.getElementById('btnToggleAll').addEventListener('click', toggleAllLevels);
 document.getElementById('btnManualExit').addEventListener('click', () => {
     if (manualExitMode) exitManualMode();
     else enterManualMode();
@@ -526,7 +720,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight') showTrade(currentIdx + 1);
     if (e.key === 'r') document.getElementById('btnRandom').click();
     if (e.key === 'c') centerOnTrade();
-    if (e.key === 'l') toggleLevels();
+    if (e.key === 'z') toggleZone();
     if (e.key === 'm') document.getElementById('btnManualExit').click();
     if (e.key === 'Escape') exitManualMode();
 });

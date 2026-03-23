@@ -373,24 +373,83 @@ def api_trade_explorer_chart(trade_id):
     } for c in candles]
 
     # Load nearby levels (D/W/M, near the trade price, naked at entry time)
+    # NOTE: PrevSession/VP levels have first_touched_at always NULL (bug).
+    # For PrevSession, only show the MOST RECENT per (type, timeframe) — "mobile" approach.
+    # For structural levels (Fractal/HTF/CC), show all naked within range.
     price = trade.entry_price
-    price_range = price * 0.02  # 2% around entry
-    nearby_levels = (
+    price_range = price * 0.05  # 5% around entry
+
+    naked_filter = [
+        Level.timeframe.in_(['daily', 'weekly', 'monthly']),
+        Level.price_level.between(price - price_range, price + price_range),
+        Level.created_at <= entry,
+        db.or_(
+            Level.first_touched_at.is_(None),
+            Level.first_touched_at > entry,
+        ),
+    ]
+
+    # Structural levels: Fractal, HTF, Fib_CC — all naked ones
+    structural_types = ['Fractal_support', 'Fractal_resistance', 'HTF_level', 'Fib_CC']
+    structural_levels = (
         Level.query
-        .filter(
-            Level.timeframe.in_(['daily', 'weekly', 'monthly']),
-            Level.level_type.notin_(['Fib_0.25', 'Fib_0.50', 'Fib_0.75']),
-            Level.price_level.between(price - price_range, price + price_range),
-            Level.created_at <= entry,
-            db.or_(
-                Level.first_touched_at.is_(None),
-                Level.first_touched_at > entry,
-            ),
-        )
+        .filter(*naked_filter, Level.level_type.in_(structural_types))
         .order_by(db.func.abs(Level.price_level - price))
         .limit(50)
         .all()
     )
+
+    # PrevSession/VP: only the MOST RECENT per (type, timeframe) — mobile levels
+    # This prevents showing 20+ PrevSession_VWAP from different days
+    from sqlalchemy import func as sa_func
+    prevsession_vp_types = [
+        'PrevSession_High', 'PrevSession_Low', 'PrevSession_EQ',
+        'PrevSession_25', 'PrevSession_75', 'PrevSession_VWAP',
+        'PrevSession_VP_POC', 'PrevSession_VP_VAH', 'PrevSession_VP_VAL',
+        'VP_POC', 'VP_VAH', 'VP_VAL',
+    ]
+
+    # Subquery: max created_at per (level_type, timeframe) before entry
+    max_created_sq = (
+        db.session.query(
+            Level.level_type,
+            Level.timeframe,
+            sa_func.max(Level.created_at).label('max_created'),
+        )
+        .filter(
+            Level.level_type.in_(prevsession_vp_types),
+            Level.timeframe.in_(['daily', 'weekly', 'monthly']),
+            Level.created_at <= entry,
+        )
+        .group_by(Level.level_type, Level.timeframe)
+        .subquery()
+    )
+
+    mobile_levels = (
+        Level.query
+        .join(max_created_sq, db.and_(
+            Level.level_type == max_created_sq.c.level_type,
+            Level.timeframe == max_created_sq.c.timeframe,
+            Level.created_at == max_created_sq.c.max_created,
+        ))
+        .filter(
+            Level.price_level.between(price - price_range, price + price_range),
+        )
+        .order_by(db.func.abs(Level.price_level - price))
+        .all()
+    )
+
+    # Igor fibs (show naked only, limited)
+    igor_types = ['Fib_0.25', 'Fib_0.50', 'Fib_0.75']
+    igor_levels = (
+        Level.query
+        .filter(*naked_filter, Level.level_type.in_(igor_types))
+        .order_by(db.func.abs(Level.price_level - price))
+        .limit(20)
+        .all()
+    )
+
+    nearby_levels = structural_levels + mobile_levels + igor_levels
 
     chart_levels = [{
         'price': l.price_level,
@@ -399,6 +458,54 @@ def api_trade_explorer_chart(trade_id):
         'created': int(l.created_at.timestamp()) if l.created_at else None,
         'touched': int(l.first_touched_at.timestamp()) if l.first_touched_at else None,
     } for l in nearby_levels]
+
+    # Resolve level price: trade.level_price → Level table via level_id → entry_price
+    level_price = getattr(trade, 'level_price', None)
+    if not level_price and trade.level_id:
+        level_obj = db.session.get(Level, trade.level_id)
+        if level_obj:
+            level_price = level_obj.price_level
+    if not level_price:
+        level_price = trade.entry_price
+
+    # Compute analysis zone — directional: support expands DOWN, resistance UP
+    zone_width = 0.015  # 1.5%
+    if trade.direction == 'LONG':
+        # Support zone: level down to level*(1-1.5%)
+        zone_inner = level_price
+        zone_outer = level_price * (1 - zone_width)
+    else:
+        # Resistance zone: level up to level*(1+1.5%)
+        zone_inner = level_price
+        zone_outer = level_price * (1 + zone_width)
+
+    # Count levels in the zone — use the already-loaded nearby_levels
+    zone_lo = min(zone_inner, zone_outer)
+    zone_hi = max(zone_inner, zone_outer)
+    zone_in_range = [l for l in nearby_levels if zone_lo <= l.price_level <= zone_hi]
+    zone_level_count = len(zone_in_range)
+    structural_set = {'Fractal_support', 'Fractal_resistance', 'HTF_level', 'Fib_CC'}
+    zone_structural = sum(1 for l in zone_in_range if l.level_type in structural_set)
+    zone_prevsession = sum(1 for l in zone_in_range if l.level_type.startswith('PrevSession'))
+    zone_vp = sum(1 for l in zone_in_range if l.level_type.startswith('VP_'))
+
+    # Entry/exit condition explanation
+    risk_pct = abs(trade.entry_price - trade.stop_loss) / trade.entry_price * 100
+    strategy = bt.strategy_name if bt else 'wick_rr_1.0'
+    rr_str = strategy.replace('wick_rr_', '') if strategy else '1.0'
+
+    entry_explanation = (
+        f"Wick touched {bt.level_type} ({bt.level_source_timeframe}) at "
+        f"${level_price:,.0f}. "
+        f"SL = entry candle wick {'low' if trade.direction == 'LONG' else 'high'} "
+        f"+ 0.1% buffer (${trade.stop_loss:,.0f}, risk {risk_pct:.2f}%). "
+        f"TP = {rr_str}:1 RR (${trade.take_profit:,.0f})."
+    ) if bt else ''
+
+    exit_explanation = (
+        f"{'TP hit' if trade.exit_reason == 'TP_HIT' else 'SL hit'} "
+        f"at ${trade.exit_price:,.0f} after {trade.candles_held or '?'} candles."
+    )
 
     return jsonify({
         'candles': chart_candles,
@@ -412,10 +519,19 @@ def api_trade_explorer_chart(trade_id):
             'take_profit': trade.take_profit,
             'direction': trade.direction,
             'exit_reason': trade.exit_reason,
-            'level_price': getattr(trade, 'level_price', None) or trade.entry_price,
+            'level_price': level_price,
             'level_type': bt.level_type if bt else None,
             'level_tf': bt.level_source_timeframe if bt else None,
             'pnl_pct': round(trade.pnl_pct * 100, 2) if trade.pnl_pct else 0,
+            'zone_inner': zone_inner,
+            'zone_outer': zone_outer,
+            'zone_level_count': zone_level_count,
+            'zone_structural': zone_structural,
+            'zone_prevsession': zone_prevsession,
+            'zone_vp': zone_vp,
+            'entry_explanation': entry_explanation,
+            'exit_explanation': exit_explanation,
+            'strategy': strategy,
         },
     })
 

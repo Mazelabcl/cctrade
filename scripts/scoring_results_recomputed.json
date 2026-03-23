@@ -1,0 +1,794 @@
+[
+  {
+    "exec_tf": "4h",
+    "min_score": 7.0,
+    "level_filter": "htf_no_igor",
+    "total_setups": 18123,
+    "total_trades": 18123,
+    "wins": 9253,
+    "losses": 8865,
+    "timeouts": 5,
+    "win_rate": 51.1,
+    "profit_factor": 0.89,
+    "total_pnl_pct": -1020.04,
+    "avg_score": 14.24,
+    "avg_winner_score": 14.22,
+    "avg_loser_score": 14.26,
+    "by_level_type": {
+      "Fib_CC": {
+        "trades": 13,
+        "win_rate": 46.2,
+        "avg_score": 12.885536500872083
+      },
+      "Fractal_resistance": {
+        "trades": 546,
+        "win_rate": 79.9,
+        "avg_score": 16.049794037001323
+      },
+      "Fractal_support": {
+        "trades": 422,
+        "win_rate": 77.7,
+        "avg_score": 16.187102149051718
+      },
+      "HTF_level": {
+        "trades": 66,
+        "win_rate": 63.6,
+        "avg_score": 13.669181536009347
+      },
+      "PrevSession_25": {
+        "trades": 1538,
+        "win_rate": 49.6,
+        "avg_score": 14.183149596072806
+      },
+      "PrevSession_75": {
+        "trades": 2162,
+        "win_rate": 48.5,
+        "avg_score": 14.57824097533288
+      },
+      "PrevSession_EQ": {
+        "trades": 1526,
+        "win_rate": 48.9,
+        "avg_score": 14.620734753176372
+      },
+      "PrevSession_High": {
+        "trades": 1255,
+        "win_rate": 48.4,
+        "avg_score": 13.884394617903647
+      },
+      "PrevSession_Low": {
+        "trades": 916,
+        "win_rate": 52.8,
+        "avg_score": 13.573667157093869
+      },
+      "PrevSession_VP_POC": {
+        "trades": 947,
+        "win_rate": 49.8,
+        "avg_score": 14.333917533152219
+      },
+      "PrevSession_VP_VAH": {
+        "trades": 1161,
+        "win_rate": 49.3,
+        "avg_score": 14.3344165111516
+      },
+      "PrevSession_VP_VAL": {
+        "trades": 1267,
+        "win_rate": 49.4,
+        "avg_score": 14.377285292743414
+      },
+      "PrevSession_VWAP": {
+        "trades": 2735,
+        "win_rate": 49.5,
+        "avg_score": 14.820240719909808
+      },
+      "VP_POC": {
+        "trades": 209,
+        "win_rate": 44.5,
+        "avg_score": 10.182645483322226
+      },
+      "VP_VAH": {
+        "trades": 1540,
+        "win_rate": 46.8,
+        "avg_score": 13.182233803336345
+      },
+      "VP_VAL": {
+        "trades": 1820,
+        "win_rate": 52.5,
+        "avg_score": 13.444951802455662
+      }
+    },
+    "elapsed_sec": 101.2
+  },
+  {
+    "exec_tf": "4h",
+    "min_score": 8.0,
+    "level_filter": "htf_no_igor",
+    "total_setups": 17932,
+    "total_trades": 17932,
+    "wins": 9151,
+    "losses": 8776,
+    "timeouts": 5,
+    "win_rate": 51.0,
+    "profit_factor": 0.89,
+    "total_pnl_pct": -975.8,
+    "avg_score": 14.31,
+    "avg_winner_score": 14.29,
+    "avg_loser_score": 14.33,
+    "by_level_type": {
+      "Fib_CC": {
+        "trades": 12,
+        "win_rate": 50.0,
+        "avg_score": 13.29945545135845
+      },
+      "Fractal_resistance": {
+        "trades": 546,
+        "win_rate": 79.9,
+        "avg_score": 16.049794037001323
+      },
+      "Fractal_support": {
+        "trades": 422,
+        "win_rate": 77.7,
+        "avg_score": 16.187102149051718
+      },
+      "HTF_level": {
+        "trades": 66,
+        "win_rate": 63.6,
+        "avg_score": 13.669181536009347
+      },
+      "PrevSession_25": {
+        "trades": 1529,
+        "win_rate": 49.6,
+        "avg_score": 14.222133579624405
+      },
+      "PrevSession_75": {
+        "trades": 2159,
+        "win_rate": 48.5,
+        "avg_score": 14.587782297572762
+      },
+      "PrevSession_EQ": {
+        "trades": 1525,
+        "win_rate": 48.9,
+        "avg_score": 14.625484855279783
+      },
+      "PrevSession_High": {
+        "trades": 1243,
+        "win_rate": 48.4,
+        "avg_score": 13.944577871179177
+      },
+      "PrevSession_Low": {
+        "trades": 899,
+        "win_rate": 52.8,
+        "avg_score": 13.686262431205176
+      },
+      "PrevSession_VP_POC": {
+        "trades": 945,
+        "win_rate": 49.7,
+        "avg_score": 14.348350011030686
+      },
+      "PrevSession_VP_VAH": {
+        "trades": 1157,
+        "win_rate": 49.2,
+        "avg_score": 14.35782438981825
+      },
+      "PrevSession_VP_VAL": {
+        "trades": 1260,
+        "win_rate": 49.4,
+        "avg_score": 14.413988433772667
+      },
+      "PrevSession_VWAP": {
+        "trades": 2731,
+        "win_rate": 49.5,
+        "avg_score": 14.831164432164474
+      },
+      "VP_POC": {
+        "trades": 167,
+        "win_rate": 43.1,
+        "avg_score": 10.849135872408741
+      },
+      "VP_VAH": {
+        "trades": 1494,
+        "win_rate": 46.3,
+        "avg_score": 13.356792409008838
+      },
+      "VP_VAL": {
+        "trades": 1777,
+        "win_rate": 52.7,
+        "avg_score": 13.588693718299156
+      }
+    },
+    "elapsed_sec": 104.5
+  },
+  {
+    "exec_tf": "4h",
+    "min_score": 9.0,
+    "level_filter": "htf_no_igor",
+    "total_setups": 17643,
+    "total_trades": 17643,
+    "wins": 8995,
+    "losses": 8644,
+    "timeouts": 4,
+    "win_rate": 51.0,
+    "profit_factor": 0.9,
+    "total_pnl_pct": -906.41,
+    "avg_score": 14.4,
+    "avg_winner_score": 14.39,
+    "avg_loser_score": 14.42,
+    "by_level_type": {
+      "Fib_CC": {
+        "trades": 11,
+        "win_rate": 45.5,
+        "avg_score": 13.77629768739361
+      },
+      "Fractal_resistance": {
+        "trades": 546,
+        "win_rate": 79.9,
+        "avg_score": 16.049794037001323
+      },
+      "Fractal_support": {
+        "trades": 422,
+        "win_rate": 77.7,
+        "avg_score": 16.187102149051718
+      },
+      "HTF_level": {
+        "trades": 64,
+        "win_rate": 62.5,
+        "avg_score": 13.837364500687578
+      },
+      "PrevSession_25": {
+        "trades": 1512,
+        "win_rate": 49.5,
+        "avg_score": 14.28661792239412
+      },
+      "PrevSession_75": {
+        "trades": 2148,
+        "win_rate": 48.3,
+        "avg_score": 14.619329909765511
+      },
+      "PrevSession_EQ": {
+        "trades": 1518,
+        "win_rate": 48.8,
+        "avg_score": 14.653775026305704
+      },
+      "PrevSession_High": {
+        "trades": 1216,
+        "win_rate": 47.7,
+        "avg_score": 14.062955772559173
+      },
+      "PrevSession_Low": {
+        "trades": 868,
+        "win_rate": 52.3,
+        "avg_score": 13.871657319924255
+      },
+      "PrevSession_VP_POC": {
+        "trades": 940,
+        "win_rate": 49.9,
+        "avg_score": 14.379228088948707
+      },
+      "PrevSession_VP_VAH": {
+        "trades": 1145,
+        "win_rate": 49.2,
+        "avg_score": 14.418220187627762
+      },
+      "PrevSession_VP_VAL": {
+        "trades": 1247,
+        "win_rate": 49.1,
+        "avg_score": 14.474646471929159
+      },
+      "PrevSession_VWAP": {
+        "trades": 2725,
+        "win_rate": 49.4,
+        "avg_score": 14.844910153884785
+      },
+      "VP_POC": {
+        "trades": 136,
+        "win_rate": 44.9,
+        "avg_score": 11.3916109235777
+      },
+      "VP_VAH": {
+        "trades": 1433,
+        "win_rate": 46.2,
+        "avg_score": 13.562398246532625
+      },
+      "VP_VAL": {
+        "trades": 1712,
+        "win_rate": 53.2,
+        "avg_score": 13.781832379228144
+      }
+    },
+    "elapsed_sec": 102.4
+  },
+  {
+    "exec_tf": "4h",
+    "min_score": 10.0,
+    "level_filter": "htf_no_igor",
+    "total_setups": 17173,
+    "total_trades": 17173,
+    "wins": 8743,
+    "losses": 8426,
+    "timeouts": 4,
+    "win_rate": 50.9,
+    "profit_factor": 0.9,
+    "total_pnl_pct": -830.16,
+    "avg_score": 14.54,
+    "avg_winner_score": 14.53,
+    "avg_loser_score": 14.54,
+    "by_level_type": {
+      "Fib_CC": {
+        "trades": 11,
+        "win_rate": 45.5,
+        "avg_score": 13.77629768739361
+      },
+      "Fractal_resistance": {
+        "trades": 543,
+        "win_rate": 79.9,
+        "avg_score": 16.084120188299778
+      },
+      "Fractal_support": {
+        "trades": 420,
+        "win_rate": 78.1,
+        "avg_score": 16.21865069771989
+      },
+      "HTF_level": {
+        "trades": 63,
+        "win_rate": 61.9,
+        "avg_score": 13.90886884032852
+      },
+      "PrevSession_25": {
+        "trades": 1477,
+        "win_rate": 49.7,
+        "avg_score": 14.398425023457335
+      },
+      "PrevSession_75": {
+        "trades": 2121,
+        "win_rate": 48.0,
+        "avg_score": 14.683257378359185
+      },
+      "PrevSession_EQ": {
+        "trades": 1498,
+        "win_rate": 48.9,
+        "avg_score": 14.723093986845038
+      },
+      "PrevSession_High": {
+        "trades": 1173,
+        "win_rate": 47.4,
+        "avg_score": 14.228637536314519
+      },
+      "PrevSession_Low": {
+        "trades": 823,
+        "win_rate": 52.0,
+        "avg_score": 14.110027554355097
+      },
+      "PrevSession_VP_POC": {
+        "trades": 925,
+        "win_rate": 49.6,
+        "avg_score": 14.456661976443216
+      },
+      "PrevSession_VP_VAH": {
+        "trades": 1127,
+        "win_rate": 49.2,
+        "avg_score": 14.495742366295145
+      },
+      "PrevSession_VP_VAL": {
+        "trades": 1230,
+        "win_rate": 48.9,
+        "avg_score": 14.542451340681888
+      },
+      "PrevSession_VWAP": {
+        "trades": 2709,
+        "win_rate": 49.3,
+        "avg_score": 14.875905119046326
+      },
+      "VP_POC": {
+        "trades": 102,
+        "win_rate": 42.2,
+        "avg_score": 12.016671935153243
+      },
+      "VP_VAH": {
+        "trades": 1340,
+        "win_rate": 46.0,
+        "avg_score": 13.843216071173783
+      },
+      "VP_VAL": {
+        "trades": 1611,
+        "win_rate": 53.3,
+        "avg_score": 14.04854594011331
+      }
+    },
+    "elapsed_sec": 101.5
+  },
+  {
+    "exec_tf": "1h",
+    "min_score": 7.0,
+    "level_filter": "htf_no_igor",
+    "total_setups": 72422,
+    "total_trades": 72422,
+    "wins": 29431,
+    "losses": 42981,
+    "timeouts": 10,
+    "win_rate": 40.6,
+    "profit_factor": 0.96,
+    "total_pnl_pct": -1015.38,
+    "avg_score": 14.37,
+    "avg_winner_score": 14.33,
+    "avg_loser_score": 14.39,
+    "by_level_type": {
+      "Fib_CC": {
+        "trades": 56,
+        "win_rate": 46.4,
+        "avg_score": 13.129172276237593
+      },
+      "Fractal_resistance": {
+        "trades": 1096,
+        "win_rate": 73.4,
+        "avg_score": 16.025901405737823
+      },
+      "Fractal_support": {
+        "trades": 794,
+        "win_rate": 71.9,
+        "avg_score": 16.087950824146873
+      },
+      "HTF_level": {
+        "trades": 336,
+        "win_rate": 40.5,
+        "avg_score": 14.169031999725421
+      },
+      "PrevSession_25": {
+        "trades": 6687,
+        "win_rate": 39.9,
+        "avg_score": 14.435747341034308
+      },
+      "PrevSession_75": {
+        "trades": 8878,
+        "win_rate": 39.3,
+        "avg_score": 14.777103521672515
+      },
+      "PrevSession_EQ": {
+        "trades": 6219,
+        "win_rate": 40.3,
+        "avg_score": 14.77333266547359
+      },
+      "PrevSession_High": {
+        "trades": 4794,
+        "win_rate": 40.7,
+        "avg_score": 14.236340285740654
+      },
+      "PrevSession_Low": {
+        "trades": 3447,
+        "win_rate": 40.6,
+        "avg_score": 13.880224316440131
+      },
+      "PrevSession_VP_POC": {
+        "trades": 4235,
+        "win_rate": 40.2,
+        "avg_score": 14.519604302013118
+      },
+      "PrevSession_VP_VAH": {
+        "trades": 4973,
+        "win_rate": 39.6,
+        "avg_score": 14.508681138714268
+      },
+      "PrevSession_VP_VAL": {
+        "trades": 5011,
+        "win_rate": 39.6,
+        "avg_score": 14.565312604489183
+      },
+      "PrevSession_VWAP": {
+        "trades": 10651,
+        "win_rate": 38.9,
+        "avg_score": 15.021334465393288
+      },
+      "VP_POC": {
+        "trades": 1997,
+        "win_rate": 31.5,
+        "avg_score": 11.249040600043983
+      },
+      "VP_VAH": {
+        "trades": 6406,
+        "win_rate": 37.8,
+        "avg_score": 13.506700440869682
+      },
+      "VP_VAL": {
+        "trades": 6842,
+        "win_rate": 44.3,
+        "avg_score": 13.641722069940473
+      }
+    },
+    "elapsed_sec": 377.9
+  },
+  {
+    "exec_tf": "1h",
+    "min_score": 8.0,
+    "level_filter": "htf_no_igor",
+    "total_setups": 71865,
+    "total_trades": 71865,
+    "wins": 29176,
+    "losses": 42679,
+    "timeouts": 10,
+    "win_rate": 40.6,
+    "profit_factor": 0.96,
+    "total_pnl_pct": -1120.07,
+    "avg_score": 14.42,
+    "avg_winner_score": 14.39,
+    "avg_loser_score": 14.44,
+    "by_level_type": {
+      "Fib_CC": {
+        "trades": 55,
+        "win_rate": 45.5,
+        "avg_score": 13.239513783113756
+      },
+      "Fractal_resistance": {
+        "trades": 1096,
+        "win_rate": 73.4,
+        "avg_score": 16.025901405737823
+      },
+      "Fractal_support": {
+        "trades": 794,
+        "win_rate": 71.9,
+        "avg_score": 16.087950824146873
+      },
+      "HTF_level": {
+        "trades": 336,
+        "win_rate": 40.5,
+        "avg_score": 14.169031999725421
+      },
+      "PrevSession_25": {
+        "trades": 6665,
+        "win_rate": 39.9,
+        "avg_score": 14.45843615253052
+      },
+      "PrevSession_75": {
+        "trades": 8867,
+        "win_rate": 39.2,
+        "avg_score": 14.786153390753139
+      },
+      "PrevSession_EQ": {
+        "trades": 6213,
+        "win_rate": 40.3,
+        "avg_score": 14.780412834454564
+      },
+      "PrevSession_High": {
+        "trades": 4767,
+        "win_rate": 40.7,
+        "avg_score": 14.273947583449962
+      },
+      "PrevSession_Low": {
+        "trades": 3401,
+        "win_rate": 40.5,
+        "avg_score": 13.965398018814154
+      },
+      "PrevSession_VP_POC": {
+        "trades": 4227,
+        "win_rate": 40.2,
+        "avg_score": 14.532692096073601
+      },
+      "PrevSession_VP_VAH": {
+        "trades": 4965,
+        "win_rate": 39.5,
+        "avg_score": 14.519385075033275
+      },
+      "PrevSession_VP_VAL": {
+        "trades": 4998,
+        "win_rate": 39.6,
+        "avg_score": 14.583826428789
+      },
+      "PrevSession_VWAP": {
+        "trades": 10643,
+        "win_rate": 38.9,
+        "avg_score": 15.02699347227711
+      },
+      "VP_POC": {
+        "trades": 1814,
+        "win_rate": 30.0,
+        "avg_score": 11.626156148235284
+      },
+      "VP_VAH": {
+        "trades": 6294,
+        "win_rate": 37.8,
+        "avg_score": 13.61317335669389
+      },
+      "VP_VAL": {
+        "trades": 6730,
+        "win_rate": 44.2,
+        "avg_score": 13.74316500541594
+      }
+    },
+    "elapsed_sec": 397.5
+  },
+  {
+    "exec_tf": "1h",
+    "min_score": 9.0,
+    "level_filter": "htf_no_igor",
+    "total_setups": 70938,
+    "total_trades": 70938,
+    "wins": 28798,
+    "losses": 42130,
+    "timeouts": 10,
+    "win_rate": 40.6,
+    "profit_factor": 0.96,
+    "total_pnl_pct": -1049.75,
+    "avg_score": 14.5,
+    "avg_winner_score": 14.46,
+    "avg_loser_score": 14.52,
+    "by_level_type": {
+      "Fib_CC": {
+        "trades": 54,
+        "win_rate": 46.3,
+        "avg_score": 13.31837724410608
+      },
+      "Fractal_resistance": {
+        "trades": 1095,
+        "win_rate": 73.3,
+        "avg_score": 16.03295826210776
+      },
+      "Fractal_support": {
+        "trades": 793,
+        "win_rate": 71.9,
+        "avg_score": 16.097447646498814
+      },
+      "HTF_level": {
+        "trades": 332,
+        "win_rate": 40.1,
+        "avg_score": 14.235066756930854
+      },
+      "PrevSession_25": {
+        "trades": 6607,
+        "win_rate": 39.9,
+        "avg_score": 14.51018355703699
+      },
+      "PrevSession_75": {
+        "trades": 8834,
+        "win_rate": 39.1,
+        "avg_score": 14.809358913862493
+      },
+      "PrevSession_EQ": {
+        "trades": 6194,
+        "win_rate": 40.3,
+        "avg_score": 14.799753687793444
+      },
+      "PrevSession_High": {
+        "trades": 4713,
+        "win_rate": 40.5,
+        "avg_score": 14.338723947427935
+      },
+      "PrevSession_Low": {
+        "trades": 3320,
+        "win_rate": 40.3,
+        "avg_score": 14.097297589168953
+      },
+      "PrevSession_VP_POC": {
+        "trades": 4211,
+        "win_rate": 40.2,
+        "avg_score": 14.555654578467115
+      },
+      "PrevSession_VP_VAH": {
+        "trades": 4942,
+        "win_rate": 39.4,
+        "avg_score": 14.546750528901581
+      },
+      "PrevSession_VP_VAL": {
+        "trades": 4959,
+        "win_rate": 39.6,
+        "avg_score": 14.631349658869825
+      },
+      "PrevSession_VWAP": {
+        "trades": 10631,
+        "win_rate": 38.9,
+        "avg_score": 15.034354132367076
+      },
+      "VP_POC": {
+        "trades": 1612,
+        "win_rate": 29.0,
+        "avg_score": 12.012976759328705
+      },
+      "VP_VAH": {
+        "trades": 6091,
+        "win_rate": 37.8,
+        "avg_score": 13.782047811920751
+      },
+      "VP_VAL": {
+        "trades": 6550,
+        "win_rate": 44.5,
+        "avg_score": 13.88632022421094
+      }
+    },
+    "elapsed_sec": 361.4
+  },
+  {
+    "exec_tf": "1h",
+    "min_score": 10.0,
+    "level_filter": "htf_no_igor",
+    "total_setups": 69503,
+    "total_trades": 69503,
+    "wins": 28187,
+    "losses": 41307,
+    "timeouts": 9,
+    "win_rate": 40.6,
+    "profit_factor": 0.96,
+    "total_pnl_pct": -1033.53,
+    "avg_score": 14.6,
+    "avg_winner_score": 14.57,
+    "avg_loser_score": 14.62,
+    "by_level_type": {
+      "Fib_CC": {
+        "trades": 50,
+        "win_rate": 46.0,
+        "avg_score": 13.614235974420664
+      },
+      "Fractal_resistance": {
+        "trades": 1094,
+        "win_rate": 73.4,
+        "avg_score": 16.038739329139364
+      },
+      "Fractal_support": {
+        "trades": 792,
+        "win_rate": 72.0,
+        "avg_score": 16.105153276326348
+      },
+      "HTF_level": {
+        "trades": 329,
+        "win_rate": 39.8,
+        "avg_score": 14.274619419144775
+      },
+      "PrevSession_25": {
+        "trades": 6524,
+        "win_rate": 39.7,
+        "avg_score": 14.573883904623674
+      },
+      "PrevSession_75": {
+        "trades": 8771,
+        "win_rate": 39.0,
+        "avg_score": 14.847026105024522
+      },
+      "PrevSession_EQ": {
+        "trades": 6139,
+        "win_rate": 40.2,
+        "avg_score": 14.846289773587111
+      },
+      "PrevSession_High": {
+        "trades": 4614,
+        "win_rate": 40.4,
+        "avg_score": 14.44114797580514
+      },
+      "PrevSession_Low": {
+        "trades": 3211,
+        "win_rate": 40.3,
+        "avg_score": 14.25450926991306
+      },
+      "PrevSession_VP_POC": {
+        "trades": 4174,
+        "win_rate": 40.1,
+        "avg_score": 14.600162116504038
+      },
+      "PrevSession_VP_VAH": {
+        "trades": 4887,
+        "win_rate": 39.3,
+        "avg_score": 14.602962819967145
+      },
+      "PrevSession_VP_VAL": {
+        "trades": 4890,
+        "win_rate": 39.4,
+        "avg_score": 14.703451712801357
+      },
+      "PrevSession_VWAP": {
+        "trades": 10586,
+        "win_rate": 38.9,
+        "avg_score": 15.057803710519556
+      },
+      "VP_POC": {
+        "trades": 1376,
+        "win_rate": 28.6,
+        "avg_score": 12.441234946049
+      },
+      "VP_VAH": {
+        "trades": 5811,
+        "win_rate": 37.9,
+        "avg_score": 13.9869913044347
+      },
+      "VP_VAL": {
+        "trades": 6255,
+        "win_rate": 44.6,
+        "avg_score": 14.090996007935363
+      }
+    },
+    "elapsed_sec": 323.5
+  }
+]

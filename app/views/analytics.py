@@ -281,12 +281,13 @@ def api_scoring_analysis():
 def api_mfe():
     """JSON: MFE analysis data from saved results files."""
     import json
+    import pandas as pd
     from pathlib import Path
 
     root = Path(__file__).resolve().parent.parent.parent
     data = {}
 
-    for tf in ['4h', '1h']:
+    for tf in ['4h', '1h', '30m', '15m']:
         fpath = root / f'scripts/mfe_results{"_" + tf if tf != "4h" else ""}.json'
         if not fpath.exists():
             fpath = root / f'scripts/mfe_results_{tf}.json'
@@ -338,5 +339,38 @@ def api_mfe():
                 'mean_candles_to_max': round(df['candles_to_max'].mean(), 0),
                 'median_candles_to_max': round(df['candles_to_max'].median(), 0),
             }
+
+    return jsonify(data)
+
+
+# ---------------------------------------------------------------------------
+# Tab 6: Backtest Breakdown by Source Timeframe
+# ---------------------------------------------------------------------------
+
+@analytics_bp.route('/api/backtest-breakdown')
+def api_backtest_breakdown():
+    """JSON: backtest WR broken down by level_type x source_tf x exec_tf."""
+    strategy = request.args.get('strategy', 'wick_rr_1.0')
+
+    rows = db.session.execute(text("""
+        SELECT level_type, level_source_timeframe, trade_execution_timeframe,
+               total_trades, win_rate, profit_factor
+        FROM individual_level_backtests
+        WHERE status = 'completed' AND strategy_name = :strategy
+        AND total_trades >= 5
+        ORDER BY level_type, level_source_timeframe, trade_execution_timeframe
+    """), {'strategy': strategy}).fetchall()
+
+    data = []
+    for lt, stf, etf, trades, wr, pf in rows:
+        pf_val = float(pf) if pf and pf != float('inf') else 0
+        data.append({
+            'level_type': lt,
+            'source_tf': stf,
+            'exec_tf': etf,
+            'trades': trades,
+            'win_rate': round(wr, 1) if wr else 0,
+            'profit_factor': round(pf_val, 2) if pf_val < 100 else 99.99,
+        })
 
     return jsonify(data)

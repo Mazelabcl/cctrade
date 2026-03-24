@@ -31,11 +31,18 @@
   <li class="nav-item">
     <a class="nav-link" data-bs-toggle="tab" href="#tab-mfe">MFE Analysis</a>
   </li>
+  <li class="nav-item">
+    <a class="nav-link" data-bs-toggle="tab" href="#tab-breakdown">Level Breakdown</a>
+  </li>
 </ul>
 
 <div class="tab-content">
   <!-- TAB 1: Backtest Results -->
   <div class="tab-pane fade show active" id="tab-backtests">
+    <div class="alert alert-info py-2 mb-2" style="font-size:0.8rem">
+      <strong>TLDR:</strong> Heatmap de Win Rate por tipo de nivel y timeframe. <strong>Rojo = malo, Verde = bueno.</strong>
+      Los Fractals (support/resistance) son los mejores niveles (~75-80% WR). VP_POC es el peor (<30%). Cada celda muestra WR% y cantidad de trades.
+    </div>
     <div class="d-flex gap-2 mb-3">
       <select id="strategySelect" class="form-select form-select-sm" style="width:180px">
         <option value="wick_rr_1.0" selected>RR 1:1</option>
@@ -57,6 +64,12 @@
 
   <!-- TAB 2: Feature Distribution -->
   <div class="tab-pane fade" id="tab-features">
+    <div class="alert alert-info py-2 mb-2" style="font-size:0.8rem">
+      <strong>TLDR:</strong> Muestra que tan lejos esta cada vela del nivel mas cercano y cuantos niveles hay en la zona.
+      <strong>"Avg Sup Dist 0.3%"</strong> = en promedio, el soporte mas cercano esta a 0.3% del precio.
+      <strong>"Within 0.5%"</strong> = X% de las velas tienen un nivel a menos de 0.5%.
+      Si es muy alto (~80%+), significa que siempre hay niveles cerca y no son tan especiales.
+    </div>
     <div id="featureStats" class="row g-2 mb-3"></div>
     <div class="row g-3">
       <div class="col-md-6">
@@ -73,6 +86,12 @@
 
   <!-- TAB 3: Level Density -->
   <div class="tab-pane fade" id="tab-density">
+    <div class="alert alert-info py-2 mb-2" style="font-size:0.8rem">
+      <strong>TLDR:</strong> Cuantos niveles "activos" (no tocados) existen en cada momento.
+      <strong>Structural</strong> = Fractals, HTF, Fib CC (niveles permanentes que desaparecen al ser tocados).
+      <strong>Mobile</strong> = PrevSession, VP (se reemplazan cada periodo, solo el mas reciente cuenta).
+      Si los mobile son muchos mas que los structural, el mercado esta lleno de "ruido" de niveles.
+    </div>
     <div class="row g-3">
       <div class="col-12">
         <div id="densityTimeChart" class="plotly-chart"></div>
@@ -85,6 +104,12 @@
 
   <!-- TAB 5: MFE Analysis -->
   <div class="tab-pane fade" id="tab-mfe">
+    <div class="alert alert-info py-2 mb-2" style="font-size:0.8rem">
+      <strong>TLDR:</strong> MFE = Maximum Favorable Excursion = cuanto subio cada trade ANTES de que el SL lo sacara.
+      <strong>"Median Max RR 4.6:1"</strong> = la mitad de los trades alcanzaron al menos 4.6 veces el riesgo. Si cerraste a 1:1, dejaste 3.6R en la mesa.
+      <strong>"R"</strong> = unidades de riesgo. Si arriesgas $100 (distancia entry-SL), 5R = $500 de ganancia.
+      <strong>Money Left on Table</strong> = cuanto mas pudiste haber ganado vs donde realmente cerraste.
+    </div>
     <div id="mfeStats" class="row g-2 mb-3"></div>
     <div class="row g-3">
       <div class="col-md-6">
@@ -104,6 +129,12 @@
 
   <!-- TAB 4: Scoring Analysis -->
   <div class="tab-pane fade" id="tab-scoring">
+    <div class="alert alert-info py-2 mb-2" style="font-size:0.8rem">
+      <strong>TLDR:</strong> El scoring engine puntua cada trade (0-20 pts) segun tipo de nivel, volumen, confluencia y precision.
+      <strong>Score vs PnL</strong> = scatter que muestra si trades con mayor score ganan mas (deberian estar arriba-derecha).
+      <strong>Violin WIN vs LOSS</strong> = distribucion de scores de ganadores vs perdedores. Si las distribuciones se separan, el score funciona.
+      <strong>Equity curves</strong> = PnL acumulado filtrando por score minimo. Si Score>=7 sube y Score>=0 baja, el filtro funciona.
+    </div>
     <div class="row g-3">
       <div class="col-md-6">
         <div id="scoreScatterChart" class="plotly-chart"></div>
@@ -113,6 +144,54 @@
       </div>
       <div class="col-12">
         <div id="equityCurveChart" class="plotly-chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 6: Level Breakdown by Source TF -->
+  <div class="tab-pane fade" id="tab-breakdown">
+    <div class="alert alert-info py-2 mb-2" style="font-size:0.8rem">
+      <strong>TLDR:</strong> Desglosa el rendimiento de cada tipo de nivel por su timeframe de origen (daily/weekly/monthly).
+      <strong>Fractal_support WEEKLY tiene PF 15.39 en 4h</strong> = el santo grial del sistema.
+      <strong>PF (Profit Factor)</strong> = ganancia bruta / perdida bruta. PF > 2 = excelente. PF < 1 = pierde dinero.
+      Cada barra muestra WR% y el color indica calidad (verde > 50%, amarillo 40-50%, rojo < 40%).
+    </div>
+    <div class="row g-2 mb-3">
+      <div class="col-auto">
+        <label class="form-label mb-0 small">Exec TF</label>
+        <select id="breakdownExecTf" class="form-select form-select-sm" style="width:100px">
+          <option value="4h" selected>4h</option>
+          <option value="1h">1h</option>
+          <option value="30m">30m</option>
+          <option value="15m">15m</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="form-label mb-0 small">Level Category</label>
+        <select id="breakdownCategory" class="form-select form-select-sm" style="width:150px">
+          <option value="all" selected>All</option>
+          <option value="fractal">Fractals</option>
+          <option value="htf">HTF + Fib</option>
+          <option value="prevsession">PrevSession</option>
+          <option value="vp">Volume Profile</option>
+        </select>
+      </div>
+      <div class="col-auto d-flex align-items-end">
+        <button id="btnLoadBreakdown" class="btn btn-primary btn-sm">Load</button>
+      </div>
+    </div>
+    <div class="row g-3">
+      <div class="col-12">
+        <div id="breakdownChart" class="plotly-chart" style="min-height:500px"></div>
+      </div>
+      <div class="col-12">
+        <div id="breakdownPFChart" class="plotly-chart" style="min-height:400px"></div>
+      </div>
+      <div class="col-12">
+        <table class="table table-sm table-dark" id="breakdownTable" style="font-size:0.75rem">
+          <thead><tr><th>Level Type</th><th>Source TF</th><th>Exec TF</th><th>Trades</th><th>WR%</th><th>PF</th><th>Rating</th></tr></thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -454,8 +533,62 @@ async function loadMFE() {
   }
 }
 
+// ---- TAB 6: Level Breakdown ----
+async function loadBreakdown() {
+  const resp = await fetch('/analytics/api/backtest-breakdown');
+  const allData = await resp.json();
+
+  const execTf = document.getElementById('breakdownExecTf').value;
+  const cat = document.getElementById('breakdownCategory').value;
+
+  // Filter
+  let data = allData.filter(d => d.exec_tf === execTf);
+  if (cat === 'fractal') data = data.filter(d => d.level_type.startsWith('Fractal'));
+  else if (cat === 'htf') data = data.filter(d => ['HTF_level','Fib_CC','Fib_0.25','Fib_0.50','Fib_0.75'].includes(d.level_type));
+  else if (cat === 'prevsession') data = data.filter(d => d.level_type.startsWith('PrevSession'));
+  else if (cat === 'vp') data = data.filter(d => d.level_type.startsWith('VP_'));
+
+  // Sort by WR descending
+  data.sort((a, b) => b.win_rate - a.win_rate);
+
+  const labels = data.map(d => `${d.level_type} (${d.source_tf})`);
+  const wrColors = data.map(d => d.win_rate >= 60 ? '#00e676' : d.win_rate >= 50 ? '#66bb6a' : d.win_rate >= 40 ? '#ffd740' : '#ff5252');
+
+  Plotly.newPlot('breakdownChart', [{
+    x: labels, y: data.map(d => d.win_rate), type: 'bar',
+    marker: { color: wrColors },
+    text: data.map(d => `${d.win_rate}% (${d.trades}t)`),
+    textposition: 'outside',
+  }], darkLayout(`Win Rate by Level Type + Source TF (exec: ${execTf})`, {
+    xaxis: { ...DARK.xaxis, tickangle: -45 },
+    yaxis: { ...DARK.yaxis, title: 'Win Rate %', range: [0, 110] },
+    margin: { ...DARK.margin, b: 120 },
+  }));
+
+  // PF chart
+  const pfColors = data.map(d => d.profit_factor >= 2 ? '#00e676' : d.profit_factor >= 1 ? '#ffd740' : '#ff5252');
+  Plotly.newPlot('breakdownPFChart', [{
+    x: labels, y: data.map(d => Math.min(d.profit_factor, 20)), type: 'bar',
+    marker: { color: pfColors },
+    text: data.map(d => d.profit_factor >= 20 ? '20+' : `${d.profit_factor}`),
+    textposition: 'outside',
+  }], darkLayout(`Profit Factor by Level Type + Source TF (exec: ${execTf})`, {
+    xaxis: { ...DARK.xaxis, tickangle: -45 },
+    yaxis: { ...DARK.yaxis, title: 'Profit Factor (capped at 20)' },
+    margin: { ...DARK.margin, b: 120 },
+    shapes: [{ type: 'line', y0: 1, y1: 1, x0: 0, x1: 1, xref: 'paper', line: { color: '#ff1744', width: 1, dash: 'dot' } }],
+  }));
+
+  // Table
+  const tbody = document.querySelector('#breakdownTable tbody');
+  tbody.innerHTML = data.map(d => {
+    const rating = d.profit_factor >= 3 ? '🟢 Excellent' : d.profit_factor >= 1.5 ? '🟡 Good' : d.profit_factor >= 1 ? '🟠 Marginal' : '🔴 Loses money';
+    return `<tr><td>${d.level_type}</td><td>${d.source_tf}</td><td>${d.exec_tf}</td><td>${d.trades}</td><td>${d.win_rate}%</td><td>${d.profit_factor}</td><td>${rating}</td></tr>`;
+  }).join('');
+}
+
 // Tab switching: lazy-load data
-let loaded = { backtests: false, features: false, density: false, scoring: false, mfe: false };
+let loaded = { backtests: false, features: false, density: false, scoring: false, mfe: false, breakdown: false };
 document.querySelectorAll('#analyticsTabs a').forEach(tab => {
   tab.addEventListener('shown.bs.tab', e => {
     const id = e.target.getAttribute('href');
@@ -463,10 +596,12 @@ document.querySelectorAll('#analyticsTabs a').forEach(tab => {
     if (id === '#tab-density' && !loaded.density) { loadDensity(); loaded.density = true; }
     if (id === '#tab-scoring' && !loaded.scoring) { loadScoring(); loaded.scoring = true; }
     if (id === '#tab-mfe' && !loaded.mfe) { loadMFE(); loaded.mfe = true; }
+    if (id === '#tab-breakdown' && !loaded.breakdown) { loadBreakdown(); loaded.breakdown = true; }
   });
 });
 
 document.getElementById('btnLoadBT').addEventListener('click', loadBacktests);
+document.getElementById('btnLoadBreakdown').addEventListener('click', () => { loadBreakdown(); });
 
 // Auto-load first tab
 loadBacktests();

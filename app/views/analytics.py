@@ -374,3 +374,72 @@ def api_backtest_breakdown():
         })
 
     return jsonify(data)
+
+
+# ---------------------------------------------------------------------------
+# Tab 7: Trail Stop Analysis
+# ---------------------------------------------------------------------------
+
+@analytics_bp.route('/api/trail-stop')
+def api_trail_stop():
+    """JSON: trail stop results from saved JSON files."""
+    import json
+    from pathlib import Path
+    from collections import defaultdict
+
+    root = Path(__file__).resolve().parent.parent.parent
+    data = {}
+
+    for tf in ['4h', '1h', '30m', '15m']:
+        fpath = root / f'scripts/trail_stop_results_{tf}.json'
+        if not fpath.exists():
+            continue
+
+        with open(fpath) as f:
+            raw = json.load(f)
+
+        tf_data = {}
+        for strategy, trades in raw.items():
+            if not trades:
+                continue
+
+            pnls = [t['pnl_r'] for t in trades]
+            wins = [t for t in trades if t['pnl_r'] > 0]
+            losses = [t for t in trades if t['pnl_r'] <= 0]
+            gross_win = sum(t['pnl_r'] for t in wins) if wins else 0
+            gross_loss = abs(sum(t['pnl_r'] for t in losses)) if losses else 0
+            pf = round(gross_win / gross_loss, 2) if gross_loss > 0 else 99.99
+
+            overall = {
+                'trades': len(trades),
+                'wr': round(len(wins) / len(trades) * 100, 1) if trades else 0,
+                'avg_r': round(sum(pnls) / len(pnls), 2) if pnls else 0,
+                'median_r': round(sorted(pnls)[len(pnls) // 2], 2) if pnls else 0,
+                'total_r': round(sum(pnls), 0),
+                'pf': pf,
+            }
+
+            grouped = defaultdict(list)
+            for t in trades:
+                grouped[t['level_type']].append(t['pnl_r'])
+
+            by_type = {}
+            for lt, lt_pnls in grouped.items():
+                lt_wins = [p for p in lt_pnls if p > 0]
+                lt_losses = [p for p in lt_pnls if p <= 0]
+                lt_gw = sum(lt_wins) if lt_wins else 0
+                lt_gl = abs(sum(lt_losses)) if lt_losses else 0
+                by_type[lt] = {
+                    'trades': len(lt_pnls),
+                    'wr': round(len(lt_wins) / len(lt_pnls) * 100, 1),
+                    'avg_r': round(sum(lt_pnls) / len(lt_pnls), 2),
+                    'total_r': round(sum(lt_pnls), 0),
+                    'pf': round(lt_gw / lt_gl, 2) if lt_gl > 0 else 99.99,
+                }
+
+            tf_data[strategy] = {'overall': overall, 'by_type': by_type}
+
+        if tf_data:
+            data[tf] = tf_data
+
+    return jsonify(data)

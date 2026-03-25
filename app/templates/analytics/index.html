@@ -34,6 +34,9 @@
   <li class="nav-item">
     <a class="nav-link" data-bs-toggle="tab" href="#tab-breakdown">Level Breakdown</a>
   </li>
+  <li class="nav-item">
+    <a class="nav-link" data-bs-toggle="tab" href="#tab-trailstop">Trail Stop</a>
+  </li>
 </ul>
 
 <div class="tab-content">
@@ -190,6 +193,56 @@
       <div class="col-12">
         <table class="table table-sm table-dark" id="breakdownTable" style="font-size:0.75rem">
           <thead><tr><th>Level Type</th><th>Source TF</th><th>Exec TF</th><th>Trades</th><th>WR%</th><th>PF</th><th>Rating</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 7: Trail Stop Analysis -->
+  <div class="tab-pane fade" id="tab-trailstop">
+    <div class="alert alert-info py-2 mb-2" style="font-size:0.8rem">
+      <strong>TLDR:</strong> Compara estrategias de salida: en vez de cerrar el trade a un RR fijo (1:1), usamos trail stops que siguen al precio.
+      <strong>"Avg R"</strong> = ganancia promedio por trade en unidades de riesgo. Si arriesgas $100, Avg R de 1.94 = ganaste $194 en promedio.
+      <strong>"Total R"</strong> = suma de todas las ganancias/perdidas. Total R de +1,601 con $100 de riesgo = $160,100 de ganancia total.
+      <strong>Swing Trail</strong> = el SL sigue los swing lows (para LONG), capturando tendencias largas. Es la mejor estrategia para Fractals.
+      <strong>Breakeven Trail</strong> = mueve el SL al precio de entrada cuando el trade gana 1:1, eliminando el riesgo. Luego trail con swings.
+    </div>
+    <div class="row g-2 mb-3">
+      <div class="col-auto">
+        <label class="form-label mb-0 small">Exec TF</label>
+        <select id="tsExecTf" class="form-select form-select-sm" style="width:100px">
+          <option value="4h" selected>4h</option>
+          <option value="1h">1h</option>
+          <option value="30m">30m</option>
+          <option value="15m">15m</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="form-label mb-0 small">Strategy</label>
+        <select id="tsStrategy" class="form-select form-select-sm" style="width:180px">
+          <option value="swing_trail" selected>Swing Trail</option>
+          <option value="breakeven_trail">Breakeven Trail</option>
+          <option value="atr_trail_2.0">ATR Trail 2.0x</option>
+          <option value="atr_trail_1.5">ATR Trail 1.5x</option>
+          <option value="partial_50pct_2:1">Partial 50% @ 2:1</option>
+          <option value="original_1:1">Original 1:1 (baseline)</option>
+        </select>
+      </div>
+      <div class="col-auto d-flex align-items-end">
+        <button id="btnLoadTS" class="btn btn-primary btn-sm">Load</button>
+      </div>
+    </div>
+    <div class="row g-3">
+      <div class="col-12">
+        <div id="tsAvgRChart" class="plotly-chart" style="min-height:450px"></div>
+      </div>
+      <div class="col-12">
+        <div id="tsCompareChart" class="plotly-chart" style="min-height:400px"></div>
+      </div>
+      <div class="col-12">
+        <table class="table table-sm table-dark" id="tsTable" style="font-size:0.75rem">
+          <thead><tr><th>Level Type</th><th>Trades</th><th>WR%</th><th>Avg R</th><th>Total R</th><th>PF</th><th>Verdict</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -587,8 +640,83 @@ async function loadBreakdown() {
   }).join('');
 }
 
+// ---- TAB 7: Trail Stop ----
+let tsAllData = null;
+async function loadTrailStop() {
+  if (!tsAllData) {
+    const resp = await fetch('/analytics/api/trail-stop');
+    tsAllData = await resp.json();
+  }
+  const tf = document.getElementById('tsExecTf').value;
+  const strategy = document.getElementById('tsStrategy').value;
+
+  if (!tsAllData[tf] || !tsAllData[tf][strategy]) {
+    document.getElementById('tsAvgRChart').innerHTML = `<div class="text-center text-muted py-5">No data for ${tf} / ${strategy}</div>`;
+    return;
+  }
+
+  const byType = tsAllData[tf][strategy].by_type;
+  const overall = tsAllData[tf][strategy].overall;
+
+  // Sort by avg_r descending
+  const sorted = Object.entries(byType).sort((a, b) => b[1].avg_r - a[1].avg_r);
+  const labels = sorted.map(s => s[0]);
+  const avgRs = sorted.map(s => s[1].avg_r);
+  const colors = avgRs.map(r => r >= 1.0 ? '#00e676' : r >= 0.1 ? '#66bb6a' : r >= 0 ? '#ffd740' : '#ff5252');
+
+  // Avg R bar chart
+  Plotly.newPlot('tsAvgRChart', [{
+    x: labels, y: avgRs, type: 'bar',
+    marker: { color: colors },
+    text: sorted.map(s => `${s[1].avg_r}R (${s[1].trades}t, WR ${s[1].wr}%)`),
+    textposition: 'outside',
+  }], darkLayout(`Avg R by Level Type — ${strategy} (${tf})`, {
+    xaxis: { ...DARK.xaxis, tickangle: -45 },
+    yaxis: { ...DARK.yaxis, title: 'Avg R (profit per trade in risk units)' },
+    margin: { ...DARK.margin, b: 120 },
+    shapes: [{ type: 'line', y0: 0, y1: 0, x0: 0, x1: 1, xref: 'paper', line: { color: '#ff1744', width: 1, dash: 'dot' } }],
+    annotations: [{ x: 0.01, y: 0.98, xref: 'paper', yref: 'paper', text: `Overall: ${overall.trades} trades, WR ${overall.wr}%, Avg ${overall.avg_r}R, Total ${overall.total_r}R, PF ${overall.pf}`, showarrow: false, font: { color: '#aaa', size: 11 } }],
+  }));
+
+  // Compare: Original vs selected strategy for top level types
+  const strategies = ['original_1:1', strategy];
+  if (strategy === 'original_1:1') strategies.pop(); // avoid duplicate
+  const topTypes = labels.slice(0, 8);
+
+  const compareTraces = strategies.map(strat => {
+    const sData = tsAllData[tf][strat]?.by_type || {};
+    return {
+      x: topTypes,
+      y: topTypes.map(lt => (sData[lt]?.avg_r || 0)),
+      name: strat,
+      type: 'bar',
+      marker: { color: strat === 'original_1:1' ? '#555' : '#00e676' },
+      text: topTypes.map(lt => `${(sData[lt]?.avg_r || 0)}R`),
+      textposition: 'outside',
+    };
+  });
+  Plotly.newPlot('tsCompareChart', compareTraces, darkLayout(`Original 1:1 vs ${strategy} — Top 8 Level Types (${tf})`, {
+    barmode: 'group',
+    xaxis: { ...DARK.xaxis, tickangle: -45 },
+    yaxis: { ...DARK.yaxis, title: 'Avg R' },
+    margin: { ...DARK.margin, b: 100 },
+    legend: { x: 0.7, y: 0.95 },
+  }));
+
+  // Table
+  const tbody = document.querySelector('#tsTable tbody');
+  tbody.innerHTML = sorted.map(([lt, d]) => {
+    let verdict;
+    if (d.avg_r >= 1.0) verdict = '<span class="text-success fw-bold">EXCELLENT — trade this</span>';
+    else if (d.avg_r >= 0.1) verdict = '<span class="text-warning">Marginal — needs filtering</span>';
+    else if (d.avg_r >= 0) verdict = '<span class="text-muted">Break-even — skip</span>';
+    else verdict = '<span class="text-danger fw-bold">TOXIC — never trade</span>';
+    return `<tr><td>${lt}</td><td>${d.trades}</td><td>${d.wr}%</td><td class="${d.avg_r >= 0 ? 'text-success' : 'text-danger'}">${d.avg_r}R</td><td>${d.total_r}R</td><td>${d.pf}</td><td>${verdict}</td></tr>`;
+  }).join('');
+}
+
 // Tab switching: lazy-load data
-let loaded = { backtests: false, features: false, density: false, scoring: false, mfe: false, breakdown: false };
+let loaded = { backtests: false, features: false, density: false, scoring: false, mfe: false, breakdown: false, trailstop: false };
 document.querySelectorAll('#analyticsTabs a').forEach(tab => {
   tab.addEventListener('shown.bs.tab', e => {
     const id = e.target.getAttribute('href');
@@ -597,11 +725,13 @@ document.querySelectorAll('#analyticsTabs a').forEach(tab => {
     if (id === '#tab-scoring' && !loaded.scoring) { loadScoring(); loaded.scoring = true; }
     if (id === '#tab-mfe' && !loaded.mfe) { loadMFE(); loaded.mfe = true; }
     if (id === '#tab-breakdown' && !loaded.breakdown) { loadBreakdown(); loaded.breakdown = true; }
+    if (id === '#tab-trailstop' && !loaded.trailstop) { loadTrailStop(); loaded.trailstop = true; }
   });
 });
 
 document.getElementById('btnLoadBT').addEventListener('click', loadBacktests);
 document.getElementById('btnLoadBreakdown').addEventListener('click', () => { loadBreakdown(); });
+document.getElementById('btnLoadTS').addEventListener('click', () => { loadTrailStop(); });
 
 // Auto-load first tab
 loadBacktests();

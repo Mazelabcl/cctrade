@@ -37,6 +37,9 @@
   <li class="nav-item">
     <a class="nav-link" data-bs-toggle="tab" href="#tab-trailstop">Trail Stop</a>
   </li>
+  <li class="nav-item">
+    <a class="nav-link" data-bs-toggle="tab" href="#tab-fractal-system">Fractal System</a>
+  </li>
 </ul>
 
 <div class="tab-content">
@@ -245,6 +248,28 @@
           <thead><tr><th>Level Type</th><th>Trades</th><th>WR%</th><th>Avg R</th><th>Total R</th><th>PF</th><th>Verdict</th></tr></thead>
           <tbody></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 8: Fractal Swing System -->
+  <div class="tab-pane fade" id="tab-fractal-system">
+    <div class="alert alert-success py-2 mb-2" style="font-size:0.8rem">
+      <strong>TLDR:</strong> Este es el sistema completo #1 — solo tradea Fractals con swing trail stop.
+      <strong>Equity Curve</strong> = como crece tu dinero trade por trade, empezando con $10,000 y arriesgando 1% por trade.
+      <strong>Return %</strong> = cuanto crecio tu capital total. <strong>Max Drawdown</strong> = la peor caida desde un maximo (ej: 15% = tu cuenta bajo 15% desde el pico).
+      <strong>Sharpe</strong> = medida de consistencia. > 1 = bueno, > 2 = excelente. <strong>PF</strong> = por cada $1 perdido, cuanto ganas.
+    </div>
+    <div id="fsMetrics" class="row g-2 mb-3"></div>
+    <div class="row g-3">
+      <div class="col-12">
+        <div id="fsEquityChart" class="plotly-chart" style="min-height:450px"></div>
+      </div>
+      <div class="col-md-6">
+        <div id="fsByComboChart" class="plotly-chart" style="min-height:400px"></div>
+      </div>
+      <div class="col-md-6">
+        <div id="fsTradeDistChart" class="plotly-chart" style="min-height:400px"></div>
       </div>
     </div>
   </div>
@@ -715,8 +740,76 @@ async function loadTrailStop() {
   }).join('');
 }
 
+// ---- TAB 8: Fractal Swing System ----
+async function loadFractalSystem() {
+  const resp = await fetch('/analytics/api/fractal-system');
+  const data = await resp.json();
+  const tfs = Object.keys(data);
+  if (tfs.length === 0) {
+    document.getElementById('fsEquityChart').innerHTML = '<div class="text-center text-muted py-5">No fractal system data. Run: python scripts/fractal_swing_system.py --tf 4h --output scripts/fractal_system_4h.json</div>';
+    return;
+  }
+
+  // Metrics cards (use first TF as primary)
+  const primary = data[tfs[0]];
+  const m = primary.metrics;
+  const returnColor = m.total_return_pct >= 0 ? '#00e676' : '#ff5252';
+  document.getElementById('fsMetrics').innerHTML = tfs.map(tf => {
+    const met = data[tf].metrics;
+    const rc = met.total_return_pct >= 0 ? '#00e676' : '#ff5252';
+    return `
+    <div class="col-auto"><div class="stat-card" style="min-width:120px">
+      <div class="value" style="font-size:1.2rem">${tf.toUpperCase()}</div>
+      <div class="label">${met.total_trades} trades</div>
+      <div style="color:${rc}; font-weight:bold; font-size:1.1rem">${met.total_return_pct >= 0 ? '+' : ''}${met.total_return_pct}%</div>
+      <div class="label">$${met.initial_capital.toLocaleString()} -> $${met.final_equity.toLocaleString()}</div>
+      <div class="label">WR ${met.win_rate}% | PF ${met.profit_factor} | DD ${met.max_drawdown_pct}%</div>
+    </div></div>`;
+  }).join('');
+
+  // Equity curves (all TFs overlaid)
+  const eqColors = { '4h': '#00e676', '1h': '#448aff', '30m': '#ff9800', '15m': '#e040fb' };
+  const eqTraces = tfs.map(tf => ({
+    x: data[tf].equity_curve.map((e, i) => i),
+    y: data[tf].equity_curve.map(e => e.equity),
+    name: `${tf} ($${data[tf].metrics.initial_capital.toLocaleString()} start)`,
+    mode: 'lines',
+    line: { color: eqColors[tf] || '#fff', width: 2 },
+  }));
+  Plotly.newPlot('fsEquityChart', eqTraces, darkLayout('Equity Curve — Fractal Swing System (1% risk/trade)', {
+    xaxis: { ...DARK.xaxis, title: 'Trade #' },
+    yaxis: { ...DARK.yaxis, title: 'Equity ($)' },
+    legend: { x: 0.01, y: 0.99 },
+  }));
+
+  // By combo chart (primary TF)
+  const combos = Object.entries(m.by_combo).sort((a, b) => b[1].total_r - a[1].total_r);
+  Plotly.newPlot('fsByComboChart', [{
+    x: combos.map(c => c[0]),
+    y: combos.map(c => c[1].total_r),
+    type: 'bar',
+    marker: { color: combos.map(c => c[1].total_r >= 0 ? '#00e676' : '#ff5252') },
+    text: combos.map(c => `${c[1].total_r}R (${c[1].trades}t, WR ${c[1].wr}%)`),
+    textposition: 'outside',
+  }], darkLayout(`Total R by Level Combo (${tfs[0]})`, {
+    xaxis: { ...DARK.xaxis, tickangle: -30 },
+    yaxis: { ...DARK.yaxis, title: 'Total R' },
+    margin: { ...DARK.margin, b: 100 },
+  }));
+
+  // Trade PnL distribution (histogram of R values)
+  const tradeRs = primary.trades_sample.map(t => t.pnl_r).filter(r => r >= -3 && r <= 30);
+  Plotly.newPlot('fsTradeDistChart', [{
+    x: tradeRs, type: 'histogram', nbinsx: 40,
+    marker: { color: '#448aff' },
+  }], darkLayout(`Trade PnL Distribution in R (${tfs[0]})`, {
+    xaxis: { ...DARK.xaxis, title: 'PnL (R)' },
+    yaxis: { ...DARK.yaxis, title: 'Count' },
+  }));
+}
+
 // Tab switching: lazy-load data
-let loaded = { backtests: false, features: false, density: false, scoring: false, mfe: false, breakdown: false, trailstop: false };
+let loaded = { backtests: false, features: false, density: false, scoring: false, mfe: false, breakdown: false, trailstop: false, fractalSystem: false };
 document.querySelectorAll('#analyticsTabs a').forEach(tab => {
   tab.addEventListener('shown.bs.tab', e => {
     const id = e.target.getAttribute('href');
@@ -726,6 +819,7 @@ document.querySelectorAll('#analyticsTabs a').forEach(tab => {
     if (id === '#tab-mfe' && !loaded.mfe) { loadMFE(); loaded.mfe = true; }
     if (id === '#tab-breakdown' && !loaded.breakdown) { loadBreakdown(); loaded.breakdown = true; }
     if (id === '#tab-trailstop' && !loaded.trailstop) { loadTrailStop(); loaded.trailstop = true; }
+    if (id === '#tab-fractal-system' && !loaded.fractalSystem) { loadFractalSystem(); loaded.fractalSystem = true; }
   });
 });
 

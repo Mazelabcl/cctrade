@@ -443,3 +443,31 @@ def api_trail_stop():
             data[tf] = tf_data
 
     return jsonify(data)
+
+
+# ---------------------------------------------------------------------------
+# Tab 8: Fractal Swing System
+# ---------------------------------------------------------------------------
+
+@analytics_bp.route('/api/fractal-system')
+def api_fractal_system():
+    """JSON: Fractal Swing System results from saved JSON files."""
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent.parent
+    data = {}
+
+    for tf in ['4h', '1h', '30m', '15m']:
+        fpath = root / f'scripts/fractal_system_{tf}.json'
+        if not fpath.exists():
+            continue
+        with open(fpath) as f:
+            result = json.load(f)
+        data[tf] = {
+            'metrics': result['metrics'],
+            'equity_curve': result['equity_curve'],
+            'trades_sample': result['trades'][:500],  # limit for performance
+        }
+
+    return jsonify(data)

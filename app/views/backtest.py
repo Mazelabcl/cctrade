@@ -351,7 +351,7 @@ def api_trade_explorer_chart(trade_id):
     tf_hours = {'1h': 1, '4h': 4, '6h': 6, '8h': 8, '12h': 12, '1d': 24}
     h = tf_hours.get(exec_tf, 4)
     margin_before = timedelta(hours=h * 40)
-    margin_after = timedelta(hours=h * 60)  # 60 bars after exit for TP analysis
+    margin_after = timedelta(hours=h * 100)  # 100 bars after exit (covers P75 of candles_to_max)
 
     candles = (
         Candle.query

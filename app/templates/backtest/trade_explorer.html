@@ -432,7 +432,7 @@ function drawLevels(data) {
             lineStyle: lv.touched ? 2 : 0,
             priceLineVisible: false, lastValueVisible: false,
             crosshairMarkerVisible: false,
-            title: (lv.role === 'resistance' ? 'R ' : 'S ') + lv.type + ' (' + lv.tf + ')' + (lv.touched ? ' [touched]' : ''),
+            title: (lv.role === 'resistance' ? 'R ' : 'S ') + lv.type + ' (' + lv.tf + ')',
             visible: visible,
         });
         series.setData([
@@ -754,7 +754,48 @@ function addTpTarget(price) {
     const rr = risk > 0 ? (pnl / risk) : 0;
     const idx = tpTargets.length + 1;
 
-    tpTargets.push({ price, rr: Math.round(rr * 100) / 100, label: `TP${idx}` });
+    // Find nearest level to this TP price
+    let nearestLevel = null;
+    let nearestDist = Infinity;
+    if (currentTradeData.levels) {
+        currentTradeData.levels.forEach(lv => {
+            const dist = Math.abs(lv.price - price) / price;
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearestLevel = lv;
+            }
+        });
+    }
+
+    // Find the candle closest to this price (for volume/wick data)
+    let tpCandle = null;
+    let candleIdx = 0;
+    const entryTime = t.entry_time;
+    for (let i = 0; i < currentTradeData.candles.length; i++) {
+        const c = currentTradeData.candles[i];
+        if (c.time >= entryTime) {
+            candleIdx++;
+            // Check if price was reached in this candle
+            if (isLong && c.high >= price) { tpCandle = c; break; }
+            if (!isLong && c.low <= price) { tpCandle = c; break; }
+        }
+    }
+
+    const tp = {
+        price,
+        rr: Math.round(rr * 100) / 100,
+        label: `TP${idx}`,
+        candles_from_entry: candleIdx,
+        nearest_level: nearestLevel ? {
+            type: nearestLevel.type,
+            tf: nearestLevel.tf,
+            price: nearestLevel.price,
+            distance_pct: Math.round(nearestDist * 10000) / 100,
+            role: nearestLevel.role,
+        } : null,
+    };
+
+    tpTargets.push(tp);
     tpDirty = true;
     drawTpTargets();
     updateTpList();
@@ -805,12 +846,20 @@ function updateTpList() {
     }
     container.innerHTML = tpTargets.map((tp, i) => {
         const color = tp.rr >= 0 ? 'text-success' : 'text-danger';
-        return `<div class="d-flex justify-content-between align-items-center mb-1">
-            <span><strong class="text-warning">${tp.label}</strong> $${tp.price.toLocaleString(undefined, {maximumFractionDigits:0})}</span>
-            <span>
-                <span class="${color} fw-bold">${tp.rr}R</span>
-                <button class="btn btn-sm btn-outline-danger py-0 px-1 ms-1" style="font-size:0.6rem" onclick="removeTpTarget(${i})">x</button>
-            </span>
+        const lvInfo = tp.nearest_level
+            ? `<div class="text-muted" style="font-size:0.6rem; margin-left:4px">
+                 @ ${tp.nearest_level.type} (${tp.nearest_level.tf}) ${tp.nearest_level.distance_pct}% away | ${tp.candles_from_entry || '?'} candles
+               </div>`
+            : `<div class="text-muted" style="font-size:0.6rem; margin-left:4px">${tp.candles_from_entry || '?'} candles from entry</div>`;
+        return `<div class="mb-1">
+            <div class="d-flex justify-content-between align-items-center">
+                <span><strong class="text-warning">${tp.label}</strong> $${tp.price.toLocaleString(undefined, {maximumFractionDigits:0})}</span>
+                <span>
+                    <span class="${color} fw-bold">${tp.rr}R</span>
+                    <button class="btn btn-sm btn-outline-danger py-0 px-1 ms-1" style="font-size:0.6rem" onclick="removeTpTarget(${i})">x</button>
+                </span>
+            </div>
+            ${lvInfo}
         </div>`;
     }).join('');
     document.getElementById('btnSaveTp').disabled = false;

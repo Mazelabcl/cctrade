@@ -513,6 +513,31 @@ def api_trade_explorer_chart(trade_id):
         f"at ${trade.exit_price:,.0f} after {trade.candles_held or '?'} candles."
     )
 
+    # Compute MFE (max favorable excursion) from candles after entry
+    mfe_price = None
+    mfe_time = None
+    mfe_rr = 0
+    risk = abs(trade.entry_price - trade.stop_loss)
+    for c in candles:
+        if c.open_time <= entry:
+            continue
+        if trade.direction == 'LONG':
+            if mfe_price is None or c.high > mfe_price:
+                mfe_price = c.high
+                mfe_time = int(c.open_time.timestamp())
+            # Stop scanning if SL is hit (after max)
+            if c.low <= trade.stop_loss and mfe_price is not None:
+                break
+        else:
+            if mfe_price is None or c.low < mfe_price:
+                mfe_price = c.low
+                mfe_time = int(c.open_time.timestamp())
+            if c.high >= trade.stop_loss and mfe_price is not None:
+                break
+    if mfe_price and risk > 0:
+        pnl = (mfe_price - trade.entry_price) if trade.direction == 'LONG' else (trade.entry_price - mfe_price)
+        mfe_rr = round(pnl / risk, 1)
+
     return jsonify({
         'candles': chart_candles,
         'levels': chart_levels,
@@ -539,6 +564,9 @@ def api_trade_explorer_chart(trade_id):
             'exit_explanation': exit_explanation,
             'strategy': strategy,
             'annotations': trade.metadata_json if trade.metadata_json else {},
+            'mfe_price': mfe_price,
+            'mfe_time': mfe_time,
+            'mfe_rr': mfe_rr,
         },
     })
 

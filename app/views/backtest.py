@@ -346,17 +346,22 @@ def api_trade_explorer_chart(trade_id):
     entry = trade.entry_time
     exit_t = trade.exit_time or entry
 
-    # Load candles: 40 before entry, trade duration, 20 after exit
+    # Load candles: configurable range for full context
     from datetime import timedelta
-    tf_hours = {'1h': 1, '4h': 4, '6h': 6, '8h': 8, '12h': 12, '1d': 24}
-    h = tf_hours.get(exec_tf, 4)
-    margin_before = timedelta(hours=h * 40)
-    margin_after = timedelta(hours=h * 100)  # 100 bars after exit (covers P75 of candles_to_max)
+    tf_hours = {'15m': 0.25, '30m': 0.5, '1h': 1, '4h': 4, '6h': 6, '8h': 8, '12h': 12, '1d': 24, '1w': 168}
+
+    # Allow overriding the chart timeframe (view trade in different TF)
+    chart_tf = request.args.get('chart_tf', exec_tf)
+    h = tf_hours.get(chart_tf, 4)
+    bars_before = request.args.get('bars_before', 300, type=int)
+    bars_after = request.args.get('bars_after', 200, type=int)
+    margin_before = timedelta(hours=h * bars_before)
+    margin_after = timedelta(hours=h * bars_after)
 
     candles = (
         Candle.query
         .filter(
-            Candle.timeframe == exec_tf,
+            Candle.timeframe == chart_tf,
             Candle.open_time >= entry - margin_before,
             Candle.open_time <= exit_t + margin_after,
         )
@@ -377,7 +382,7 @@ def api_trade_explorer_chart(trade_id):
     # For PrevSession, only show the MOST RECENT per (type, timeframe) — "mobile" approach.
     # For structural levels (Fractal/HTF/CC), show all naked within range.
     price = trade.entry_price
-    price_range = price * 0.05  # 5% around entry
+    price_range = price * 0.15  # 15% around entry for full context
 
     naked_filter = [
         Level.timeframe.in_(['daily', 'weekly', 'monthly']),

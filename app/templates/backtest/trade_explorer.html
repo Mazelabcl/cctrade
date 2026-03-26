@@ -89,7 +89,16 @@
         </button>
         <div>
           <span id="tradeCounter" class="text-muted small">-</span>
-          <button id="btnManualExit" class="btn btn-outline-success btn-sm ms-3" title="Manual exit mode (M)">
+          <select id="chartTf" class="form-select form-select-sm d-inline-block ms-2" style="width:70px; font-size:0.7rem" title="Chart timeframe">
+            <option value="">Exec</option>
+            <option value="15m">15m</option>
+            <option value="30m">30m</option>
+            <option value="1h">1h</option>
+            <option value="4h">4h</option>
+            <option value="1d">1d</option>
+            <option value="1w">1w</option>
+          </select>
+          <button id="btnManualExit" class="btn btn-outline-success btn-sm ms-2" title="Manual exit mode (M)">
             <i class="bi bi-cursor"></i> Manual Exit
           </button>
           <button id="btnToggleZone" class="btn btn-outline-warning btn-sm ms-1" title="Toggle analysis zone (Z)">
@@ -367,7 +376,9 @@ async function showTrade(idx) {
     updateNav();
     exitManualMode();
 
-    const resp = await fetch(`/backtest/api/trade-explorer/${trade.id}/chart`);
+    const chartTf = document.getElementById('chartTf').value;
+    const chartParams = chartTf ? `?chart_tf=${chartTf}` : '';
+    const resp = await fetch(`/backtest/api/trade-explorer/${trade.id}/chart${chartParams}`);
     const data = await resp.json();
     currentTradeData = data;
 
@@ -897,6 +908,7 @@ document.getElementById('btnRandom').addEventListener('click', () => {
 document.getElementById('btnCenter').addEventListener('click', centerOnTrade);
 document.getElementById('btnToggleZone').addEventListener('click', toggleZone);
 document.getElementById('btnToggleAll').addEventListener('click', toggleAllLevels);
+document.getElementById('chartTf').addEventListener('change', () => { if (trades.length > 0) showTrade(currentIdx); });
 document.getElementById('btnManualExit').addEventListener('click', () => {
     if (manualExitMode) exitManualMode();
     else enterManualMode();

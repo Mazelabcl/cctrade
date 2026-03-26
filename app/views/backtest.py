@@ -532,8 +532,28 @@ def api_trade_explorer_chart(trade_id):
             'entry_explanation': entry_explanation,
             'exit_explanation': exit_explanation,
             'strategy': strategy,
+            'annotations': trade.metadata_json if trade.metadata_json else {},
         },
     })
+
+
+@backtest_bp.route('/api/trade-explorer/<int:trade_id>/annotations', methods=['POST'])
+def api_trade_explorer_save_annotations(trade_id):
+    """Save TP annotation targets for a trade."""
+    trade = db.session.get(IndividualLevelTrade, trade_id)
+    if trade is None:
+        abort(404)
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No JSON body'}), 400
+
+    if not trade.metadata_json:
+        trade.metadata_json = {}
+    trade.metadata_json['tp_targets'] = data.get('tp_targets', [])
+    db.session.commit()
+
+    return jsonify({'status': 'saved', 'trade_id': trade_id})
 
 
 @backtest_bp.route('/individual-levels/<int:bt_id>/trade/<int:trade_id>')

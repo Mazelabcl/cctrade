@@ -464,10 +464,22 @@ def api_fractal_system():
             continue
         with open(fpath) as f:
             result = json.load(f)
+        # Build flat R curve (no compounding — realistic)
+        flat_r_curve = []
+        cumulative_r = 0
+        for i, t in enumerate(result['trades']):
+            cumulative_r += t.get('pnl_r', 0)
+            flat_r_curve.append({
+                'time': t['entry_time'],
+                'r': round(cumulative_r, 1),
+                'trade_idx': i + 1,
+            })
+
         data[tf] = {
             'metrics': result['metrics'],
             'equity_curve': result['equity_curve'],
-            'trades_sample': result['trades'][:500],  # limit for performance
+            'flat_r_curve': flat_r_curve,
+            'trades_sample': result['trades'][:500],
         }
 
     return jsonify(data)

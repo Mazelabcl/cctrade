@@ -176,6 +176,30 @@
           </table>
         </div>
       </div>
+
+      <!-- TP Annotation -->
+      <div id="tpAnnotationCard" class="card bg-dark text-white mb-2" style="border:1px solid #ff9800;">
+        <div class="card-body p-2">
+          <h6 class="mb-1" style="font-size:0.85rem">
+            <i class="bi bi-bullseye text-warning"></i> TP Annotations
+            <button id="btnTpMode" class="btn btn-outline-warning btn-sm float-end py-0 px-1" style="font-size:0.65rem" title="Press T">
+              <i class="bi bi-plus-circle"></i> Add TP
+            </button>
+          </h6>
+          <div id="tpTargetsList" style="font-size:0.72rem; max-height:150px; overflow-y:auto;">
+            <span class="text-muted">No TPs. Press T then click chart.</span>
+          </div>
+          <div class="d-flex gap-1 mt-1">
+            <button id="btnSaveTp" class="btn btn-sm btn-success py-0 px-2" style="font-size:0.65rem" disabled>
+              <i class="bi bi-save"></i> Save (S)
+            </button>
+            <button id="btnClearTp" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:0.65rem">
+              <i class="bi bi-trash"></i> Clear
+            </button>
+            <span id="tpSaveStatus" class="text-muted ms-auto" style="font-size:0.6rem"></span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -192,6 +216,10 @@ let extraSeries = [];        // SL, TP, entry level, zone series
 let manualExitMode = false;
 let currentTradeData = null;
 let manualExitSeries = null;
+let tpAnnotationMode = false;
+let tpTargets = [];        // [{price, rr, label}]
+let tpSeries = [];         // chart line series for TPs
+let tpDirty = false;       // unsaved changes
 let zoneVisible = false;
 let zoneSeries = [];
 
@@ -248,9 +276,14 @@ function initChart() {
         if (price) updateManualExit(price);
     });
     chart.subscribeClick(param => {
-        if (!manualExitMode || !currentTradeData || !param.point) return;
+        if (!currentTradeData || !param.point) return;
         const price = candleSeries.coordinateToPrice(param.point.y);
-        if (price) setManualExit(price);
+        if (!price) return;
+        if (tpAnnotationMode) {
+            addTpTarget(price);
+        } else if (manualExitMode) {
+            setManualExit(price);
+        }
     });
 
     buildLevelToggles();
@@ -354,6 +387,9 @@ async function showTrade(idx) {
 
     if (zoneVisible) drawZone(data);
 
+    // Load saved TP annotations
+    loadTpAnnotations(data.trade.annotations);
+
     // Center on trade
     centerOnTrade();
 
@@ -373,6 +409,8 @@ function clearAllSeries() {
         try { chart.removeSeries(manualExitSeries); } catch(e) {}
         manualExitSeries = null;
     }
+    tpSeries.forEach(s => { try { chart.removeSeries(s); } catch(e) {} });
+    tpSeries = [];
 }
 
 function drawLevels(data) {
@@ -697,6 +735,109 @@ function updateNav() {
         trades.length > 0 ? `${currentIdx + 1} / ${trades.length}` : '-';
 }
 
+// ---- TP Annotation Mode ----
+function toggleTpMode() {
+    tpAnnotationMode = !tpAnnotationMode;
+    if (tpAnnotationMode) exitManualMode();
+    document.getElementById('btnTpMode').classList.toggle('active', tpAnnotationMode);
+    document.getElementById('chart-container').style.cursor = tpAnnotationMode ? 'crosshair' : 'default';
+}
+
+function addTpTarget(price) {
+    if (!currentTradeData) return;
+    const t = currentTradeData.trade;
+    const entry = t.entry_price;
+    const sl = t.stop_loss;
+    const risk = Math.abs(entry - sl);
+    const isLong = t.direction === 'LONG';
+    const pnl = isLong ? (price - entry) : (entry - price);
+    const rr = risk > 0 ? (pnl / risk) : 0;
+    const idx = tpTargets.length + 1;
+
+    tpTargets.push({ price, rr: Math.round(rr * 100) / 100, label: `TP${idx}` });
+    tpDirty = true;
+    drawTpTargets();
+    updateTpList();
+}
+
+function removeTpTarget(idx) {
+    tpTargets.splice(idx, 1);
+    // Relabel
+    tpTargets.forEach((tp, i) => { tp.label = `TP${i + 1}`; });
+    tpDirty = true;
+    drawTpTargets();
+    updateTpList();
+}
+
+function clearTpTargets() {
+    tpTargets = [];
+    tpDirty = true;
+    drawTpTargets();
+    updateTpList();
+}
+
+function drawTpTargets() {
+    // Remove old TP series
+    tpSeries.forEach(s => { try { chart.removeSeries(s); } catch(e) {} });
+    tpSeries = [];
+    if (!currentTradeData || currentTradeData.candles.length === 0) return;
+
+    const tStart = currentTradeData.candles[0].time;
+    const tEnd = currentTradeData.candles[currentTradeData.candles.length - 1].time;
+
+    tpTargets.forEach((tp, i) => {
+        const s = chart.addLineSeries({
+            color: '#ff9800', lineWidth: 2, lineStyle: 1,
+            priceLineVisible: false, lastValueVisible: false,
+            title: `${tp.label} $${tp.price.toLocaleString(undefined, {maximumFractionDigits:0})} (${tp.rr}R)`,
+        });
+        s.setData([{ time: tStart, value: tp.price }, { time: tEnd, value: tp.price }]);
+        tpSeries.push(s);
+    });
+}
+
+function updateTpList() {
+    const container = document.getElementById('tpTargetsList');
+    if (tpTargets.length === 0) {
+        container.innerHTML = '<span class="text-muted">No TPs. Press T then click chart.</span>';
+        document.getElementById('btnSaveTp').disabled = true;
+        return;
+    }
+    container.innerHTML = tpTargets.map((tp, i) => {
+        const color = tp.rr >= 0 ? 'text-success' : 'text-danger';
+        return `<div class="d-flex justify-content-between align-items-center mb-1">
+            <span><strong class="text-warning">${tp.label}</strong> $${tp.price.toLocaleString(undefined, {maximumFractionDigits:0})}</span>
+            <span>
+                <span class="${color} fw-bold">${tp.rr}R</span>
+                <button class="btn btn-sm btn-outline-danger py-0 px-1 ms-1" style="font-size:0.6rem" onclick="removeTpTarget(${i})">x</button>
+            </span>
+        </div>`;
+    }).join('');
+    document.getElementById('btnSaveTp').disabled = false;
+}
+
+async function saveTpTargets() {
+    if (!currentTradeData || !trades[currentIdx]) return;
+    const tradeId = trades[currentIdx].id;
+    const resp = await fetch(`/backtest/api/trade-explorer/${tradeId}/annotations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tp_targets: tpTargets }),
+    });
+    if (resp.ok) {
+        tpDirty = false;
+        document.getElementById('tpSaveStatus').textContent = 'Saved!';
+        setTimeout(() => { document.getElementById('tpSaveStatus').textContent = ''; }, 2000);
+    }
+}
+
+function loadTpAnnotations(annotations) {
+    tpTargets = (annotations && annotations.tp_targets) ? annotations.tp_targets : [];
+    tpDirty = false;
+    drawTpTargets();
+    updateTpList();
+}
+
 // Event listeners
 document.getElementById('btnLoad').addEventListener('click', loadTrades);
 document.getElementById('btnPrev').addEventListener('click', () => showTrade(currentIdx - 1));
@@ -712,6 +853,9 @@ document.getElementById('btnManualExit').addEventListener('click', () => {
     else enterManualMode();
 });
 document.getElementById('btnExitManual').addEventListener('click', exitManualMode);
+document.getElementById('btnTpMode').addEventListener('click', toggleTpMode);
+document.getElementById('btnSaveTp').addEventListener('click', saveTpTargets);
+document.getElementById('btnClearTp').addEventListener('click', clearTpTargets);
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
@@ -721,8 +865,10 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'r') document.getElementById('btnRandom').click();
     if (e.key === 'c') centerOnTrade();
     if (e.key === 'z') toggleZone();
+    if (e.key === 't') toggleTpMode();
+    if (e.key === 's') saveTpTargets();
     if (e.key === 'm') document.getElementById('btnManualExit').click();
-    if (e.key === 'Escape') exitManualMode();
+    if (e.key === 'Escape') { exitManualMode(); if (tpAnnotationMode) toggleTpMode(); }
 });
 
 // Init

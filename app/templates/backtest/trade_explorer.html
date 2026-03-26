@@ -432,7 +432,7 @@ function drawLevels(data) {
             lineStyle: lv.touched ? 2 : 0,
             priceLineVisible: false, lastValueVisible: false,
             crosshairMarkerVisible: false,
-            title: lv.type + ' (' + lv.tf + ')',
+            title: (lv.role === 'resistance' ? 'R ' : 'S ') + lv.type + ' (' + lv.tf + ')' + (lv.touched ? ' [touched]' : ''),
             visible: visible,
         });
         series.setData([

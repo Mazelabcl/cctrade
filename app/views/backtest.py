@@ -351,7 +351,7 @@ def api_trade_explorer_chart(trade_id):
     tf_hours = {'1h': 1, '4h': 4, '6h': 6, '8h': 8, '12h': 12, '1d': 24}
     h = tf_hours.get(exec_tf, 4)
     margin_before = timedelta(hours=h * 40)
-    margin_after = timedelta(hours=h * 20)
+    margin_after = timedelta(hours=h * 60)  # 60 bars after exit for TP analysis
 
     candles = (
         Candle.query
@@ -457,6 +457,7 @@ def api_trade_explorer_chart(trade_id):
         'tf': l.timeframe,
         'created': int(l.created_at.timestamp()) if l.created_at else None,
         'touched': int(l.first_touched_at.timestamp()) if l.first_touched_at else None,
+        'role': 'resistance' if l.price_level > trade.entry_price else 'support',
     } for l in nearby_levels]
 
     # Resolve level price: trade.level_price → Level table via level_id → entry_price

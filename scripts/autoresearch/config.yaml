@@ -1,0 +1,28 @@
+# AutoResearch Configuration
+# The agent mutates these parameters and evaluates the result
+
+mode: exit_optimization  # exit_optimization or feature_discovery
+
+exit:
+  strategy: swing_trail  # breakeven_trail, atr_trail, swing_trail, partial
+  swing_lookback: 5
+  atr_multiplier: 2.0
+  breakeven_at_rr: 1.0
+  partial_pct: 0.5
+  partial_rr: 2.0
+  timeout_candles: 500
+  sl_buffer_pct: 0.001
+
+levels:
+  types:
+    - Fractal_support
+    - Fractal_resistance
+  source_timeframes:
+    - daily
+    - weekly
+    - monthly
+
+execution:
+  timeframe: "4h"
+  initial_capital: 10000
+  risk_pct: 0.02

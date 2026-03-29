@@ -106,96 +106,98 @@ def find_swing_highs(highs, lookback=5):
 # Data loading + caching
 # ---------------------------------------------------------------------------
 
-def load_and_cache_data(session, _cache={}):
+def load_and_cache_data(session, _cache={}, timeframe='1m'):
     """Load candles + levels once, cache in memory. Returns data dict."""
-    if 'loaded' in _cache:
-        return _cache
+    cache_key = f'loaded_{timeframe}'
+    if cache_key in _cache:
+        return _cache[timeframe]
 
-    print("Loading 1m candles from DB...", flush=True)
+    print(f"Loading {timeframe} candles from DB...", flush=True)
     t0 = time.time()
     from app.services.level_trade_backtest_db import load_candles_db, load_levels_db
 
-    candles = load_candles_db(session, timeframe='1m')
+    candles = load_candles_db(session, timeframe=timeframe)
     print(f"  Loaded {len(candles):,} candles ({time.time()-t0:.1f}s)", flush=True)
 
     if candles.empty:
-        raise RuntimeError("No 1m candles in DB")
+        raise RuntimeError(f"No {timeframe} candles in DB")
 
-    _cache['c_times'] = candles['open_time'].values.astype('datetime64[ns]')
-    _cache['c_opens'] = candles['open'].values.astype(np.float64)
-    _cache['c_highs'] = candles['high'].values.astype(np.float64)
-    _cache['c_lows'] = candles['low'].values.astype(np.float64)
-    _cache['c_closes'] = candles['close'].values.astype(np.float64)
-    _cache['c_vols'] = candles['volume'].values.astype(np.float64)
-    _cache['n_candles'] = len(candles)
+    # Use a sub-dict per timeframe so multiple TFs can coexist
+    d = {}
+    _cache[timeframe] = d
+
+    d['c_times'] = candles['open_time'].values.astype('datetime64[ns]')
+    d['c_opens'] = candles['open'].values.astype(np.float64)
+    d['c_highs'] = candles['high'].values.astype(np.float64)
+    d['c_lows'] = candles['low'].values.astype(np.float64)
+    d['c_closes'] = candles['close'].values.astype(np.float64)
+    d['c_vols'] = candles['volume'].values.astype(np.float64)
+    d['n_candles'] = len(candles)
 
     # Precompute ATR
     print("  Computing ATR(14)...", flush=True)
-    _cache['atr'] = compute_atr(_cache['c_highs'], _cache['c_lows'], _cache['c_closes'], 14)
+    d['atr'] = compute_atr(d['c_highs'], d['c_lows'], d['c_closes'], 14)
 
     # Swing cache (populated on demand per lookback)
-    _cache['swing_cache'] = {}
+    d['swing_cache'] = {}
 
-    # Load levels
-    print("Loading levels from DB...", flush=True)
-    t1 = time.time()
-    levels = load_levels_db(session)
-    print(f"  Loaded {len(levels):,} levels ({time.time()-t1:.1f}s)", flush=True)
+    # Load levels (shared across timeframes, only load once)
+    if '_levels_loaded' not in _cache:
+        print("Loading levels from DB...", flush=True)
+        t1 = time.time()
+        levels = load_levels_db(session)
+        print(f"  Loaded {len(levels):,} levels ({time.time()-t1:.1f}s)", flush=True)
 
-    if levels.empty:
-        raise RuntimeError("No levels in DB")
+        if levels.empty:
+            raise RuntimeError("No levels in DB")
 
-    # Encode level types to int IDs
-    unique_types = sorted(levels['level_type'].unique())
-    type_to_id = {t: i for i, t in enumerate(unique_types)}
-    id_to_type = {i: t for t, i in type_to_id.items()}
-    _cache['type_to_id'] = type_to_id
-    _cache['id_to_type'] = id_to_type
+        unique_types = sorted(levels['level_type'].unique())
+        type_to_id = {t: i for i, t in enumerate(unique_types)}
+        id_to_type = {i: t for t, i in type_to_id.items()}
 
-    _cache['l_prices'] = levels['price_level'].values.astype(np.float64)
-    _cache['l_type_ids'] = np.array([type_to_id[t] for t in levels['level_type']], dtype=np.int32)
-    _cache['l_types_str'] = levels['level_type'].values
-    _cache['l_timeframes'] = levels['timeframe'].values
+        _cache['_levels'] = {
+            'type_to_id': type_to_id,
+            'id_to_type': id_to_type,
+            'l_prices': levels['price_level'].values.astype(np.float64),
+            'l_type_ids': np.array([type_to_id[t] for t in levels['level_type']], dtype=np.int32),
+            'l_types_str': levels['level_type'].values,
+            'l_timeframes': levels['timeframe'].values,
+            'l_tf_weights': np.array([TF_WEIGHTS.get(tf, 0) for tf in levels['timeframe']], dtype=np.float64),
+            'l_created': levels['created_at'].values.astype('datetime64[ns]'),
+        }
 
-    # Timeframe weights
-    _cache['l_tf_weights'] = np.array([TF_WEIGHTS.get(tf, 0) for tf in levels['timeframe']], dtype=np.float64)
+        is_mobile = (
+            levels['level_type'].str.startswith('PrevSession') |
+            levels['level_type'].str.startswith('VP_')
+        ).fillna(False).values
+        _cache['_levels']['l_is_structural'] = ~is_mobile
 
-    # Timestamps for lifecycle
-    far_future = np.datetime64('2099-01-01')
-    _cache['l_created'] = levels['created_at'].values.astype('datetime64[ns]')
+        far_future = np.datetime64('2099-01-01')
+        validity_end = np.full(len(levels), far_future, dtype='datetime64[ns]')
+        if 'first_touched_at' in levels.columns:
+            ft = levels['first_touched_at'].values.astype('datetime64[ns]')
+            has_ft = ~pd.isna(levels['first_touched_at']).values
+            structural_with_ft = _cache['_levels']['l_is_structural'] & has_ft
+            validity_end[structural_with_ft] = ft[structural_with_ft]
+        if 'superseded_at' in levels.columns:
+            sa = levels['superseded_at'].values.astype('datetime64[ns]')
+            has_sa = ~pd.isna(levels['superseded_at']).values
+            mobile_with_sa = is_mobile & has_sa
+            validity_end[mobile_with_sa] = sa[mobile_with_sa]
+        _cache['_levels']['l_validity_end'] = validity_end
 
-    # Structural vs mobile
-    is_mobile = (
-        levels['level_type'].str.startswith('PrevSession') |
-        levels['level_type'].str.startswith('VP_')
-    ).fillna(False).values
-    _cache['l_is_structural'] = ~is_mobile
+        sorted_idx = np.argsort(_cache['_levels']['l_prices'])
+        _cache['_levels']['l_sorted_prices'] = _cache['_levels']['l_prices'][sorted_idx]
+        _cache['_levels']['l_sorted_idx'] = sorted_idx
+        _cache['_levels_loaded'] = True
 
-    # Validity end: structural uses first_touched_at, mobile uses superseded_at
-    validity_end = np.full(len(levels), far_future, dtype='datetime64[ns]')
+    # Copy level data into this timeframe's dict
+    for k, v in _cache['_levels'].items():
+        d[k] = v
 
-    if 'first_touched_at' in levels.columns:
-        ft = levels['first_touched_at'].values.astype('datetime64[ns]')
-        has_ft = ~pd.isna(levels['first_touched_at']).values
-        structural_with_ft = _cache['l_is_structural'] & has_ft
-        validity_end[structural_with_ft] = ft[structural_with_ft]
-
-    if 'superseded_at' in levels.columns:
-        sa = levels['superseded_at'].values.astype('datetime64[ns]')
-        has_sa = ~pd.isna(levels['superseded_at']).values
-        mobile_with_sa = is_mobile & has_sa
-        validity_end[mobile_with_sa] = sa[mobile_with_sa]
-
-    _cache['l_validity_end'] = validity_end
-
-    # Sorted level prices for searchsorted (confluence detection)
-    sorted_idx = np.argsort(_cache['l_prices'])
-    _cache['l_sorted_prices'] = _cache['l_prices'][sorted_idx]
-    _cache['l_sorted_idx'] = sorted_idx
-
-    _cache['loaded'] = True
+    _cache[cache_key] = True
     print(f"Data cached ({time.time()-t0:.1f}s total)\n", flush=True)
-    return _cache
+    return d
 
 
 def _get_swings(data, lookback):
@@ -555,9 +557,9 @@ def _simulate_exit(strategy, direction, entry, sl, risk, idx,
 # Main evaluator
 # ---------------------------------------------------------------------------
 
-def evaluate(config, session=None, _cache={}):
+def evaluate(config, session=None, _cache={}, timeframe='1m'):
     """Evaluate a confluence scalper configuration. Returns metrics dict."""
-    data = load_and_cache_data(session, _cache)
+    data = load_and_cache_data(session, _cache, timeframe=timeframe)
 
     c_highs = data['c_highs']
     c_lows = data['c_lows']
@@ -704,7 +706,7 @@ MUTATIONS = [
     {'name': 'rr_ratio', 'field': 'exit.rr_ratio', 'range': [0.5, 3.0], 'step': 0.25},
     {'name': 'swing_lookback', 'field': 'exit.swing_lookback', 'range': [2, 10], 'step': 1, 'type': 'int'},
     {'name': 'atr_multiplier', 'field': 'exit.atr_multiplier', 'range': [0.5, 3.0], 'step': 0.25},
-    {'name': 'timeout_candles', 'field': 'exit.timeout_candles', 'range': [5, 50], 'step': 5, 'type': 'int'},
+    {'name': 'timeout_candles', 'field': 'exit.timeout_candles', 'range': [5, 200], 'step': 5, 'type': 'int'},
     {'name': 'breakeven_rr', 'field': 'exit.breakeven_at_rr', 'range': [0.5, 3.0], 'step': 0.25},
     {'name': 'partial_pct', 'field': 'exit.partial_pct', 'range': [0.2, 0.8], 'step': 0.1},
     {'name': 'partial_rr', 'field': 'exit.partial_rr', 'range': [1.0, 5.0], 'step': 0.5},
@@ -795,21 +797,26 @@ def apply_mutation(config, mutation):
 # Agent loop
 # ---------------------------------------------------------------------------
 
-def run_confluence_scalper(n_experiments=50):
+def run_confluence_scalper(n_experiments=50, timeframe='1m'):
     """Main AutoResearch loop for confluence scalper discovery."""
     from app import create_app
     from app.extensions import db
 
     results_dir = os.path.join(os.path.dirname(__file__), 'results')
     os.makedirs(results_dir, exist_ok=True)
-    results_file = os.path.join(results_dir, 'confluence_scalper.jsonl')
+    results_file = os.path.join(results_dir, f'confluence_scalper_{timeframe}.jsonl')
 
     app = create_app()
     with app.app_context():
         config = copy.deepcopy(DEFAULT_CONFIG)
 
+        # Adjust defaults for larger timeframes
+        if timeframe in ('15m', '30m', '1h', '4h'):
+            config['exit']['timeout_candles'] = 50  # more room
+            config['exit']['atr_multiplier'] = 1.5
+
         print("=" * 70, flush=True)
-        print("AUTORESEARCH MODE C — Confluence Scalper Discovery", flush=True)
+        print(f"AUTORESEARCH MODE C — Confluence Scalper [{timeframe}]", flush=True)
         print("=" * 70, flush=True)
         print(f"Running {n_experiments} experiments...\n", flush=True)
 
@@ -817,7 +824,7 @@ def run_confluence_scalper(n_experiments=50):
         print("Evaluating baseline...", flush=True)
         t0 = time.time()
         _cache = {}
-        baseline = evaluate(config, db.session, _cache)
+        baseline = evaluate(config, db.session, _cache, timeframe=timeframe)
         elapsed = time.time() - t0
         print(f"Baseline ({elapsed:.1f}s):", flush=True)
         for k, v in sorted(baseline.items()):
@@ -840,7 +847,7 @@ def run_confluence_scalper(n_experiments=50):
             new_config = apply_mutation(config, mutation)
 
             t0 = time.time()
-            metrics = evaluate(new_config, db.session, _cache)
+            metrics = evaluate(new_config, db.session, _cache, timeframe=timeframe)
             elapsed = time.time() - t0
 
             improved = fitness(metrics) > fitness(best)
@@ -903,6 +910,8 @@ def run_confluence_scalper(n_experiments=50):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='AutoResearch Mode C — Confluence Scalper')
     parser.add_argument('--experiments', type=int, default=50, help='Number of experiments')
+    parser.add_argument('--timeframe', type=str, default='1m',
+                        help='Execution timeframe (1m, 15m, 30m, 1h, 4h)')
     args = parser.parse_args()
 
-    run_confluence_scalper(n_experiments=args.experiments)
+    run_confluence_scalper(n_experiments=args.experiments, timeframe=args.timeframe)

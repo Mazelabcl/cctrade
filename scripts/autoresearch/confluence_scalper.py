@@ -47,6 +47,8 @@ DEFAULT_CONFIG = {
     'zone_width': 0.01,
     'touch_tolerance': 0.003,
     'naked_only': True,
+    'scoring_mode': 'weighted',      # 'unique_types', 'total_count', 'weighted'
+    'entry_mode': 'touch',           # 'touch' = enter on close, 'sfp' = enter after stop hunt
     'level_types': [
         'Fractal_support', 'Fractal_resistance', 'HTF_level',
         'Fib_CC', 'PrevSession_High', 'PrevSession_Low',
@@ -189,6 +191,31 @@ def load_and_cache_data(session, _cache={}, timeframe='1m'):
         sorted_idx = np.argsort(_cache['_levels']['l_prices'])
         _cache['_levels']['l_sorted_prices'] = _cache['_levels']['l_prices'][sorted_idx]
         _cache['_levels']['l_sorted_idx'] = sorted_idx
+
+        # Load backtest win rates for weighted scoring
+        print("  Loading backtest win rates...", flush=True)
+        from sqlalchemy import text as sa_text
+        wr_rows = session.execute(sa_text(
+            "SELECT level_type, level_source_timeframe, "
+            "AVG(win_rate)/100.0 as wr, AVG(profit_factor) as pf "
+            "FROM individual_level_backtests "
+            "WHERE status = 'completed' AND total_trades >= 10 "
+            "GROUP BY level_type, level_source_timeframe"
+        )).fetchall()
+        wr_cache = {}
+        for lt, tf, wr, pf in wr_rows:
+            wr_cache[(lt, tf)] = float(wr) if wr else 0.5
+        _cache['_levels']['wr_cache'] = wr_cache
+
+        # Pre-compute per-level weight from win rate
+        l_weights = np.zeros(len(levels), dtype=np.float64)
+        for i in range(len(levels)):
+            lt = levels.iloc[i]['level_type']
+            tf = levels.iloc[i]['timeframe']
+            l_weights[i] = wr_cache.get((lt, tf), 0.5)
+        _cache['_levels']['l_weights'] = l_weights
+        print(f"  Win rates loaded: {len(wr_cache)} entries", flush=True)
+
         _cache['_levels_loaded'] = True
 
     # Copy level data into this timeframe's dict
@@ -393,6 +420,9 @@ def score_and_deduplicate(entries, data, config):
     sorted_prices = data['l_sorted_prices']
     sorted_idx = data['l_sorted_idx']
 
+    scoring_mode = config.get('scoring_mode', 'unique_types')
+    l_weights = data.get('l_weights', None)
+
     n = len(entries)
     scores = np.zeros(n, dtype=np.float64)
 
@@ -407,18 +437,29 @@ def score_and_deduplicate(entries, data, config):
         right = np.searchsorted(sorted_prices, hi, side='right')
 
         if left >= right:
-            scores[i] = 1.0
+            scores[i] = 0.5 if scoring_mode == 'weighted' else 1.0
             continue
 
-        # Count unique level types in zone (regardless of active status —
-        # if the level exists near this price, it's confluence)
         zone_orig = sorted_idx[left:right]
-        unique_types = len(set(l_type_ids[zone_orig].tolist()))
 
-        # TF bonus
-        tf_bonus = float(l_tf_weights[zone_orig].max())
+        if scoring_mode == 'unique_types':
+            # Original: count unique level types
+            unique_types = len(set(l_type_ids[zone_orig].tolist()))
+            tf_bonus = float(l_tf_weights[zone_orig].max())
+            scores[i] = unique_types + tf_bonus * 0.5
 
-        scores[i] = unique_types + tf_bonus * 0.5
+        elif scoring_mode == 'total_count':
+            # Count ALL levels (2 HTF_daily = 2, not 1)
+            total_levels = len(zone_orig)
+            tf_bonus = float(l_tf_weights[zone_orig].max())
+            scores[i] = total_levels + tf_bonus * 0.5
+
+        elif scoring_mode == 'weighted':
+            # Sum of backtest win rates for each level in zone
+            if l_weights is not None:
+                scores[i] = float(l_weights[zone_orig].sum())
+            else:
+                scores[i] = len(zone_orig) * 0.5  # fallback
 
     # Filter by threshold
     mask = scores >= threshold
@@ -597,11 +638,38 @@ def evaluate(config, session=None, _cache={}, timeframe='1m'):
         return {'error': 'No entries after scoring/dedup', 'total_r': 0, 'fitness': 0}
 
     # Phase 4: Simulate exits
+    entry_mode = config.get('entry_mode', 'touch')
     t_phase = time.time()
     results = []
     for i in range(len(entries)):
         ci = int(entries[i, 0])
         direction = int(entries[i, 2])
+
+        if entry_mode == 'sfp':
+            # SFP Entry: wait for candle that breaks the touch candle's wick,
+            # then reverses (stop hunt pattern).
+            # LONG: wait for a candle whose low breaks touch candle's low,
+            #       then closes ABOVE it → SFP confirmed, enter on that close
+            # SHORT: wait for candle whose high breaks touch candle's high,
+            #        then closes BELOW it → enter on that close
+            touch_low = c_lows[ci]
+            touch_high = c_highs[ci]
+            sfp_found = False
+            sfp_window = min(ci + 10, n_candles)  # look up to 10 candles ahead
+
+            for k in range(ci + 1, sfp_window):
+                if direction == 1:  # LONG: need low break + close above
+                    if c_lows[k] < touch_low and c_closes[k] > touch_low:
+                        ci = k  # shift entry to SFP candle
+                        sfp_found = True
+                        break
+                else:  # SHORT: need high break + close below
+                    if c_highs[k] > touch_high and c_closes[k] < touch_high:
+                        ci = k
+                        sfp_found = True
+                        break
+            if not sfp_found:
+                continue  # no SFP confirmation → skip trade
 
         entry_price = c_closes[ci]
         if direction == 1:  # LONG
@@ -710,6 +778,9 @@ MUTATIONS = [
     {'name': 'breakeven_rr', 'field': 'exit.breakeven_at_rr', 'range': [0.5, 3.0], 'step': 0.25},
     {'name': 'partial_pct', 'field': 'exit.partial_pct', 'range': [0.2, 0.8], 'step': 0.1},
     {'name': 'partial_rr', 'field': 'exit.partial_rr', 'range': [1.0, 5.0], 'step': 0.5},
+    {'name': 'scoring_mode', 'field': 'scoring_mode',
+     'options': ['unique_types', 'total_count', 'weighted']},
+    {'name': 'entry_mode', 'field': 'entry_mode', 'options': ['touch', 'sfp']},
     {'name': 'add_level_type', 'field': 'level_types', 'action': 'add', 'pool': ALL_LEVEL_TYPES},
     {'name': 'remove_level_type', 'field': 'level_types', 'action': 'remove', 'min_items': 2},
 ]
@@ -810,9 +881,16 @@ def run_confluence_scalper(n_experiments=50, timeframe='1m'):
     with app.app_context():
         config = copy.deepcopy(DEFAULT_CONFIG)
 
-        # Adjust defaults for larger timeframes
-        if timeframe in ('15m', '30m', '1h', '4h'):
-            config['exit']['timeout_candles'] = 50  # more room
+        # Start from best known config for each timeframe
+        if timeframe == '15m':
+            config['level_types'] = ['Fractal_support', 'Fractal_resistance',
+                                     'PrevSession_VWAP', 'PrevSession_VP_POC']
+            config['exit']['strategy'] = 'breakeven_trail'
+            config['exit']['timeout_candles'] = 35
+            config['exit']['swing_lookback'] = 9
+            config['touch_tolerance'] = 0.001
+        elif timeframe in ('30m', '1h', '4h'):
+            config['exit']['timeout_candles'] = 50
             config['exit']['atr_multiplier'] = 1.5
 
         print("=" * 70, flush=True)

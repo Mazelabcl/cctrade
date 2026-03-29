@@ -47,7 +47,7 @@ DEFAULT_CONFIG = {
     'zone_width': 0.01,
     'touch_tolerance': 0.003,
     'naked_only': True,
-    'scoring_mode': 'weighted',      # 'unique_types', 'total_count', 'weighted'
+    'scoring_mode': 'weighted',      # 'unique_types', 'total_count', 'weighted', 'tf_weighted'
     'entry_mode': 'touch',           # 'touch' = enter on close, 'sfp' = enter after stop hunt
     'level_types': [
         'Fractal_support', 'Fractal_resistance', 'HTF_level',
@@ -68,7 +68,7 @@ DEFAULT_CONFIG = {
 }
 
 # Timeframe weights for confluence scoring
-TF_WEIGHTS = {'1h': 0, '4h': 0, 'daily': 1, 'weekly': 2, 'monthly': 3}
+TF_WEIGHTS = {'1h': 0.25, '4h': 0.5, 'daily': 1, 'weekly': 2, 'monthly': 3}
 
 
 # ---------------------------------------------------------------------------
@@ -461,6 +461,12 @@ def score_and_deduplicate(entries, data, config):
             else:
                 scores[i] = len(zone_orig) * 0.5  # fallback
 
+        elif scoring_mode == 'tf_weighted':
+            # Each level's score IS its timeframe weight
+            # monthly=3, weekly=2, daily=1, hourly/4h=0.25
+            # A weekly Fib_CC (2) + daily HTF (1) + daily VP_POC (1) = 4
+            scores[i] = float(l_tf_weights[zone_orig].sum())
+
     # Filter by threshold
     mask = scores >= threshold
     entries = entries[mask]
@@ -779,14 +785,14 @@ MUTATIONS = [
     {'name': 'partial_pct', 'field': 'exit.partial_pct', 'range': [0.2, 0.8], 'step': 0.1},
     {'name': 'partial_rr', 'field': 'exit.partial_rr', 'range': [1.0, 5.0], 'step': 0.5},
     {'name': 'scoring_mode', 'field': 'scoring_mode',
-     'options': ['unique_types', 'total_count', 'weighted']},
+     'options': ['unique_types', 'total_count', 'weighted', 'tf_weighted']},
     {'name': 'entry_mode', 'field': 'entry_mode', 'options': ['touch', 'sfp']},
     {'name': 'add_level_type', 'field': 'level_types', 'action': 'add', 'pool': ALL_LEVEL_TYPES},
     {'name': 'remove_level_type', 'field': 'level_types', 'action': 'remove', 'min_items': 2},
 ]
 
 
-def propose_mutation(config, history=None):
+def propose_mutation(config, history=None, no_fractals=False):
     """Propose a random mutation to the config."""
     recent_fails = set()
     if history:
@@ -826,6 +832,8 @@ def propose_mutation(config, history=None):
     elif mut_def.get('action') == 'add':
         current = get_nested(config, mut_def['field'])
         pool = [t for t in mut_def['pool'] if t not in current]
+        if no_fractals:
+            pool = [t for t in pool if 'Fractal' not in t]
         if pool:
             to_add = random.choice(pool)
             mutation['new'] = to_add
@@ -868,23 +876,36 @@ def apply_mutation(config, mutation):
 # Agent loop
 # ---------------------------------------------------------------------------
 
-def run_confluence_scalper(n_experiments=50, timeframe='1m'):
+def run_confluence_scalper(n_experiments=50, timeframe='1m', no_fractals=False,
+                          initial_scoring=None, tag=None):
     """Main AutoResearch loop for confluence scalper discovery."""
     from app import create_app
     from app.extensions import db
 
     results_dir = os.path.join(os.path.dirname(__file__), 'results')
     os.makedirs(results_dir, exist_ok=True)
-    results_file = os.path.join(results_dir, f'confluence_scalper_{timeframe}.jsonl')
+    parts = [timeframe]
+    if no_fractals:
+        parts.append('nofractals')
+    if tag:
+        parts.append(tag)
+    suffix = '_' + '_'.join(parts)
+    results_file = os.path.join(results_dir, f'confluence_scalper{suffix}.jsonl')
 
     app = create_app()
     with app.app_context():
         config = copy.deepcopy(DEFAULT_CONFIG)
 
+        # Filter out fractals if requested
+        if no_fractals:
+            non_fractal_types = [t for t in ALL_LEVEL_TYPES if 'Fractal' not in t]
+            config['level_types'] = non_fractal_types[:8]  # Start with first 8
+
         # Start from best known config for each timeframe
         if timeframe == '15m':
-            config['level_types'] = ['Fractal_support', 'Fractal_resistance',
-                                     'PrevSession_VWAP', 'PrevSession_VP_POC']
+            if not no_fractals:
+                config['level_types'] = ['Fractal_support', 'Fractal_resistance',
+                                         'PrevSession_VWAP', 'PrevSession_VP_POC']
             config['exit']['strategy'] = 'breakeven_trail'
             config['exit']['timeout_candles'] = 35
             config['exit']['swing_lookback'] = 9
@@ -893,8 +914,18 @@ def run_confluence_scalper(n_experiments=50, timeframe='1m'):
             config['exit']['timeout_candles'] = 50
             config['exit']['atr_multiplier'] = 1.5
 
+        # Override scoring mode if requested
+        if initial_scoring:
+            config['scoring_mode'] = initial_scoring
+
+        labels = [f"[{timeframe}]"]
+        if no_fractals:
+            labels.append("[NO FRACTALS]")
+        if initial_scoring:
+            labels.append(f"[{initial_scoring}]")
+        label = ' '.join(labels)
         print("=" * 70, flush=True)
-        print(f"AUTORESEARCH MODE C — Confluence Scalper [{timeframe}]", flush=True)
+        print(f"AUTORESEARCH MODE C — Confluence Scalper {label}", flush=True)
         print("=" * 70, flush=True)
         print(f"Running {n_experiments} experiments...\n", flush=True)
 
@@ -916,7 +947,7 @@ def run_confluence_scalper(n_experiments=50, timeframe='1m'):
         improvements = 0
 
         for i in range(n_experiments):
-            mutation = propose_mutation(config, history)
+            mutation = propose_mutation(config, history, no_fractals=no_fractals)
 
             if mutation.get('skip'):
                 print(f"[{i+1}/{n_experiments}] SKIP: {mutation['description']}", flush=True)
@@ -990,6 +1021,14 @@ if __name__ == '__main__':
     parser.add_argument('--experiments', type=int, default=50, help='Number of experiments')
     parser.add_argument('--timeframe', type=str, default='1m',
                         help='Execution timeframe (1m, 15m, 30m, 1h, 4h)')
+    parser.add_argument('--no-fractals', action='store_true',
+                        help='Exclude Fractal_support/resistance from level types')
+    parser.add_argument('--scoring', type=str, default=None,
+                        help='Override initial scoring_mode (unique_types, total_count, weighted, tf_weighted)')
+    parser.add_argument('--tag', type=str, default=None,
+                        help='Custom tag appended to results filename')
     args = parser.parse_args()
 
-    run_confluence_scalper(n_experiments=args.experiments, timeframe=args.timeframe)
+    run_confluence_scalper(n_experiments=args.experiments, timeframe=args.timeframe,
+                          no_fractals=args.no_fractals, initial_scoring=args.scoring,
+                          tag=args.tag)

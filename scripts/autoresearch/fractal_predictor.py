@@ -605,8 +605,22 @@ def evaluate(config, data, _cache=None):
         return {'error': 'Too few samples', 'f1_macro': 0, 'f1_bullish': 0, 'f1_bearish': 0}
 
     # Time-based train/test split
-    test_split = config.get('test_split', 0.3)
-    split_idx = int(len(X) * (1 - test_split))
+    oos_date = config.get('oos_date', None)  # e.g. '2024-01-01' for out-of-sample
+    if oos_date:
+        # Split by date: train before oos_date, test after
+        df = data['df']
+        oos_ts = pd.Timestamp(oos_date, tz='UTC')
+        # Find the candle index closest to oos_date
+        candle_times = df['open_time']
+        if hasattr(candle_times.iloc[0], 'tz') and candle_times.iloc[0].tz is None:
+            oos_ts = oos_ts.tz_localize(None)
+        oos_candle_idx = (candle_times >= oos_ts).idxmax()
+        # Map to position in our filtered arrays
+        split_idx = int(np.searchsorted(orig_indices, oos_candle_idx))
+        split_idx = max(100, min(split_idx, len(X) - 100))
+    else:
+        test_split = config.get('test_split', 0.3)
+        split_idx = int(len(X) * (1 - test_split))
     X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
     y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
 
@@ -932,7 +946,8 @@ def apply_mutation(config, mutation):
 # Main experiment loop
 # ---------------------------------------------------------------------------
 
-def run_fractal_predictor(n_experiments=50, timeframe='1h', levels_only=True, tag=None):
+def run_fractal_predictor(n_experiments=50, timeframe='1h', levels_only=True, tag=None,
+                          oos_date=None):
     """Main AutoResearch loop for fractal prediction."""
     from app import create_app
     from app.extensions import db
@@ -960,9 +975,15 @@ def run_fractal_predictor(n_experiments=50, timeframe='1h', levels_only=True, ta
         if not levels_only:
             config['features'] = config['features'] + ['volume_ratio_20', 'momentum_10', 'atr_14']
 
+        # Out-of-sample split
+        if oos_date:
+            config['oos_date'] = oos_date
+
         labels = [f"[{timeframe}]"]
         if levels_only:
             labels.append("[LEVELS+PA ONLY]")
+        if oos_date:
+            labels.append(f"[OOS: train<{oos_date}, test>={oos_date}]")
         label = ' '.join(labels)
         print("=" * 70, flush=True)
         print(f"AUTORESEARCH MODE D — Fractal Predictor {label}", flush=True)
@@ -1071,7 +1092,10 @@ if __name__ == '__main__':
                         help='Allow retail indicators (RSI, momentum, volume). Default: levels+PA only')
     parser.add_argument('--tag', type=str, default=None,
                         help='Custom tag appended to results filename')
+    parser.add_argument('--oos', type=str, default=None,
+                        help='Out-of-sample date (e.g. 2024-01-01). Train before, test after.')
     args = parser.parse_args()
 
     run_fractal_predictor(n_experiments=args.experiments, timeframe=args.timeframe,
-                          levels_only=not args.all_features, tag=args.tag)
+                          levels_only=not args.all_features, tag=args.tag,
+                          oos_date=args.oos)

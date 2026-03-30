@@ -824,6 +824,315 @@ def fitness(metrics):
 
 
 # ---------------------------------------------------------------------------
+# Backtest — convert predictions into real trades with P&L
+# ---------------------------------------------------------------------------
+
+def compute_atr(highs, lows, closes, period=14):
+    """Compute ATR for all candles."""
+    n = len(highs)
+    atr = np.zeros(n)
+    for i in range(1, n):
+        tr = max(highs[i] - lows[i],
+                 abs(highs[i] - closes[i-1]),
+                 abs(lows[i] - closes[i-1]))
+        if i < period:
+            atr[i] = tr
+        else:
+            atr[i] = (atr[i-1] * (period - 1) + tr) / period
+    return atr
+
+
+def find_swing_lows(lows, lookback=5):
+    """Running swing low (lowest low in lookback window)."""
+    n = len(lows)
+    result = np.copy(lows)
+    for i in range(lookback, n):
+        result[i] = np.min(lows[max(0, i-lookback):i+1])
+    return result
+
+
+def find_swing_highs(highs, lookback=5):
+    """Running swing high (highest high in lookback window)."""
+    n = len(highs)
+    result = np.copy(highs)
+    for i in range(lookback, n):
+        result[i] = np.max(highs[max(0, i-lookback):i+1])
+    return result
+
+
+def backtest_predictions(data, config, _cache=None, oos_date=None):
+    """Train model, generate predictions on test set, simulate trades.
+
+    For each predicted fractal:
+    - Bullish (class 1): enter LONG at close, SL = low of last 3 bars - buffer
+    - Bearish (class 2): enter SHORT at close, SL = high of last 3 bars + buffer
+    - Exit: breakeven trail (move SL to entry after +1R, then trail with swing lows/highs)
+
+    Returns dict with trade metrics + P&L.
+    """
+    from sklearn.ensemble import RandomForestClassifier
+    import lightgbm as lgb
+
+    df = data['df']
+    highs = df['high'].values.astype(np.float64)
+    lows = df['low'].values.astype(np.float64)
+    closes = df['close'].values.astype(np.float64)
+    opens = df['open'].values.astype(np.float64)
+
+    # Build features + targets
+    X, y, feature_names, orig_indices = build_feature_matrix(data, config, _cache)
+
+    if len(X) < 500:
+        return {'error': 'Too few samples'}
+
+    # Train/test split (same logic as evaluate)
+    if oos_date:
+        candle_times = df['open_time']
+        oos_ts = pd.Timestamp(oos_date, tz='UTC')
+        if hasattr(candle_times.iloc[0], 'tz') and candle_times.iloc[0].tz is None:
+            oos_ts = oos_ts.tz_localize(None)
+        oos_candle_idx = (candle_times >= oos_ts).idxmax()
+        split_idx = int(np.searchsorted(orig_indices, oos_candle_idx))
+        split_idx = max(100, min(split_idx, len(X) - 100))
+    else:
+        split_idx = int(len(X) * 0.7)
+
+    X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+    y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
+    test_orig = orig_indices[split_idx:]
+
+    # Class weights
+    n_total = len(y_train)
+    class_weights = {}
+    for c in [0, 1, 2]:
+        count = (y_train == c).sum()
+        if count > 0:
+            class_weights[c] = n_total / (3 * count)
+
+    # Train model (use best known config)
+    model_type = config.get('model', 'rf')
+    n_trees = config.get('n_trees', 200)
+    max_depth = config.get('max_depth', 10)
+
+    if model_type == 'rf':
+        clf = RandomForestClassifier(
+            n_estimators=n_trees, max_depth=max_depth, min_samples_leaf=5,
+            class_weight=class_weights, random_state=42, n_jobs=-1,
+        )
+    else:  # lgbm
+        clf = lgb.LGBMClassifier(
+            n_estimators=n_trees, max_depth=max_depth, learning_rate=0.1,
+            class_weight=class_weights, random_state=42, n_jobs=-1, verbose=-1,
+        )
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
+
+    # Precompute trade helpers
+    n_candles = len(closes)
+    atr = compute_atr(highs, lows, closes, period=14)
+    sw_lows = find_swing_lows(lows, lookback=7)
+    sw_highs = find_swing_highs(highs, lookback=7)
+
+    # Exit config
+    exit_cfg = config.get('exit', {})
+    timeout = exit_cfg.get('timeout_candles', 50)
+    be_rr = exit_cfg.get('breakeven_at_rr', 1.0)
+    sl_buffer_pct = exit_cfg.get('sl_buffer_pct', 0.001)
+    strategy = exit_cfg.get('strategy', 'breakeven_trail')
+    rr_ratio = exit_cfg.get('rr_ratio', 2.0)
+    atr_mult = exit_cfg.get('atr_multiplier', 1.5)
+    partial_pct = exit_cfg.get('partial_pct', 0.5)
+    partial_rr = exit_cfg.get('partial_rr', 2.0)
+
+    # Simulate trades
+    trades = []
+    cooldown_until = -1
+
+    for i in range(len(y_pred)):
+        pred = y_pred[i]
+        if pred == 0:  # No fractal predicted
+            continue
+
+        candle_idx = test_orig[i]
+        if candle_idx <= cooldown_until:
+            continue
+        if candle_idx + 5 >= n_candles:
+            continue
+
+        entry = closes[candle_idx]
+        direction = 1 if pred == 1 else -1  # 1=LONG, 2(bearish)=SHORT
+
+        # SL: recent swing extreme + buffer
+        if direction == 1:  # LONG
+            recent_low = min(lows[max(0, candle_idx-3):candle_idx+1])
+            sl = recent_low * (1 - sl_buffer_pct)
+        else:  # SHORT
+            recent_high = max(highs[max(0, candle_idx-3):candle_idx+1])
+            sl = recent_high * (1 + sl_buffer_pct)
+
+        risk = abs(entry - sl)
+        if risk <= 0 or risk / entry > 0.05:  # Skip if SL > 5%
+            continue
+
+        # Simulate exit
+        pnl = _simulate_exit_bt(
+            strategy, direction, entry, sl, risk, candle_idx,
+            highs, lows, closes, atr, sw_lows, sw_highs,
+            timeout, rr_ratio, be_rr, atr_mult, partial_pct, partial_rr
+        )
+
+        trades.append({
+            'candle_idx': int(candle_idx),
+            'direction': direction,
+            'entry': round(entry, 2),
+            'sl': round(sl, 2),
+            'risk_pct': round(risk / entry * 100, 3),
+            'pnl_r': round(pnl, 2),
+            'actual': int(y_test.iloc[i]),
+            'predicted': int(pred),
+        })
+
+        cooldown_until = candle_idx + max(5, timeout // 2)
+
+    if not trades:
+        return {'error': 'No trades generated'}
+
+    # Compute metrics
+    pnls = np.array([t['pnl_r'] for t in trades])
+    wins = pnls[pnls > 0]
+    losses = pnls[pnls <= 0]
+
+    total_r = float(pnls.sum())
+    win_rate = len(wins) / len(pnls) * 100
+    avg_win = float(wins.mean()) if len(wins) > 0 else 0
+    avg_loss = float(losses.mean()) if len(losses) > 0 else 0
+    profit_factor = float(wins.sum() / abs(losses.sum())) if len(losses) > 0 and losses.sum() != 0 else 999
+
+    # Max consecutive losses
+    max_consec_loss = 0
+    cur_consec = 0
+    for p in pnls:
+        if p <= 0:
+            cur_consec += 1
+            max_consec_loss = max(max_consec_loss, cur_consec)
+        else:
+            cur_consec = 0
+
+    # Risk/commission analysis
+    risk_per_trade = 10  # USD
+    avg_risk_pct = np.mean([t['risk_pct'] for t in trades]) / 100
+    avg_btc_price = np.mean([t['entry'] for t in trades])
+    avg_position_size = risk_per_trade / avg_risk_pct if avg_risk_pct > 0 else 0
+    commission_rate = 0.0006  # 0.06% round trip
+    commission_per_trade = avg_position_size * commission_rate
+    total_commission = commission_per_trade * len(trades)
+    gross_profit = total_r * risk_per_trade
+    net_profit = gross_profit - total_commission
+
+    # Period
+    first_candle = test_orig[0]
+    last_candle = test_orig[-1]
+    n_days = (last_candle - first_candle) / (24 if '1h' in str(config.get('_timeframe', '1h')) else 6)
+    n_months = max(1, n_days / 30)
+
+    return {
+        'total_trades': len(trades),
+        'win_rate': round(win_rate, 1),
+        'profit_factor': round(profit_factor, 2),
+        'total_r': round(total_r, 1),
+        'avg_r': round(float(pnls.mean()), 3),
+        'avg_win_r': round(avg_win, 2),
+        'avg_loss_r': round(avg_loss, 2),
+        'max_consecutive_losses': max_consec_loss,
+        'trades_per_day': round(len(trades) / max(1, n_days), 2),
+        'avg_risk_pct': round(avg_risk_pct * 100, 3),
+        'avg_position_size': round(avg_position_size, 0),
+        'commission_per_trade': round(commission_per_trade, 2),
+        'gross_profit_10usd': round(gross_profit, 0),
+        'total_commission': round(total_commission, 0),
+        'net_profit_10usd': round(net_profit, 0),
+        'net_per_month': round(net_profit / n_months, 0),
+        'strategy': strategy,
+        'n_test_candles': int(last_candle - first_candle),
+    }
+
+
+def _simulate_exit_bt(strategy, direction, entry, sl, risk, idx,
+                      highs, lows, closes, atr, sw_lows, sw_highs,
+                      timeout, rr_ratio, be_rr, atr_mult, partial_pct, partial_rr):
+    """Simulate a single trade exit. Returns pnl in R units."""
+    n = len(highs)
+    end = min(idx + timeout, n)
+    d = 1 if direction == 1 else -1
+
+    if strategy == 'fixed_rr':
+        tp = entry + d * risk * rr_ratio
+        for j in range(idx + 1, end):
+            if direction == 1:
+                if lows[j] <= sl:
+                    return -1.0
+                if highs[j] >= tp:
+                    return rr_ratio
+            else:
+                if highs[j] >= sl:
+                    return -1.0
+                if lows[j] <= tp:
+                    return rr_ratio
+
+    elif strategy == 'breakeven_trail':
+        sl_cur = sl
+        reached = False
+        for j in range(idx + 1, end):
+            if direction == 1:
+                if lows[j] <= sl_cur:
+                    return round((sl_cur - entry) / risk, 2)
+                if highs[j] >= entry + be_rr * risk:
+                    reached = True
+                if reached:
+                    sl_cur = max(sl_cur, max(entry, sw_lows[j]))
+            else:
+                if highs[j] >= sl_cur:
+                    return round((entry - sl_cur) / risk, 2)
+                if lows[j] <= entry - be_rr * risk:
+                    reached = True
+                if reached:
+                    sl_cur = min(sl_cur, min(entry, sw_highs[j]))
+
+    elif strategy == 'swing_trail':
+        sl_cur = sl
+        for j in range(idx + 1, end):
+            if direction == 1:
+                if lows[j] <= sl_cur:
+                    return round((sl_cur - entry) / risk, 2)
+                sl_cur = max(sl_cur, sw_lows[j])
+            else:
+                if highs[j] >= sl_cur:
+                    return round((entry - sl_cur) / risk, 2)
+                sl_cur = min(sl_cur, sw_highs[j])
+
+    elif strategy == 'atr_trail':
+        sl_cur = sl
+        for j in range(idx + 1, end):
+            cur_atr = atr[j] if atr[j] > 0 else risk
+            if direction == 1:
+                if lows[j] <= sl_cur:
+                    return round((sl_cur - entry) / risk, 2)
+                sl_cur = max(sl_cur, highs[j] - atr_mult * cur_atr)
+            else:
+                if highs[j] >= sl_cur:
+                    return round((entry - sl_cur) / risk, 2)
+                sl_cur = min(sl_cur, lows[j] + atr_mult * cur_atr)
+
+    # Timeout — close at market
+    last = closes[min(end - 1, n - 1)]
+    if direction == 1:
+        pnl = (last - entry) / risk
+    else:
+        pnl = (entry - last) / risk
+    return round(pnl, 2)
+
+
+# ---------------------------------------------------------------------------
 # Mutation system
 # ---------------------------------------------------------------------------
 
@@ -1083,6 +1392,106 @@ def run_fractal_predictor(n_experiments=50, timeframe='1h', levels_only=True, ta
         return best, best_config
 
 
+def run_backtest(timeframe='1h', oos_date=None):
+    """Run backtest with best known config for the given timeframe."""
+    from app import create_app
+    from app.extensions import db
+
+    app = create_app()
+    with app.app_context():
+        config = copy.deepcopy(DEFAULT_CONFIG)
+        config['_timeframe'] = timeframe
+
+        # Best configs from AutoResearch experiments
+        if timeframe == '1h':
+            config['features'] = [
+                'body_ratio', 'lower_wick', 'dist_from_high_20', 'dist_from_low_20',
+                'conf_support_count', 'conf_resistance_count', 'conf_resistance_types',
+                'conf_support_tf_weight', 'conf_resistance_tf_weight',
+                'nearest_support_dist', 'nearest_resistance_dist',
+                'nearest_support_tf', 'nearest_resistance_tf',
+                'naked_support_total', 'naked_resistance_total',
+                'has_htf_resistance', 'candles_since_bullish', 'candles_since_bearish',
+                'consecutive_dir', 'conf_support_types',
+            ]
+            config['zone_width'] = 0.02
+            config['n_trees'] = 150
+            config['max_depth'] = 14
+        elif timeframe == '4h':
+            config['features'] = [
+                'body_ratio', 'upper_wick', 'lower_wick', 'dist_from_high_20', 'dist_from_low_20',
+                'conf_support_count', 'conf_resistance_count', 'conf_support_types',
+                'conf_resistance_types', 'conf_support_tf_weight', 'conf_resistance_tf_weight',
+                'nearest_support_dist', 'nearest_resistance_dist',
+                'nearest_support_tf', 'nearest_resistance_tf',
+                'naked_support_total', 'naked_resistance_total',
+                'has_htf_support', 'has_htf_resistance',
+                'candles_since_bullish', 'candles_since_bearish',
+            ]
+            config['zone_width'] = 0.0075
+            config['n_trees'] = 50
+            config['max_depth'] = 10
+
+        if oos_date:
+            config['oos_date'] = oos_date
+
+        # Test multiple exit strategies
+        exit_strategies = [
+            {'name': 'breakeven_trail', 'strategy': 'breakeven_trail',
+             'timeout_candles': 50, 'breakeven_at_rr': 1.0, 'sl_buffer_pct': 0.001,
+             'rr_ratio': 2.0, 'atr_multiplier': 1.5, 'partial_pct': 0.5, 'partial_rr': 2.0},
+            {'name': 'swing_trail', 'strategy': 'swing_trail',
+             'timeout_candles': 50, 'breakeven_at_rr': 1.0, 'sl_buffer_pct': 0.001,
+             'rr_ratio': 2.0, 'atr_multiplier': 1.5, 'partial_pct': 0.5, 'partial_rr': 2.0},
+            {'name': 'fixed_rr_2', 'strategy': 'fixed_rr',
+             'timeout_candles': 50, 'breakeven_at_rr': 1.0, 'sl_buffer_pct': 0.001,
+             'rr_ratio': 2.0, 'atr_multiplier': 1.5, 'partial_pct': 0.5, 'partial_rr': 2.0},
+            {'name': 'fixed_rr_3', 'strategy': 'fixed_rr',
+             'timeout_candles': 50, 'breakeven_at_rr': 1.0, 'sl_buffer_pct': 0.001,
+             'rr_ratio': 3.0, 'atr_multiplier': 1.5, 'partial_pct': 0.5, 'partial_rr': 2.0},
+        ]
+
+        print("=" * 70, flush=True)
+        oos_label = f" [OOS: test>={oos_date}]" if oos_date else ""
+        print(f"BACKTEST — Fractal Predictor [{timeframe}]{oos_label}", flush=True)
+        print("=" * 70, flush=True)
+
+        # Load data once
+        data = load_data(db.session, timeframe=timeframe)
+        _cache = {}
+
+        for exit_cfg in exit_strategies:
+            exit_name = exit_cfg.pop('name')
+            config['exit'] = exit_cfg
+            print(f"\n--- Exit: {exit_name} ---", flush=True)
+
+            result = backtest_predictions(data, config, _cache, oos_date=oos_date)
+
+            if result.get('error'):
+                print(f"  ERROR: {result['error']}", flush=True)
+                continue
+
+            print(f"  Trades: {result['total_trades']}", flush=True)
+            print(f"  Win rate: {result['win_rate']}%", flush=True)
+            print(f"  Profit Factor: {result['profit_factor']}", flush=True)
+            print(f"  Total R: {result['total_r']}", flush=True)
+            print(f"  Avg R: {result['avg_r']}", flush=True)
+            print(f"  Avg win: {result['avg_win_r']}R, Avg loss: {result['avg_loss_r']}R", flush=True)
+            print(f"  Max consec losses: {result['max_consecutive_losses']}", flush=True)
+            print(f"  Trades/day: {result['trades_per_day']}", flush=True)
+            print(f"  --- $10 risk ---", flush=True)
+            print(f"  Avg SL: {result['avg_risk_pct']}%", flush=True)
+            print(f"  Avg position: ${result['avg_position_size']}", flush=True)
+            print(f"  Commission/trade: ${result['commission_per_trade']}", flush=True)
+            print(f"  Gross profit: ${result['gross_profit_10usd']}", flush=True)
+            print(f"  Total commission: ${result['total_commission']}", flush=True)
+            print(f"  NET profit: ${result['net_profit_10usd']}", flush=True)
+            print(f"  NET/month: ${result['net_per_month']}", flush=True)
+
+        print(flush=True)
+        print("=" * 70, flush=True)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='AutoResearch Mode D — Fractal Predictor')
     parser.add_argument('--experiments', type=int, default=50, help='Number of experiments')
@@ -1094,8 +1503,13 @@ if __name__ == '__main__':
                         help='Custom tag appended to results filename')
     parser.add_argument('--oos', type=str, default=None,
                         help='Out-of-sample date (e.g. 2024-01-01). Train before, test after.')
+    parser.add_argument('--backtest', action='store_true',
+                        help='Run backtest with best config instead of AutoResearch loop')
     args = parser.parse_args()
 
-    run_fractal_predictor(n_experiments=args.experiments, timeframe=args.timeframe,
-                          levels_only=not args.all_features, tag=args.tag,
-                          oos_date=args.oos)
+    if args.backtest:
+        run_backtest(timeframe=args.timeframe, oos_date=args.oos)
+    else:
+        run_fractal_predictor(n_experiments=args.experiments, timeframe=args.timeframe,
+                              levels_only=not args.all_features, tag=args.tag,
+                              oos_date=args.oos)

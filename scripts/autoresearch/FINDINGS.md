@@ -343,6 +343,14 @@ US session vs Asia vs Europe. Es posible que el edge se concentre en ciertas ses
 
 Usar el fractal predictor (89% adj precision) como filtro: solo tomar trades del confluence scalper cuando el predictor dice "zona caliente". Podria mejorar PF y reducir trades perdedores.
 
+### 7. ~~Backtest del predictor~~ RESPONDIDA
+
+**El predictor es rentable como sistema de trading OOS.** Mejores resultados:
+- 4h swing_trail: PF 1.59, +$21/mes ($10 risk), 161 trades en 2 anos
+- 1h breakeven_trail: PF 1.30, +$13/mes ($10 risk), 618 trades en 2 anos
+- Fixed RR 2:1 no funciona; trail es necesario
+- WR bajo (21-26%) pero avg win 3-4R vs avg loss 0.6-0.8R
+
 ### 6. Multi-timeframe predictor
 
 Combinar features de niveles de TODOS los timeframes en un solo modelo. Un nivel weekly cerca + un nivel daily cerca + fractal rhythm → prediccion mas robusta.

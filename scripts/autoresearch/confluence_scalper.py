@@ -643,6 +643,34 @@ def evaluate(config, session=None, _cache={}, timeframe='1m'):
     if len(entries) == 0:
         return {'error': 'No entries after scoring/dedup', 'total_r': 0, 'fitness': 0}
 
+    # Session filter: filter entries by hour of day (UTC)
+    # Sessions: asia=0-8, eu=8-14, us=14-21, off=21-24
+    session_filter = config.get('session_filter', 'all')
+    if session_filter != 'all':
+        SESSION_HOURS = {
+            'asia': set(range(0, 8)),
+            'eu': set(range(8, 14)),
+            'us': set(range(14, 21)),
+            'us_eu': set(range(8, 21)),
+            'asia_eu': set(range(0, 14)),
+        }
+        allowed_hours = SESSION_HOURS.get(session_filter, set(range(0, 24)))
+        # Extract hour from candle timestamps
+        keep_mask = np.zeros(len(entries), dtype=bool)
+        for i in range(len(entries)):
+            ci = int(entries[i, 0])
+            ct = c_times[ci]
+            if hasattr(ct, 'hour'):
+                hour = ct.hour if hasattr(ct, 'hour') else 0
+            else:
+                # datetime64 → extract hour
+                hour = int((ct - ct.astype('datetime64[D]')) / np.timedelta64(1, 'h'))
+            keep_mask[i] = hour in allowed_hours
+        entries = entries[keep_mask]
+        scores = scores[keep_mask]
+        if len(entries) == 0:
+            return {'error': 'No entries after session filter', 'total_r': 0, 'fitness': 0}
+
     # Phase 4: Simulate exits
     entry_mode = config.get('entry_mode', 'touch')
     t_phase = time.time()
@@ -787,6 +815,8 @@ MUTATIONS = [
     {'name': 'scoring_mode', 'field': 'scoring_mode',
      'options': ['unique_types', 'total_count', 'weighted', 'tf_weighted']},
     {'name': 'entry_mode', 'field': 'entry_mode', 'options': ['touch', 'sfp']},
+    {'name': 'session_filter', 'field': 'session_filter',
+     'options': ['all', 'us', 'eu', 'asia', 'us_eu', 'asia_eu']},
     {'name': 'add_level_type', 'field': 'level_types', 'action': 'add', 'pool': ALL_LEVEL_TYPES},
     {'name': 'remove_level_type', 'field': 'level_types', 'action': 'remove', 'min_items': 2},
 ]

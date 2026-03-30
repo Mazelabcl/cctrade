@@ -49,6 +49,7 @@ DEFAULT_CONFIG = {
     'naked_only': True,
     'scoring_mode': 'weighted',      # 'unique_types', 'total_count', 'weighted', 'tf_weighted'
     'entry_mode': 'touch',           # 'touch' = enter on close, 'sfp' = enter after stop hunt
+    'session_filter': 'all',         # 'all', 'us', 'eu', 'asia', 'us_eu', 'asia_eu'
     'level_types': [
         'Fractal_support', 'Fractal_resistance', 'HTF_level',
         'Fib_CC', 'PrevSession_High', 'PrevSession_Low',

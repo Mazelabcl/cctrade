@@ -528,12 +528,17 @@
             <div class="list-group list-group-flush mb-3">
                 <div class="list-group-item bg-danger bg-opacity-10 border-danger">
                     <strong>Sniper 1m backtest: corregir info del futuro</strong><br>
-                    <small>El backtest actual mira DENTRO de la vela de 15m cerrada para elegir el mejor punto de entrada en 1m. En la practica, el touch se detecta en tiempo real en 1m, no despues de que cierra la 15m. Re-hacer con logica: 1m touch en nivel de confluencia -> esperar SFP -> entrar.</small>
+                    <small>El backtest usaba info del futuro. Se probo 1m puro real-time pero las comisiones lo matan (SL 0.23% = position grande = comision alta). El 15m sigue siendo necesario como filtro de ruido. Probar hibrido: senal 15m -> entry en las SIGUIENTES velas de 1m.</small>
                 </div>
             </div>
 
             <h5 class="text-warning"><i class="bi bi-star me-1"></i>Alta Prioridad</h5>
             <div class="list-group list-group-flush mb-3">
+                <div class="list-group-item bg-success bg-opacity-10 border-success">
+                    <strong>MVP: Paper Trading en Tiempo Real</strong>
+                    <span class="badge bg-success float-end">NEXT</span><br>
+                    <small>Conectar el sistema validado ($156/mo) a data real de Binance. Paper trading con senales en vivo. Ya tenemos: live sync, pipeline de indicadores/features/predicciones, signal generator. Falta: modelo PaperTrade, servicio de confluence scalper en vivo, dashboard de P&L.</small>
+                </div>
                 <div class="list-group-item bg-warning bg-opacity-10 border-warning">
                     <strong>Multi-TF Pyramiding (1m -> 15m -> 4h -> Daily)</strong><br>
                     <small>Idea clave: empezar en 1m (mejor SL), compound cuando 15m confirma, dejar correr cuando 4h confirma, swing trade si daily confirma. Cada TF superior da mas confianza + oportunidad de agregar posicion.</small>
@@ -545,8 +550,8 @@
                     </div>
                 </div>
                 <div class="list-group-item bg-transparent border-secondary">
-                    <strong>1m real-time touch detection</strong><br>
-                    <small>Base del pyramiding: detectar en 1m cuando el precio toca un nivel de confluencia naked. Este es el primer trigger. Estudiar: que pasa despues? SFP? Wick rejection? Cuanto se mueve?</small>
+                    <strong>Hibrido 15m senal + 1m entry (post-confirmacion)</strong><br>
+                    <small>1m puro no funciona (comisiones). Probar: esperar cierre de 15m con touch, luego en las SIGUIENTES velas de 1m buscar entry con volumen alto. El 15m filtra ruido, el 1m da mejor SL.</small>
                 </div>
             </div>
 

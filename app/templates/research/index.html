@@ -1,0 +1,465 @@
+{% extends "base.html" %}
+{% block title %}AutoResearch Dashboard{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="bi bi-rocket-takeoff me-2"></i>AutoResearch Dashboard</h2>
+
+<!-- Tab Navigation -->
+<ul class="nav nav-tabs mb-3" id="researchTabs">
+    <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#tab-discovery">Discovery Map</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tab-data">Data Inventory</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tab-features">Feature Lab</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tab-performance">Strategy Performance</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tab-roadmap">Roadmap</a>
+    </li>
+</ul>
+
+<div class="tab-content">
+
+<!-- ============================================================ -->
+<!-- TAB 1: DISCOVERY MAP -->
+<!-- ============================================================ -->
+<div class="tab-pane fade show active" id="tab-discovery">
+
+    <!-- Best System Hero -->
+    <div class="card bg-success bg-opacity-10 border-success mb-4">
+        <div class="card-body text-center">
+            <h4 class="text-success mb-1">Best System: 15m Signal + 1m Sniper Entry</h4>
+            <div class="d-flex justify-content-center gap-4 mt-3">
+                <div><span class="display-5 text-success fw-bold">$431</span><br><small class="text-muted">/month ($10 risk)</small></div>
+                <div><span class="display-5 text-info fw-bold">5.10</span><br><small class="text-muted">Profit Factor</small></div>
+                <div><span class="display-5 text-warning fw-bold">43.3%</span><br><small class="text-muted">Win Rate</small></div>
+                <div><span class="display-5 text-light fw-bold">+1.79R</span><br><small class="text-muted">Avg R/trade</small></div>
+            </div>
+            <small class="text-muted mt-2 d-block">OOS validated (train 2017-2023, test 2024-2026) | breakeven_trail be_rr=2.75 | 2,709 trades</small>
+        </div>
+    </div>
+
+    <!-- Experiment Cards -->
+    <h5 class="mb-3">Experiment History</h5>
+    <div class="row g-3">
+        <!-- Mode A -->
+        <div class="col-md-4">
+            <div class="card h-100 border-success">
+                <div class="card-header bg-success bg-opacity-10">
+                    <strong>Mode A</strong> — Exit Optimization
+                    <span class="badge bg-success float-end">DONE</span>
+                </div>
+                <div class="card-body">
+                    <p class="small">Optimizar salida del sistema de fractales en 4h</p>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">PF</span><span class="fw-bold text-success">10+</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Best exit</span><span>swing_trail</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Finding</span><span class="small">Trail 5x better than fixed RR</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Mode B -->
+        <div class="col-md-4">
+            <div class="card h-100 border-danger">
+                <div class="card-header bg-danger bg-opacity-10">
+                    <strong>Mode B</strong> — Feature Discovery (Retail)
+                    <span class="badge bg-danger float-end">FAILED</span>
+                </div>
+                <div class="card-body">
+                    <p class="small">Predecir fractales con features retail (RSI, momentum)</p>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">F1</span><span class="fw-bold text-danger">0.10</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Finding</span><span class="small text-danger">Retail indicators don't work</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Mode C -->
+        <div class="col-md-4">
+            <div class="card h-100 border-success">
+                <div class="card-header bg-success bg-opacity-10">
+                    <strong>Mode C</strong> — Confluence Scalper
+                    <span class="badge bg-success float-end">DONE</span>
+                </div>
+                <div class="card-body">
+                    <p class="small">Scalper basado en confluencia de niveles</p>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Best TF</span><span>15m (PF 2.39)</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Net/month</span><span class="text-success">$134</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">1m</span><span class="text-danger small">Killed by commissions</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">No fractals</span><span class="text-danger small">No edge without them</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Mode D -->
+        <div class="col-md-4">
+            <div class="card h-100 border-info">
+                <div class="card-header bg-info bg-opacity-10">
+                    <strong>Mode D</strong> — Fractal Predictor (Levels+PA)
+                    <span class="badge bg-info float-end">DONE</span>
+                </div>
+                <div class="card-body">
+                    <p class="small">ML predicts fractals using coach's levels + price action</p>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">F1 macro</span><span class="fw-bold text-info">0.40</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Adj precision</span><span class="text-info">89%</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">OOS</span><span class="text-success">No overfitting</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Retail features</span><span class="small">Add nothing (0.41 vs 0.40)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Mode E -->
+        <div class="col-md-4">
+            <div class="card h-100 border-warning">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <strong>Mode E</strong> — Combo (Scalper + Predictor)
+                    <span class="badge bg-warning text-dark float-end">DONE</span>
+                </div>
+                <div class="card-body">
+                    <p class="small">Predictor as filter for scalper trades</p>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">PF</span><span>2.45 &rarr; 2.72</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Finding</span><span class="small">Better quality but fewer trades</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Session/MFE/Sniper -->
+        <div class="col-md-4">
+            <div class="card h-100 border-success">
+                <div class="card-header bg-success bg-opacity-10">
+                    <strong>Optimizations</strong> — Session + MFE + Sniper
+                    <span class="badge bg-success float-end">DONE</span>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Session</span><span>US PF 5.15 (3x Asia)</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">MFE capture</span><span>14% &rarr; 90% (be_rr=2.75)</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Sniper 1m</span><span>SL 46% tighter (1.84x pos)</span>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1">
+                        <span class="text-muted">Combined</span><span class="fw-bold text-success">$431/mo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Findings -->
+    <h5 class="mt-4 mb-3">Universal Truths (confirmed across all experiments)</h5>
+    <div class="row g-2">
+        <div class="col-md-6"><div class="card card-body small"><i class="bi bi-check-circle text-success me-1"></i><strong>Fractals dominate everything.</strong> Without them, no edge survives commissions.</div></div>
+        <div class="col-md-6"><div class="card card-body small"><i class="bi bi-check-circle text-success me-1"></i><strong>naked_only=True always wins.</strong> Untouched levels have more power.</div></div>
+        <div class="col-md-6"><div class="card card-body small"><i class="bi bi-check-circle text-success me-1"></i><strong>US session has 3x more edge.</strong> Asia is noise.</div></div>
+        <div class="col-md-6"><div class="card card-body small"><i class="bi bi-check-circle text-success me-1"></i><strong>Retail indicators add nothing.</strong> Coach's levels + PA is all you need.</div></div>
+        <div class="col-md-6"><div class="card card-body small"><i class="bi bi-check-circle text-success me-1"></i><strong>Trail exits beat fixed RR.</strong> breakeven_trail best for 15m+.</div></div>
+        <div class="col-md-6"><div class="card card-body small"><i class="bi bi-check-circle text-success me-1"></i><strong>OOS validated.</strong> No overfitting (2017-2023 train, 2024-2026 test).</div></div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TAB 2: DATA INVENTORY -->
+<!-- ============================================================ -->
+<div class="tab-pane fade" id="tab-data">
+    <div class="row">
+        <div class="col-md-6">
+            <h5>Candle Data</h5>
+            <table class="table table-sm table-dark">
+                <thead><tr><th>Timeframe</th><th>Count</th><th>From</th><th>To</th></tr></thead>
+                <tbody>
+                {% for row in candle_stats %}
+                <tr>
+                    <td><span class="badge bg-primary">{{ row[0] }}</span></td>
+                    <td>{{ "{:,}".format(row[1]) }}</td>
+                    <td class="small">{{ row[2][:10] if row[2] else '-' }}</td>
+                    <td class="small">{{ row[3][:10] if row[3] else '-' }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <h5>Computed Features</h5>
+            <div class="card card-body">
+                <span class="display-6">{{ "{:,}".format(feature_count) }}</span>
+                <small class="text-muted">feature rows computed</small>
+            </div>
+        </div>
+    </div>
+
+    <h5 class="mt-4">Level Types ({{ level_stats|length }} combinations)</h5>
+    <table class="table table-sm table-dark">
+        <thead><tr><th>Level Type</th><th>Timeframe</th><th>Total</th><th>Naked</th><th>Touched %</th></tr></thead>
+        <tbody>
+        {% for row in level_stats[:40] %}
+        <tr>
+            <td>{{ row[0] }}</td>
+            <td><span class="badge bg-secondary">{{ row[1] }}</span></td>
+            <td>{{ "{:,}".format(row[2]) }}</td>
+            <td>{{ "{:,}".format(row[3]) }}</td>
+            <td>{{ "%.0f"|format((1 - row[3]/row[2])*100 if row[2] > 0 else 0) }}%</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <h5 class="mt-4">Data Sources NOT Yet Computed</h5>
+    <div class="row g-2">
+        <div class="col-md-3"><div class="card card-body text-center"><i class="bi bi-graph-up-arrow fs-3 text-muted"></i><br><strong>VWAP Intraday</strong><br><small class="text-muted">Current session VWAP (calculable)</small></div></div>
+        <div class="col-md-3"><div class="card card-body text-center"><i class="bi bi-arrow-left-right fs-3 text-muted"></i><br><strong>Delta (Buy-Sell)</strong><br><small class="text-muted">Binance aggTrades API</small></div></div>
+        <div class="col-md-3"><div class="card card-body text-center"><i class="bi bi-stack fs-3 text-muted"></i><br><strong>Open Interest</strong><br><small class="text-muted">Binance Futures API</small></div></div>
+        <div class="col-md-3"><div class="card card-body text-center"><i class="bi bi-percent fs-3 text-muted"></i><br><strong>Funding Rate</strong><br><small class="text-muted">Binance Futures API</small></div></div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TAB 3: FEATURE LAB -->
+<!-- ============================================================ -->
+<div class="tab-pane fade" id="tab-features">
+    <h5>Features Tested in AutoResearch</h5>
+    <p class="text-muted small">Features that survived 200+ mutation experiments. Importance from Mode D Random Forest.</p>
+
+    <div class="row">
+        <div class="col-md-8">
+            <table class="table table-sm table-dark">
+                <thead><tr><th>Feature</th><th>Type</th><th>Importance</th><th>Survived?</th><th>Notes</th></tr></thead>
+                <tbody>
+                <tr class="table-success"><td>candles_since_bearish</td><td>Fractal rhythm</td><td><div class="progress" style="height:12px"><div class="progress-bar bg-success" style="width:85%">18.8%</div></div></td><td><i class="bi bi-check-circle text-success"></i></td><td>Most predictive feature</td></tr>
+                <tr class="table-success"><td>candles_since_bullish</td><td>Fractal rhythm</td><td><div class="progress" style="height:12px"><div class="progress-bar bg-success" style="width:77%">17.1%</div></div></td><td><i class="bi bi-check-circle text-success"></i></td><td>Fractals have a temporal rhythm</td></tr>
+                <tr class="table-success"><td>dist_from_high_20</td><td>Price action</td><td><div class="progress" style="height:12px"><div class="progress-bar bg-info" style="width:34%">6.8%</div></div></td><td><i class="bi bi-check-circle text-success"></i></td><td>Best from Mode B</td></tr>
+                <tr class="table-success"><td>upper_wick</td><td>Candle shape</td><td><div class="progress" style="height:12px"><div class="progress-bar bg-info" style="width:32%">6.4%</div></div></td><td><i class="bi bi-check-circle text-success"></i></td><td></td></tr>
+                <tr class="table-success"><td>dist_from_low_20</td><td>Price action</td><td><div class="progress" style="height:12px"><div class="progress-bar bg-info" style="width:32%">6.3%</div></div></td><td><i class="bi bi-check-circle text-success"></i></td><td></td></tr>
+                <tr class="table-success"><td>lower_wick</td><td>Candle shape</td><td><div class="progress" style="height:12px"><div class="progress-bar bg-info" style="width:31%">6.2%</div></div></td><td><i class="bi bi-check-circle text-success"></i></td><td></td></tr>
+                <tr class="table-success"><td>body_ratio</td><td>Candle shape</td><td><div class="progress" style="height:12px"><div class="progress-bar bg-info" style="width:31%">6.1%</div></div></td><td><i class="bi bi-check-circle text-success"></i></td><td></td></tr>
+                <tr><td>nearest_support_dist</td><td>Level context</td><td><div class="progress" style="height:12px"><div class="progress-bar bg-warning" style="width:20%"></div></div></td><td><i class="bi bi-check-circle text-success"></i></td><td>In all final models</td></tr>
+                <tr><td>nearest_resistance_dist</td><td>Level context</td><td><div class="progress" style="height:12px"><div class="progress-bar bg-warning" style="width:20%"></div></div></td><td><i class="bi bi-check-circle text-success"></i></td><td></td></tr>
+                <tr><td>nearest_support_tf</td><td>Level TF weight</td><td><div class="progress" style="height:12px"><div class="progress-bar bg-warning" style="width:15%"></div></div></td><td><i class="bi bi-check-circle text-success"></i></td><td>HTF levels more predictive</td></tr>
+                <tr><td>nearest_resistance_tf</td><td>Level TF weight</td><td><div class="progress" style="height:12px"><div class="progress-bar bg-warning" style="width:15%"></div></div></td><td><i class="bi bi-check-circle text-success"></i></td><td></td></tr>
+                <tr><td>conf_support_count</td><td>Confluence</td><td><div class="progress" style="height:12px"><div class="progress-bar bg-warning" style="width:12%"></div></div></td><td><i class="bi bi-check-circle text-success"></i></td><td></td></tr>
+                <tr><td>conf_resistance_count</td><td>Confluence</td><td><div class="progress" style="height:12px"><div class="progress-bar bg-warning" style="width:12%"></div></div></td><td><i class="bi bi-check-circle text-success"></i></td><td></td></tr>
+                <tr><td>has_htf_support/resistance</td><td>HTF presence</td><td><div class="progress" style="height:12px"><div class="progress-bar bg-warning" style="width:10%"></div></div></td><td><i class="bi bi-check-circle text-success"></i></td><td></td></tr>
+                <tr><td>naked_support/resistance_total</td><td>Global count</td><td><div class="progress" style="height:12px"><div class="progress-bar bg-secondary" style="width:8%"></div></div></td><td><i class="bi bi-check-circle text-success"></i></td><td></td></tr>
+                <tr class="text-muted"><td>rsi_14 / rsi_7</td><td>Retail</td><td></td><td><i class="bi bi-x-circle text-danger"></i></td><td>No improvement over levels</td></tr>
+                <tr class="text-muted"><td>momentum_5 / 10 / 20</td><td>Retail</td><td></td><td><i class="bi bi-x-circle text-danger"></i></td><td>Adds noise</td></tr>
+                <tr class="text-muted"><td>volume_ratio_20</td><td>Retail</td><td></td><td><i class="bi bi-x-circle text-danger"></i></td><td>Eliminated by optimizer</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-body mb-3">
+                <h6>Feature Groups</h6>
+                <div class="mb-2"><span class="badge bg-success">Fractal rhythm</span> 36% total importance</div>
+                <div class="mb-2"><span class="badge bg-info">Price action</span> 32% total</div>
+                <div class="mb-2"><span class="badge bg-warning">Level context</span> 25% total</div>
+                <div class="mb-2"><span class="badge bg-secondary">Unused retail</span> 0% (eliminated)</div>
+            </div>
+            <div class="card card-body">
+                <h6>Potential New Features</h6>
+                <ul class="small mb-0">
+                    <li>VWAP intraday distance</li>
+                    <li>Delta (buy vs sell volume)</li>
+                    <li>Open Interest change</li>
+                    <li>Funding rate</li>
+                    <li>Liquidation heatmap proximity</li>
+                    <li>Multi-TF confluence score</li>
+                    <li>Time since level creation</li>
+                    <li>Level density in zone</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TAB 4: STRATEGY PERFORMANCE -->
+<!-- ============================================================ -->
+<div class="tab-pane fade" id="tab-performance">
+    <h5>Strategy Comparison (all tested configurations)</h5>
+
+    <table class="table table-sm table-dark table-hover">
+        <thead><tr><th>System</th><th>TF</th><th>Session</th><th>Entry</th><th>Exit</th><th>PF</th><th>WR</th><th>Avg R</th><th>Trades</th><th class="text-end">Net/mo</th></tr></thead>
+        <tbody>
+        <tr class="table-success">
+            <td><strong>Sniper (best)</strong></td><td>15m+1m</td><td>All</td><td>1m extreme+1</td><td>BE trail 2.75</td>
+            <td class="fw-bold">5.10</td><td>43.3%</td><td>+1.79</td><td>2,709</td><td class="text-end fw-bold text-success">$431</td>
+        </tr>
+        <tr>
+            <td>Scalper (improved exit)</td><td>15m</td><td>All</td><td>15m close</td><td>BE trail 2.75</td>
+            <td>2.23</td><td>35.9%</td><td>+0.72</td><td>2,722</td><td class="text-end">$156</td>
+        </tr>
+        <tr>
+            <td>Scalper (original)</td><td>15m</td><td>All</td><td>15m close</td><td>BE trail 1.0</td>
+            <td>2.39</td><td>32.3%</td><td>+0.59</td><td>2,962</td><td class="text-end">$134</td>
+        </tr>
+        <tr>
+            <td>Scalper US only</td><td>15m</td><td>US</td><td>15m close</td><td>BE trail 1.0</td>
+            <td>5.15</td><td>47.4%</td><td>+1.27</td><td>515</td><td class="text-end">$57</td>
+        </tr>
+        <tr>
+            <td>Scalper US+EU</td><td>15m</td><td>US+EU</td><td>15m close</td><td>BE trail 1.0</td>
+            <td>3.73</td><td>40.0%</td><td>+0.99</td><td>972</td><td class="text-end">$82</td>
+        </tr>
+        <tr>
+            <td>Combo (scalper+predictor)</td><td>15m</td><td>All</td><td>15m close</td><td>BE trail 1.0</td>
+            <td>2.72</td><td>32.3%</td><td>+0.71</td><td>560</td><td class="text-end">$136</td>
+        </tr>
+        <tr>
+            <td>Predictor alone</td><td>4h</td><td>All</td><td>4h close</td><td>swing trail</td>
+            <td>1.59</td><td>24%</td><td>+0.37</td><td>161</td><td class="text-end">$21</td>
+        </tr>
+        <tr>
+            <td>Fractal swing (Mode A)</td><td>4h</td><td>All</td><td>Touch</td><td>swing trail</td>
+            <td>10+</td><td>-</td><td>-</td><td>Rare</td><td class="text-end">$87</td>
+        </tr>
+        <tr class="text-muted">
+            <td>Scalper 1m</td><td>1m</td><td>All</td><td>1m close</td><td>atr trail</td>
+            <td>2.14</td><td>54.4%</td><td>-</td><td>43K</td><td class="text-end text-danger">-$115K</td>
+        </tr>
+        <tr class="text-muted">
+            <td>No fractals</td><td>15m</td><td>All</td><td>15m close</td><td>atr trail</td>
+            <td>1.39</td><td>48.1%</td><td>-</td><td>21K</td><td class="text-end text-danger">-$40</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h5 class="mt-4">MFE Analysis — How Much We Capture</h5>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card card-body text-center">
+                <small class="text-muted">15m All Sessions</small>
+                <div class="mt-2">
+                    <span class="text-warning">Actual: +0.59R</span> /
+                    <span class="text-info">MFE-35: +4.14R</span>
+                </div>
+                <div class="progress mt-2" style="height:20px">
+                    <div class="progress-bar bg-warning" style="width:14%">14%</div>
+                    <div class="progress-bar bg-dark" style="width:86%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-body text-center">
+                <small class="text-muted">15m US Session</small>
+                <div class="mt-2">
+                    <span class="text-warning">Actual: +1.28R</span> /
+                    <span class="text-info">MFE-35: +4.40R</span>
+                </div>
+                <div class="progress mt-2" style="height:20px">
+                    <div class="progress-bar bg-warning" style="width:29%">29%</div>
+                    <div class="progress-bar bg-dark" style="width:71%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-body text-center">
+                <small class="text-muted">Sniper 1m Entry</small>
+                <div class="mt-2">
+                    <span class="text-success">Actual: +1.79R</span> /
+                    <span class="text-info">MFE-35: +4.14R</span>
+                </div>
+                <div class="progress mt-2" style="height:20px">
+                    <div class="progress-bar bg-success" style="width:43%">43%</div>
+                    <div class="progress-bar bg-dark" style="width:57%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TAB 5: ROADMAP -->
+<!-- ============================================================ -->
+<div class="tab-pane fade" id="tab-roadmap">
+    <div class="row">
+        <div class="col-md-6">
+            <h5 class="text-success"><i class="bi bi-check-circle me-1"></i>Completed</h5>
+            <div class="list-group list-group-flush mb-4">
+                <div class="list-group-item bg-transparent border-secondary"><i class="bi bi-check text-success me-1"></i> Mode A: Exit optimization (4h fractals) <span class="badge bg-success float-end">PF 10+</span></div>
+                <div class="list-group-item bg-transparent border-secondary"><i class="bi bi-check text-success me-1"></i> Mode B: Feature discovery (retail) <span class="badge bg-danger float-end">F1=0.10</span></div>
+                <div class="list-group-item bg-transparent border-secondary"><i class="bi bi-check text-success me-1"></i> Mode C: Confluence scalper (1m/15m/30m) <span class="badge bg-success float-end">$134/mo</span></div>
+                <div class="list-group-item bg-transparent border-secondary"><i class="bi bi-check text-success me-1"></i> Mode C+: No-fractals experiments <span class="badge bg-danger float-end">No edge</span></div>
+                <div class="list-group-item bg-transparent border-secondary"><i class="bi bi-check text-success me-1"></i> Mode C+: tf_weighted scoring <span class="badge bg-danger float-end">Worse</span></div>
+                <div class="list-group-item bg-transparent border-secondary"><i class="bi bi-check text-success me-1"></i> Mode D: Fractal predictor (levels+PA) <span class="badge bg-info float-end">F1=0.40</span></div>
+                <div class="list-group-item bg-transparent border-secondary"><i class="bi bi-check text-success me-1"></i> Mode D+: OOS validation <span class="badge bg-success float-end">No overfit</span></div>
+                <div class="list-group-item bg-transparent border-secondary"><i class="bi bi-check text-success me-1"></i> Mode D+: Backtest as trading system <span class="badge bg-success float-end">$21/mo</span></div>
+                <div class="list-group-item bg-transparent border-secondary"><i class="bi bi-check text-success me-1"></i> Mode E: Combo scalper+predictor <span class="badge bg-warning text-dark float-end">PF 2.72</span></div>
+                <div class="list-group-item bg-transparent border-secondary"><i class="bi bi-check text-success me-1"></i> Session filters (US/EU/Asia) <span class="badge bg-success float-end">US 3x</span></div>
+                <div class="list-group-item bg-transparent border-secondary"><i class="bi bi-check text-success me-1"></i> MFE analysis (are we leaving profit?) <span class="badge bg-warning text-dark float-end">14-29%</span></div>
+                <div class="list-group-item bg-transparent border-secondary"><i class="bi bi-check text-success me-1"></i> Exit optimization (be_rr=2.75) <span class="badge bg-success float-end">90% MFE</span></div>
+                <div class="list-group-item bg-transparent border-secondary"><i class="bi bi-check text-success me-1"></i> Sniper 1m v2 (rigorous study) <span class="badge bg-success float-end">1.84x pos</span></div>
+                <div class="list-group-item bg-transparent border-secondary"><i class="bi bi-check text-success me-1"></i> Sniper backtest (15m+1m) <span class="badge bg-success float-end">$431/mo</span></div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <h5 class="text-warning"><i class="bi bi-lightbulb me-1"></i>Ideas / Pending</h5>
+            <div class="list-group list-group-flush mb-4">
+                <div class="list-group-item bg-transparent border-secondary">
+                    <strong>Multi-TF signals</strong><br>
+                    <small class="text-muted">Combinar 4h context + 1h signal + 15m/1m entry. "La 1h me da entrada, que dice la 4h?"</small>
+                </div>
+                <div class="list-group-item bg-transparent border-secondary">
+                    <strong>VWAP intraday como nivel</strong><br>
+                    <small class="text-muted">Current session VWAP. Requiere calcular + agregar a DB + recorrer pipeline.</small>
+                </div>
+                <div class="list-group-item bg-transparent border-secondary">
+                    <strong>Delta / Open Interest / Funding</strong><br>
+                    <small class="text-muted">Descargar de Binance API. Institutional flow features para el predictor.</small>
+                </div>
+                <div class="list-group-item bg-transparent border-secondary">
+                    <strong>Pipeline modular para nuevos niveles</strong><br>
+                    <small class="text-muted">Sistema que compute/backtest/score un nuevo level type automaticamente.</small>
+                </div>
+                <div class="list-group-item bg-transparent border-secondary">
+                    <strong>Risk sizing dinamico</strong><br>
+                    <small class="text-muted">Mas riesgo en "zona caliente" (predictor dice fractal), menos en fria.</small>
+                </div>
+                <div class="list-group-item bg-transparent border-secondary">
+                    <strong>Volume analysis en 1m touch</strong><br>
+                    <small class="text-muted">El 59% del vol peak esta a +-2 bars del extreme. Explotar para timing.</small>
+                </div>
+                <div class="list-group-item bg-transparent border-secondary">
+                    <strong>Limit order en nivel exacto</strong><br>
+                    <small class="text-muted">En vez de market en close, limit order = mejor fill + maker fees.</small>
+                </div>
+                <div class="list-group-item bg-transparent border-secondary">
+                    <strong>Optimizar be_rr para SL de 1m</strong><br>
+                    <small class="text-muted">be_rr=2.75 fue optimizado para 15m SL. Con 1m SL, be_rr=4.77 es equivalente. Net sube $431->$458.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div><!-- /tab-content -->
+{% endblock %}

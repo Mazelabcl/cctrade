@@ -49,6 +49,7 @@ def create_app(config_name=None):
     from .views.backtest import backtest_bp
     from .views.settings import settings_bp
     from .views.analytics import analytics_bp
+    from .views.research import research_bp
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(data_bp, url_prefix='/data')
@@ -59,6 +60,7 @@ def create_app(config_name=None):
     app.register_blueprint(backtest_bp, url_prefix='/backtest')
     app.register_blueprint(settings_bp, url_prefix='/settings')
     app.register_blueprint(analytics_bp, url_prefix='/analytics')
+    app.register_blueprint(research_bp, url_prefix='/research')
 
     with app.app_context():
         db.create_all()

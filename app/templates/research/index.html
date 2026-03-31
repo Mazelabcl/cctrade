@@ -3,6 +3,71 @@
 {% block content %}
 <h2 class="mb-3"><i class="bi bi-rocket-takeoff me-2"></i>AutoResearch Dashboard</h2>
 
+<!-- Glossary (collapsible) -->
+<div class="mb-3">
+    <a class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" href="#glossary">
+        <i class="bi bi-book me-1"></i> Glosario / Glossary
+    </a>
+    <div class="collapse mt-2" id="glossary">
+        <div class="card card-body bg-dark">
+            <div class="row g-3 small">
+                <div class="col-md-6">
+                    <h6 class="text-info">Metricas de Trading</h6>
+                    <dl class="mb-0">
+                        <dt>PF (Profit Factor)</dt>
+                        <dd>Ganancia bruta / Perdida bruta. PF=2 significa que por cada $1 que pierdes, ganas $2. PF>1.5 es bueno, PF>3 es excelente.<br>
+                        <em>Ejemplo: 10 trades ganadores ($500 total) y 8 perdedores ($250 total) = PF 2.0</em></dd>
+
+                        <dt>WR (Win Rate)</dt>
+                        <dd>% de trades ganadores. WR=43% = de cada 100 trades, 43 ganan. Un WR bajo puede ser muy rentable si los ganadores son grandes.<br>
+                        <em>Ejemplo: WR 30% pero avg win = 5R y avg loss = 1R = muy rentable</em></dd>
+
+                        <dt>R (Risk Unit)</dt>
+                        <dd>Unidad de riesgo = la distancia de tu entry al SL. Si arriesgas $10 por trade, 1R = $10. Un trade de +3R = ganaste $30.<br>
+                        <em>Ejemplo: Entry $60,000, SL $59,400 = R es $600. Si el trade llega a $61,800 = +3R</em></dd>
+
+                        <dt>SL (Stop Loss)</dt>
+                        <dd>Precio donde cierras el trade si va en tu contra. Limita tu perdida a 1R maximo.</dd>
+
+                        <dt>BE (Breakeven)</dt>
+                        <dd>Mover el SL al precio de entrada. Si te sacan, pierdes $0 en vez de -1R. "Trade gratis."</dd>
+
+                        <dt>be_rr (Breakeven R-Ratio)</dt>
+                        <dd>Cuanto debe moverse el trade a tu favor ANTES de mover el SL a breakeven. be_rr=2.75 = espera +2.75R antes de proteger.<br>
+                        <em>Ejemplo: Entry $60k, SL $59.4k (R=$600). Con be_rr=2.75, no mueves SL hasta que el precio llegue a $61,650</em></dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-info">Conceptos del Sistema</h6>
+                    <dl class="mb-0">
+                        <dt>Fractal</dt>
+                        <dd>Patron de 5 velas donde la del medio es el punto mas alto (bearish) o mas bajo (bullish). Marca un swing point. Son la senal de entrada principal.</dd>
+
+                        <dt>Confluencia</dt>
+                        <dd>Cuando multiples niveles tecnicos coinciden en la misma zona de precio (ej: un fractal + un VWAP + un Fibonacci). Mas confluencia = senal mas fuerte.</dd>
+
+                        <dt>Naked Level</dt>
+                        <dd>Un nivel que el precio NO ha tocado aun. Son mas poderosos porque tienen liquidez acumulada. Una vez tocado, pierde fuerza.</dd>
+
+                        <dt>MFE (Max Favorable Excursion)</dt>
+                        <dd>Lo maximo que el precio se movio a tu favor durante el trade. Si tu MFE fue +5R pero cerraste en +2R, dejaste 3R "en la mesa".</dd>
+
+                        <dt>OOS (Out-of-Sample)</dt>
+                        <dd>Test con datos que el modelo NUNCA vio. Entrenamos con 2017-2023 y testeamos en 2024-2026. Si funciona en OOS, no es overfitting.</dd>
+
+                        <dt>Session Filter</dt>
+                        <dd>Solo operar en ciertas horas. US session (14-21 UTC) tiene 3x mas edge que Asia porque hay mas volumen institucional.</dd>
+
+                        <dt>Sniper Entry</dt>
+                        <dd>En vez de entrar al cierre de la vela de 15m, bajar al grafico de 1m para encontrar un mejor punto de entrada mas cerca del SL.<br>
+                        <span class="text-warning">NOTA: El backtest actual tiene un problema metodologico (usa info del futuro). Pendiente de corregir.</span></dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Tab Navigation -->
 <ul class="nav nav-tabs mb-3" id="researchTabs">
     <li class="nav-item">
@@ -30,16 +95,35 @@
 <div class="tab-pane fade show active" id="tab-discovery">
 
     <!-- Best System Hero -->
-    <div class="card bg-success bg-opacity-10 border-success mb-4">
-        <div class="card-body text-center">
-            <h4 class="text-success mb-1">Best System: 15m Signal + 1m Sniper Entry</h4>
-            <div class="d-flex justify-content-center gap-4 mt-3">
-                <div><span class="display-5 text-success fw-bold">$431</span><br><small class="text-muted">/month ($10 risk)</small></div>
-                <div><span class="display-5 text-info fw-bold">5.10</span><br><small class="text-muted">Profit Factor</small></div>
-                <div><span class="display-5 text-warning fw-bold">43.3%</span><br><small class="text-muted">Win Rate</small></div>
-                <div><span class="display-5 text-light fw-bold">+1.79R</span><br><small class="text-muted">Avg R/trade</small></div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-8">
+            <div class="card bg-success bg-opacity-10 border-success h-100">
+                <div class="card-header bg-success bg-opacity-10"><strong>Best VALIDATED System: 15m Confluence Scalper (improved exit)</strong></div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-around text-center">
+                        <div><span class="display-6 text-success fw-bold">$156</span><br><small class="text-muted">/mes ($10 risk)</small></div>
+                        <div><span class="display-6 text-info fw-bold">2.23</span><br><small class="text-muted">Profit Factor</small></div>
+                        <div><span class="display-6 text-warning fw-bold">35.9%</span><br><small class="text-muted">Win Rate</small></div>
+                        <div><span class="display-6 text-light fw-bold">+0.72R</span><br><small class="text-muted">Avg R/trade</small></div>
+                    </div>
+                    <small class="text-muted d-block text-center mt-2">2,722 trades en 8 anos | breakeven_trail be_rr=2.75 | OOS validated</small>
+                    <p class="small mt-2 mb-0">Senal: precio toca zona de confluencia (3+ niveles apilados en +-1%). Entrada: close de la vela de 15m. SL: debajo del low. Exit: trail que deja correr hasta +2.75R antes de proteger.</p>
+                </div>
             </div>
-            <small class="text-muted mt-2 d-block">OOS validated (train 2017-2023, test 2024-2026) | breakeven_trail be_rr=2.75 | 2,709 trades</small>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning bg-opacity-10 border-warning h-100">
+                <div class="card-header bg-warning bg-opacity-10"><strong>Sniper 1m Entry (pendiente corregir)</strong></div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <span class="display-6 text-warning fw-bold">$431</span><br><small class="text-muted">/mes ($10 risk)</small>
+                    </div>
+                    <div class="alert alert-warning small mt-2 mb-0 py-1">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        El backtest usaba info del futuro (miraba dentro de la vela de 15m para elegir el mejor punto de entrada en 1m). Necesita re-hacerse con logica de tiempo real: detectar el touch en 1m MIENTRAS ocurre, no despues.
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -177,14 +261,32 @@
     </div>
 
     <!-- Key Findings -->
-    <h5 class="mt-4 mb-3">Universal Truths (confirmed across all experiments)</h5>
+    <h5 class="mt-4 mb-3">Universal Truths (confirmadas en 1,600+ experimentos)</h5>
     <div class="row g-2">
-        <div class="col-md-6"><div class="card card-body small"><i class="bi bi-check-circle text-success me-1"></i><strong>Fractals dominate everything.</strong> Without them, no edge survives commissions.</div></div>
-        <div class="col-md-6"><div class="card card-body small"><i class="bi bi-check-circle text-success me-1"></i><strong>naked_only=True always wins.</strong> Untouched levels have more power.</div></div>
-        <div class="col-md-6"><div class="card card-body small"><i class="bi bi-check-circle text-success me-1"></i><strong>US session has 3x more edge.</strong> Asia is noise.</div></div>
-        <div class="col-md-6"><div class="card card-body small"><i class="bi bi-check-circle text-success me-1"></i><strong>Retail indicators add nothing.</strong> Coach's levels + PA is all you need.</div></div>
-        <div class="col-md-6"><div class="card card-body small"><i class="bi bi-check-circle text-success me-1"></i><strong>Trail exits beat fixed RR.</strong> breakeven_trail best for 15m+.</div></div>
-        <div class="col-md-6"><div class="card card-body small"><i class="bi bi-check-circle text-success me-1"></i><strong>OOS validated.</strong> No overfitting (2017-2023 train, 2024-2026 test).</div></div>
+        <div class="col-md-6"><div class="card card-body small">
+            <i class="bi bi-check-circle text-success me-1"></i><strong>Los fractales dominan todo.</strong><br>
+            Sin fractales, ningun otro nivel genera suficiente edge para cubrir comisiones. Son el indicador mas fuerte. Los demas niveles (Fib, VP, Session) solo funcionan como complemento.
+        </div></div>
+        <div class="col-md-6"><div class="card card-body small">
+            <i class="bi bi-check-circle text-success me-1"></i><strong>Niveles "naked" (sin tocar) siempre ganan.</strong><br>
+            Un nivel que nunca ha sido tocado tiene mas liquidez acumulada. Cuando el precio finalmente lo toca, la reaccion es mas fuerte. Siempre filtrar por naked=True.
+        </div></div>
+        <div class="col-md-6"><div class="card card-body small">
+            <i class="bi bi-check-circle text-success me-1"></i><strong>US session tiene 3x mas edge que Asia.</strong><br>
+            Horario: 14-21 UTC (9am-4pm hora NY). En este horario hay mas volumen institucional, los niveles se respetan mejor. Asia (0-8 UTC) genera muchas senales falsas.
+        </div></div>
+        <div class="col-md-6"><div class="card card-body small">
+            <i class="bi bi-check-circle text-success me-1"></i><strong>Indicadores retail NO aportan nada.</strong><br>
+            RSI, MACD, momentum, volumen relativo: agregar estos al modelo no mejora la prediccion. Solo se necesitan los niveles del coach (HTF, Fib, VP, Session) + forma de vela.
+        </div></div>
+        <div class="col-md-6"><div class="card card-body small">
+            <i class="bi bi-check-circle text-success me-1"></i><strong>Trail exits ganan a fixed RR.</strong><br>
+            Un take-profit fijo (ej: siempre cerrar en +2R) es peor que un trailing stop que deja correr los ganadores. Clave: no mover el SL a breakeven demasiado rapido (be_rr=2.75).
+        </div></div>
+        <div class="col-md-6"><div class="card card-body small">
+            <i class="bi bi-check-circle text-success me-1"></i><strong>No hay overfitting (OOS validado).</strong><br>
+            El modelo entrenado con datos de 2017-2023 funciona igual de bien en 2024-2026 (datos que nunca vio). Los patrones de interaccion precio-niveles son estables en el tiempo.
+        </div></div>
     </div>
 </div>
 

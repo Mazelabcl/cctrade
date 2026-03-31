@@ -524,12 +524,34 @@
             </div>
         </div>
         <div class="col-md-6">
-            <h5 class="text-warning"><i class="bi bi-lightbulb me-1"></i>Ideas / Pending</h5>
-            <div class="list-group list-group-flush mb-4">
-                <div class="list-group-item bg-transparent border-secondary">
-                    <strong>Multi-TF signals</strong><br>
-                    <small class="text-muted">Combinar 4h context + 1h signal + 15m/1m entry. "La 1h me da entrada, que dice la 4h?"</small>
+            <h5 class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Corregir</h5>
+            <div class="list-group list-group-flush mb-3">
+                <div class="list-group-item bg-danger bg-opacity-10 border-danger">
+                    <strong>Sniper 1m backtest: corregir info del futuro</strong><br>
+                    <small>El backtest actual mira DENTRO de la vela de 15m cerrada para elegir el mejor punto de entrada en 1m. En la practica, el touch se detecta en tiempo real en 1m, no despues de que cierra la 15m. Re-hacer con logica: 1m touch en nivel de confluencia -> esperar SFP -> entrar.</small>
                 </div>
+            </div>
+
+            <h5 class="text-warning"><i class="bi bi-star me-1"></i>Alta Prioridad</h5>
+            <div class="list-group list-group-flush mb-3">
+                <div class="list-group-item bg-warning bg-opacity-10 border-warning">
+                    <strong>Multi-TF Pyramiding (1m -> 15m -> 4h -> Daily)</strong><br>
+                    <small>Idea clave: empezar en 1m (mejor SL), compound cuando 15m confirma, dejar correr cuando 4h confirma, swing trade si daily confirma. Cada TF superior da mas confianza + oportunidad de agregar posicion.</small>
+                    <div class="mt-1 small">
+                        <span class="badge bg-primary">1m</span> Touch en nivel de confluencia. Entry con SL tight. Muchos cerraran rapido.
+                        <span class="badge bg-info">15m</span> Si confirma -> compound (2da posicion, SL ajustado).
+                        <span class="badge bg-success">4h</span> Si confirma -> dejar correr, puede durar 2 dias.
+                        <span class="badge bg-warning text-dark">Daily</span> Si confirma -> swing trade. Entrado en 1m, duracion de dias/semana.
+                    </div>
+                </div>
+                <div class="list-group-item bg-transparent border-secondary">
+                    <strong>1m real-time touch detection</strong><br>
+                    <small>Base del pyramiding: detectar en 1m cuando el precio toca un nivel de confluencia naked. Este es el primer trigger. Estudiar: que pasa despues? SFP? Wick rejection? Cuanto se mueve?</small>
+                </div>
+            </div>
+
+            <h5 class="text-info"><i class="bi bi-lightbulb me-1"></i>Ideas / Explorar</h5>
+            <div class="list-group list-group-flush mb-4">
                 <div class="list-group-item bg-transparent border-secondary">
                     <strong>VWAP intraday como nivel</strong><br>
                     <small class="text-muted">Current session VWAP. Requiere calcular + agregar a DB + recorrer pipeline.</small>
@@ -552,11 +574,11 @@
                 </div>
                 <div class="list-group-item bg-transparent border-secondary">
                     <strong>Limit order en nivel exacto</strong><br>
-                    <small class="text-muted">En vez de market en close, limit order = mejor fill + maker fees.</small>
+                    <small class="text-muted">En vez de market en close, limit order = mejor fill + maker fees (0.02% vs 0.04%).</small>
                 </div>
                 <div class="list-group-item bg-transparent border-secondary">
                     <strong>Optimizar be_rr para SL de 1m</strong><br>
-                    <small class="text-muted">be_rr=2.75 fue optimizado para 15m SL. Con 1m SL, be_rr=4.77 es equivalente. Net sube $431->$458.</small>
+                    <small class="text-muted">be_rr=2.75 fue optimizado para 15m SL. Con 1m SL, be_rr=4.77 es equivalente.</small>
                 </div>
             </div>
         </div>

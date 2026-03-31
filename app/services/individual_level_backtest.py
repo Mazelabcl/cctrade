@@ -14,6 +14,7 @@ import pandas as pd
 from sqlalchemy.orm import Session
 
 from ..models import IndividualLevelBacktest, IndividualLevelTrade
+from ..models.level import Level
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ class ClosedTrade:
     pnl_pct: float = 0.0
     candles_held: int = 0
     level_id: Optional[int] = None
+    level_price: float = 0.0
     entry_volatility: float = 0.0
     volume_ratio: float = 0.0
     distance_to_level: float = 0.0
@@ -163,19 +165,20 @@ def compute_atr_series(highs: np.ndarray, lows: np.ndarray,
 # Signal detection
 # ---------------------------------------------------------------------------
 
-def detect_entry_signal(candle: pd.Series, level_price: float,
-                        tolerance_pct: float = 0.02) -> Optional[str]:
-    """Detect if a candle interacts with a level and confirms direction.
+def detect_entry_signal(candle: pd.Series, level_price: float) -> Optional[str]:
+    """Detect if a candle touches a level exactly and confirms direction.
 
     LONG signal (bounce from support):
-      - Candle low touches level: low <= level * (1 + tolerance)
-      - Candle closes above level: close > level
+      - Candle low touches the level: low <= level_price
+      - Candle closes above level: close > level_price
       → Level acted as support
 
     SHORT signal (rejection from resistance):
-      - Candle high touches level: high >= level * (1 - tolerance)
-      - Candle closes below level: close < level
+      - Candle high touches the level: high >= level_price
+      - Candle closes below level: close < level_price
       → Level acted as resistance
+
+    No tolerance — touches must be surgical (exact).
 
     Returns "LONG", "SHORT", or None.
     """
@@ -183,14 +186,12 @@ def detect_entry_signal(candle: pd.Series, level_price: float,
     high = candle['high']
     close = candle['close']
 
-    tol = level_price * tolerance_pct
-
-    # LONG — price dipped to level (support) and bounced
-    if low <= level_price + tol and close > level_price:
+    # LONG — candle low must touch the level exactly
+    if low <= level_price and close > level_price:
         return 'LONG'
 
-    # SHORT — price rose to level (resistance) and rejected
-    if high >= level_price - tol and close < level_price:
+    # SHORT — candle high must touch the level exactly
+    if high >= level_price and close < level_price:
         return 'SHORT'
 
     return None
@@ -247,6 +248,7 @@ def close_position(pos: OpenPosition, exit_time: datetime,
         pnl_pct=pnl_pct,
         candles_held=pos.candles_held,
         level_id=pos.level_id,
+        level_price=pos.level_price,
         entry_volatility=pos.entry_volatility,
         volume_ratio=pos.volume_ratio,
         distance_to_level=pos.distance_to_level,
@@ -433,6 +435,37 @@ def run_individual_level_backtest(
     logger.info("  %d levels of type %s, %d candles to process",
                 len(filtered), label, len(candles))
 
+    # ---- Match CSV levels to DB Level records ----
+    lev_id_map = np.zeros(len(filtered), dtype=int)
+    if db is not None:
+        # Query all DB levels matching this type/timeframe
+        tf_map_db = {'1h': 'hourly', '4h': 'daily', '1d': 'daily', '1w': 'weekly', '1M': 'monthly'}
+        csv_tf = tf_map_db.get(source_timeframe, source_timeframe)
+        db_levels = Level.query.filter(
+            Level.timeframe == csv_tf,
+        ).all()
+
+        # Build lookup: (price_rounded, created_date) → Level.id
+        # Use rounded price to handle float imprecision
+        db_lookup = {}
+        for lv in db_levels:
+            key = (round(lv.price_level, 1), lv.created_at.strftime('%Y-%m-%d') if lv.created_at else '')
+            db_lookup[key] = lv.id
+
+        matched = 0
+        for idx in range(len(filtered)):
+            row = filtered.iloc[idx]
+            price = round(float(row['price_level']), 1)
+            created = pd.Timestamp(row['created_at'])
+            created_str = created.strftime('%Y-%m-%d') if pd.notna(created) else ''
+
+            key = (price, created_str)
+            if key in db_lookup:
+                lev_id_map[idx] = db_lookup[key]
+                matched += 1
+
+        logger.info("  Matched %d/%d CSV levels to DB Level records", matched, len(filtered))
+
     # ---- Pre-extract numpy arrays for speed ----
     c_open_times = candles['open_time'].values                     # datetime64
     c_highs = candles['high'].values.astype(np.float64)
@@ -446,7 +479,7 @@ def run_individual_level_backtest(
     # ---- Pre-extract level arrays (sorted by created_at) ----
     lev_prices = filtered['price_level'].values.astype(np.float64)
     lev_created = filtered['created_at'].values                     # datetime64
-    lev_ids = filtered['id'].values if 'id' in filtered.columns else np.zeros(len(filtered), dtype=int)
+    lev_ids = lev_id_map
     n_levels = len(lev_prices)
 
     # ---- Track which levels have been touched (index → bool) ----
@@ -496,6 +529,7 @@ def run_individual_level_backtest(
                 position = None
 
             # Mark levels touched by this candle (for naked tracking)
+            # A level is touched when the candle's range actually reaches it
             if naked_only:
                 for j in range(n_levels):
                     if level_touched[j]:
@@ -503,8 +537,8 @@ def run_individual_level_backtest(
                     if lev_created[j] >= ct:
                         break  # levels are sorted by time
                     lp = lev_prices[j]
-                    tol = lp * tolerance_pct
-                    if lo <= lp + tol and hi >= lp - tol:
+                    # Level is touched if price passed through it: low <= level <= high
+                    if lo <= lp and hi >= lp:
                         level_touched[j] = True
 
             continue
@@ -530,17 +564,16 @@ def run_individual_level_backtest(
         sort_order = np.argsort(candidate_dists)
         candidate_idx = candidate_idx[sort_order]
 
-        # Check each candidate for entry signal
+        # Check each candidate for entry signal — exact touch, no tolerance
         entered = False
         for j in candidate_idx:
             lp = lev_prices[j]
-            tol = lp * tolerance_pct
 
-            # LONG: price dipped to support and bounced
-            if lo <= lp + tol and cl > lp:
+            # LONG: candle low must touch the level exactly (support bounce)
+            if lo <= lp and cl > lp:
                 signal = 'LONG'
-            # SHORT: price rose to resistance and rejected
-            elif hi >= lp - tol and cl < lp:
+            # SHORT: candle high must touch the level exactly (resistance rejection)
+            elif hi >= lp and cl < lp:
                 signal = 'SHORT'
             else:
                 continue
@@ -584,8 +617,8 @@ def run_individual_level_backtest(
                 if lev_created[j] >= ct:
                     break
                 lp = lev_prices[j]
-                tol = lp * tolerance_pct
-                if lo <= lp + tol and hi >= lp - tol:
+                # Level is touched if price passed through it: low <= level <= high
+                if lo <= lp and hi >= lp:
                     level_touched[j] = True
 
     # Close any remaining position at last candle close
@@ -650,6 +683,7 @@ def run_individual_level_backtest(
                 volume_ratio=t.volume_ratio,
                 distance_to_level=t.distance_to_level,
                 zone_confluence=t.zone_confluence,
+                level_price=t.level_price,
             )
             db.add(trade_rec)
 

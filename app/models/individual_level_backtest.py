@@ -116,6 +116,7 @@ class IndividualLevelTrade(db.Model):
     volume_ratio = db.Column(db.Float)  # Volume vs MA at entry
     distance_to_level = db.Column(db.Float)  # % distance from exact level
     zone_confluence = db.Column(db.Integer)  # Number of levels in zone
+    level_price = db.Column(db.Float)  # Exact level price at entry
 
     # Additional metadata
     metadata_json = db.Column('metadata', db.JSON)
@@ -154,5 +155,6 @@ class IndividualLevelTrade(db.Model):
             'volume_ratio': self.volume_ratio,
             'distance_to_level': self.distance_to_level,
             'zone_confluence': self.zone_confluence,
+            'level_price': self.level_price,
             'metadata': self.metadata_json,
         }

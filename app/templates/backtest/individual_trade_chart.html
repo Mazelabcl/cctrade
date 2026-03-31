@@ -96,10 +96,29 @@
     </div>
 </div>
 
-<!-- Chart -->
-<div class="card mb-3">
-    <div class="card-body p-0">
-        <div id="trade-chart" style="height: 500px;"></div>
+<!-- Split Chart: Level Context (left) | Trade Execution (right) -->
+<div class="row mb-3">
+    <!-- Left panel: Level context in source timeframe -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header py-1">
+                <small class="fw-bold">Level Context — {{ bt.level_source_timeframe }} timeframe</small>
+            </div>
+            <div class="card-body p-0">
+                <div id="level-chart" style="height: 450px;"></div>
+            </div>
+        </div>
+    </div>
+    <!-- Right panel: Trade execution in trading timeframe -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header py-1">
+                <small class="fw-bold">Trade Execution — {{ bt.trade_execution_timeframe }} timeframe</small>
+            </div>
+            <div class="card-body p-0">
+                <div id="trade-chart" style="height: 450px;"></div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -108,9 +127,9 @@
     <div class="card-body py-2">
         <div class="d-flex gap-4 flex-wrap">
             <span><span style="display:inline-block;width:30px;height:3px;background:#2196F3;vertical-align:middle;"></span> Level Price</span>
-            <span><span style="display:inline-block;width:30px;height:3px;background:#4CAF50;vertical-align:middle;"></span> Take Profit</span>
-            <span><span style="display:inline-block;width:30px;height:3px;background:#F44336;vertical-align:middle;"></span> Stop Loss</span>
-            <span><span style="display:inline-block;width:12px;height:12px;background:#4CAF50;border-radius:50%;vertical-align:middle;"></span> Entry</span>
+            <span><span style="display:inline-block;width:20px;height:12px;background:rgba(76,175,80,0.25);border:1px solid #4CAF50;vertical-align:middle;"></span> TP Zone</span>
+            <span><span style="display:inline-block;width:20px;height:12px;background:rgba(244,67,54,0.25);border:1px solid #F44336;vertical-align:middle;"></span> SL Zone</span>
+            <span><span style="display:inline-block;width:30px;height:3px;background:#4CAF50;vertical-align:middle;"></span> Entry</span>
             <span><span style="display:inline-block;width:12px;height:12px;background:{% if trade.exit_reason == 'TP_HIT' %}#4CAF50{% elif trade.exit_reason == 'SL_HIT' %}#F44336{% else %}#9E9E9E{% endif %};border-radius:50%;vertical-align:middle;"></span> Exit ({{ trade.exit_reason }})</span>
         </div>
     </div>
@@ -119,76 +138,207 @@
 
 {% block extra_js %}
 <script>
+// Shared chart options (dark theme)
+function chartOptions(container, height) {
+    return {
+        width: container.clientWidth,
+        height: height,
+        layout: {
+            background: { type: 'solid', color: '#1e1e1e' },
+            textColor: '#d1d4dc',
+        },
+        grid: {
+            vertLines: { color: '#2B2B43' },
+            horzLines: { color: '#2B2B43' },
+        },
+        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        rightPriceScale: { borderColor: '#2B2B43' },
+        timeScale: {
+            borderColor: '#2B2B43',
+            timeVisible: true,
+            secondsVisible: false,
+        },
+    };
+}
+
+function candleSeriesOptions() {
+    return {
+        upColor: '#26a69a',
+        downColor: '#ef5350',
+        borderDownColor: '#ef5350',
+        borderUpColor: '#26a69a',
+        wickDownColor: '#ef5350',
+        wickUpColor: '#26a69a',
+    };
+}
+
 fetch('{{ url_for("backtest.api_il_trade_chart", trade_id=trade.id) }}')
     .then(r => r.json())
     .then(data => {
-        const container = document.getElementById('trade-chart');
-        const chart = LightweightCharts.createChart(container, {
-            width: container.clientWidth,
-            height: 500,
-            layout: {
-                background: { type: 'solid', color: '#1e1e1e' },
-                textColor: '#d1d4dc',
-            },
-            grid: {
-                vertLines: { color: '#2B2B43' },
-                horzLines: { color: '#2B2B43' },
-            },
-            crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-            rightPriceScale: { borderColor: '#2B2B43' },
-            timeScale: {
-                borderColor: '#2B2B43',
-                timeVisible: true,
-                secondsVisible: false,
-            },
-        });
-
-        // Candlestick series
-        const candleSeries = chart.addCandlestickSeries({
-            upColor: '#26a69a',
-            downColor: '#ef5350',
-            borderDownColor: '#ef5350',
-            borderUpColor: '#26a69a',
-            wickDownColor: '#ef5350',
-            wickUpColor: '#26a69a',
-        });
-        candleSeries.setData(data.candles);
-
         const m = data.markers;
 
-        // Level price line (blue) — reconstructed from distance_to_level
-        // For LONG: level was below entry (support), for SHORT: level was above entry (resistance)
-        const dist = {{ trade.distance_to_level or 0 }};
-        const levelPrice = m.direction === 'LONG'
-            ? m.entry_price * (1 - dist)
-            : m.entry_price * (1 + dist);
-        candleSeries.createPriceLine({
-            price: levelPrice,
-            color: '#2196F3',
+        // ============================================================
+        // LEFT PANEL: Level Context (source timeframe)
+        // ============================================================
+        if (data.level_candles && data.level_candles.length > 0 && data.level_info) {
+            const levelContainer = document.getElementById('level-chart');
+            const levelChart = LightweightCharts.createChart(levelContainer, chartOptions(levelContainer, 450));
+            const levelSeries = levelChart.addCandlestickSeries(candleSeriesOptions());
+            levelSeries.setData(data.level_candles);
+
+            // Level price line (blue, solid)
+            levelSeries.createPriceLine({
+                price: data.level_info.price,
+                color: '#2196F3',
+                lineWidth: 2,
+                lineStyle: LightweightCharts.LineStyle.Solid,
+                axisLabelVisible: true,
+                title: 'Level ($' + Math.round(data.level_info.price) + ')',
+            });
+
+            // Build markers for the level chart
+            const levelMarkers = [];
+            if (data.level_info.created_at) {
+                levelMarkers.push({
+                    time: data.level_info.created_at,
+                    position: 'aboveBar',
+                    color: '#2196F3',
+                    shape: 'square',
+                    text: 'Level Created',
+                });
+            }
+            if (m.entry_time) {
+                levelMarkers.push({
+                    time: m.entry_time,
+                    position: 'belowBar',
+                    color: '#FF9800',
+                    shape: 'arrowUp',
+                    text: 'Trade Entry',
+                });
+            }
+            if (levelMarkers.length > 0) {
+                levelMarkers.sort((a, b) => a.time - b.time);
+                levelSeries.setMarkers(levelMarkers);
+            }
+
+            levelChart.timeScale().fitContent();
+            window.addEventListener('resize', () => {
+                levelChart.applyOptions({ width: levelContainer.clientWidth });
+            });
+        } else {
+            // No level data available — show message
+            document.getElementById('level-chart').innerHTML =
+                '<div class="d-flex align-items-center justify-content-center h-100 text-muted">' +
+                '<span>Level context not available (no level data found)</span></div>';
+        }
+
+        // ============================================================
+        // RIGHT PANEL: Trade Execution (execution timeframe)
+        // ============================================================
+        const tradeContainer = document.getElementById('trade-chart');
+        const tradeChart = LightweightCharts.createChart(tradeContainer, chartOptions(tradeContainer, 450));
+        const tradeSeries = tradeChart.addCandlestickSeries(candleSeriesOptions());
+        tradeSeries.setData(data.candles);
+
+        // --- Trade zones using area series ---
+        // TP zone: green fill between entry and TP
+        // SL zone: red fill between entry and SL
+        const entryPrice = m.entry_price;
+        const tpPrice = m.take_profit;
+        const slPrice = m.stop_loss;
+        const isLong = m.direction === 'LONG';
+
+        // Build time range for the trade (entry to exit)
+        const tradeStart = m.entry_time;
+        const tradeEnd = m.exit_time || data.candles[data.candles.length - 1].time;
+
+        // Filter candles within trade duration for zone rendering
+        const tradeCandles = data.candles.filter(c => c.time >= tradeStart && c.time <= tradeEnd);
+
+        // TP zone (green) — area series with flat line at TP
+        if (tradeCandles.length > 0) {
+            // Use baseline series to create colored zones
+            // Baseline at entry price: above = TP zone (green), below = SL zone (red)
+            const baselineSeries = tradeChart.addBaselineSeries({
+                baseValue: { type: 'price', price: entryPrice },
+                topLineColor: 'rgba(76, 175, 80, 0.6)',
+                topFillColor1: 'rgba(76, 175, 80, 0.15)',
+                topFillColor2: 'rgba(76, 175, 80, 0.02)',
+                bottomLineColor: 'rgba(244, 67, 54, 0.6)',
+                bottomFillColor1: 'rgba(244, 67, 54, 0.02)',
+                bottomFillColor2: 'rgba(244, 67, 54, 0.15)',
+                lineWidth: 0,
+                lastValueVisible: false,
+                priceLineVisible: false,
+            });
+
+            // For LONG: zone goes from entry UP to TP and DOWN to SL
+            // For SHORT: zone goes from entry DOWN to TP and UP to SL
+            const zoneData = tradeCandles.map(c => ({
+                time: c.time,
+                value: isLong ? c.close : c.close,
+            }));
+            baselineSeries.setData(zoneData);
+        }
+
+        // Level price line (blue) — use stored level_price, draw as bounded line series
+        const levelPrice = (data.trade.level_price != null)
+            ? data.trade.level_price
+            : (data.level_info ? data.level_info.price : null);
+
+        if (levelPrice) {
+            // Draw level as a line series from creation time (or first candle) to trade exit
+            const levelStart = (data.level_info && data.level_info.created_at)
+                ? data.level_info.created_at
+                : data.candles[0].time;
+            const levelEnd = m.exit_time || data.candles[data.candles.length - 1].time;
+
+            // Build data points: only candles within [levelStart, levelEnd]
+            const levelLineData = data.candles
+                .filter(c => c.time >= levelStart && c.time <= levelEnd)
+                .map(c => ({ time: c.time, value: levelPrice }));
+
+            if (levelLineData.length > 0) {
+                const levelLineSeries = tradeChart.addLineSeries({
+                    color: '#2196F3',
+                    lineWidth: 2,
+                    lineStyle: LightweightCharts.LineStyle.Solid,
+                    lastValueVisible: true,
+                    priceLineVisible: false,
+                    title: 'Level $' + Math.round(levelPrice),
+                });
+                levelLineSeries.setData(levelLineData);
+            }
+        }
+
+        // Entry price line (green solid for LONG, red for SHORT)
+        tradeSeries.createPriceLine({
+            price: entryPrice,
+            color: isLong ? '#4CAF50' : '#F44336',
             lineWidth: 2,
             lineStyle: LightweightCharts.LineStyle.Solid,
             axisLabelVisible: true,
-            title: 'Level ($' + Math.round(levelPrice) + ')',
+            title: 'Entry $' + Math.round(entryPrice),
         });
 
-        // Take Profit line (green dashed)
-        candleSeries.createPriceLine({
-            price: m.take_profit,
+        // Take Profit line (green, prominent)
+        tradeSeries.createPriceLine({
+            price: tpPrice,
             color: '#4CAF50',
-            lineWidth: 1,
+            lineWidth: 2,
             lineStyle: LightweightCharts.LineStyle.Dashed,
             axisLabelVisible: true,
-            title: 'TP',
+            title: 'TP $' + Math.round(tpPrice),
         });
 
-        // Stop Loss line (red dashed)
-        candleSeries.createPriceLine({
-            price: m.stop_loss,
+        // Stop Loss line (red, prominent)
+        tradeSeries.createPriceLine({
+            price: slPrice,
             color: '#F44336',
-            lineWidth: 1,
+            lineWidth: 2,
             lineStyle: LightweightCharts.LineStyle.Dashed,
             axisLabelVisible: true,
-            title: 'SL',
+            title: 'SL $' + Math.round(slPrice),
         });
 
         // Entry marker
@@ -196,33 +346,34 @@ fetch('{{ url_for("backtest.api_il_trade_chart", trade_id=trade.id) }}')
         if (m.entry_time) {
             markers.push({
                 time: m.entry_time,
-                position: m.direction === 'LONG' ? 'belowBar' : 'aboveBar',
+                position: isLong ? 'belowBar' : 'aboveBar',
                 color: '#4CAF50',
-                shape: m.direction === 'LONG' ? 'arrowUp' : 'arrowDown',
-                text: m.direction + ' Entry @ $' + Math.round(m.entry_price),
+                shape: isLong ? 'arrowUp' : 'arrowDown',
+                text: m.direction + ' @ $' + Math.round(m.entry_price),
             });
         }
 
         // Exit marker
         if (m.exit_time) {
-            const exitColor = m.exit_reason === 'TP_HIT' ? '#4CAF50' : m.exit_reason === 'SL_HIT' ? '#F44336' : '#9E9E9E';
+            const exitColor = m.exit_reason === 'TP_HIT' ? '#4CAF50'
+                : m.exit_reason === 'SL_HIT' ? '#F44336' : '#9E9E9E';
             markers.push({
                 time: m.exit_time,
-                position: m.direction === 'LONG' ? 'aboveBar' : 'belowBar',
+                position: isLong ? 'aboveBar' : 'belowBar',
                 color: exitColor,
                 shape: 'circle',
                 text: m.exit_reason + ' @ $' + Math.round(m.exit_price),
             });
         }
 
-        candleSeries.setMarkers(markers);
+        tradeSeries.setMarkers(markers);
 
         // Fit content
-        chart.timeScale().fitContent();
+        tradeChart.timeScale().fitContent();
 
-        // Resize
+        // Resize handler
         window.addEventListener('resize', () => {
-            chart.applyOptions({ width: container.clientWidth });
+            tradeChart.applyOptions({ width: tradeContainer.clientWidth });
         });
     });
 </script>

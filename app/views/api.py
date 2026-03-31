@@ -750,3 +750,68 @@ def pipeline_runs():
         .all()
     )
     return jsonify([r.to_dict() for r in runs])
+
+
+# ---------------------------------------------------------------------------
+# Paper Trading endpoints
+# ---------------------------------------------------------------------------
+
+@api_bp.route('/paper-trades')
+def paper_trades():
+    """List all paper trades."""
+    from ..models.paper_trade import PaperTrade
+    trades = (
+        PaperTrade.query
+        .order_by(PaperTrade.signal_time.desc())
+        .limit(100)
+        .all()
+    )
+    return jsonify([{
+        'id': t.id,
+        'signal_time': t.signal_time.isoformat() if t.signal_time else None,
+        'direction': t.direction,
+        'entry_price': t.entry_price,
+        'stop_loss': t.stop_loss,
+        'risk_pct': t.risk_pct,
+        'confluence_score': t.confluence_score,
+        'level_types': t.level_types_json,
+        'status': t.status,
+        'exit_time': t.exit_time.isoformat() if t.exit_time else None,
+        'exit_price': t.exit_price,
+        'exit_reason': t.exit_reason,
+        'pnl_r': t.pnl_r,
+        'breakeven_reached': t.breakeven_reached,
+        'bars_since_entry': t.bars_since_entry,
+        'current_trail_sl': t.current_trail_sl,
+    } for t in trades])
+
+
+@api_bp.route('/paper-trades/stats')
+def paper_trade_stats():
+    """Paper trading summary stats."""
+    from ..services.confluence_signal import get_paper_trade_stats
+    stats = get_paper_trade_stats(db.session)
+    return jsonify(stats)
+
+
+@api_bp.route('/paper-trades/check-now', methods=['POST'])
+def paper_trades_check_now():
+    """Manually trigger signal check + update open trades."""
+    from ..services.confluence_signal import check_for_signal, update_open_trades
+    signal = check_for_signal(db.session)
+    closed = update_open_trades(db.session)
+    return jsonify({
+        'new_signal': signal is not None,
+        'signal_direction': signal.direction if signal else None,
+        'signal_entry': signal.entry_price if signal else None,
+        'trades_closed': len(closed),
+    })
+
+
+@api_bp.route('/paper-trades/reset', methods=['POST'])
+def paper_trades_reset():
+    """Clear all paper trades (start fresh)."""
+    from ..models.paper_trade import PaperTrade
+    count = PaperTrade.query.delete()
+    db.session.commit()
+    return jsonify({'deleted': count})

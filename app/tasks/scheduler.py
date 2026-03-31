@@ -73,6 +73,25 @@ def start_live_sync(app: Flask, interval_minutes: int = 5):
                     logger.info("Running full pipeline after live sync...")
                     from .pipeline_runner import run_full_pipeline
                     run_full_pipeline(app)
+
+                # Check for paper trading signals
+                try:
+                    from ..services.confluence_signal import check_for_signal, update_open_trades
+                    from ..extensions import db
+                    signal = check_for_signal(db.session)
+                    closed = update_open_trades(db.session)
+                    if signal:
+                        publish_sse('pipeline', {
+                            'status': 'signal',
+                            'type': 'paper_trade',
+                            'direction': signal.direction,
+                            'entry': signal.entry_price,
+                        })
+                        logger.info("Paper trade signal: %s at %.2f", signal.direction, signal.entry_price)
+                    if closed:
+                        logger.info("Paper trades closed: %d", len(closed))
+                except Exception as e:
+                    logger.warning("Paper trading check failed: %s", e)
             except Exception as e:
                 publish_sse('pipeline', {'status': 'failed', 'type': 'live_sync',
                                          'error': str(e)})

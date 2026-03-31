@@ -156,16 +156,23 @@ def api_il_replay(bt_id):
 
 @backtest_bp.route('/api/individual-levels/trade/<int:trade_id>/chart-data')
 def api_il_trade_chart(trade_id):
-    """JSON: candle data around a specific trade for chart visualization."""
+    """JSON: candle data around a specific trade for chart visualization.
+
+    Returns two sets of candles:
+      - candles: execution-timeframe candles around the trade (right panel)
+      - level_candles: source-timeframe candles showing level creation context (left panel)
+    """
     from pathlib import Path
     from ..services.individual_level_backtest import load_candles_csv
+    from ..models.level import Level
     import pandas as pd
+    import numpy as np
 
     trade = db.session.get(IndividualLevelTrade, trade_id)
     if trade is None:
         abort(404)
 
-    # Load candle data from CSV
+    # Load candle data from CSV (1h candles)
     root = Path(__file__).resolve().parent.parent.parent
     datasets = root / 'datasets'
     candle_files = sorted(datasets.glob('ml_dataset_*.csv'))
@@ -174,7 +181,7 @@ def api_il_trade_chart(trade_id):
 
     candles = load_candles_csv(*[str(f) for f in candle_files])
 
-    # Get candles around the trade: 24h before entry to 24h after exit
+    # --- Right panel: execution-timeframe candles around the trade ---
     entry = pd.Timestamp(trade.entry_time)
     exit_t = pd.Timestamp(trade.exit_time) if trade.exit_time else entry
     margin = pd.Timedelta(hours=48)
@@ -191,9 +198,85 @@ def api_il_trade_chart(trade_id):
             'close': float(row['close']),
         })
 
+    # --- Left panel: level context in source timeframe ---
+    level_candles = []
+    level_info = None
+
+    # Get level and backtest info
+    bt = trade.backtest
+    level = db.session.get(Level, trade.level_id) if trade.level_id else None
+
+    # Determine level price and created_at from DB record or stored trade data
+    level_price = None
+    level_created = None
+    level_type_str = None
+
+    if level:
+        level_price = level.price_level
+        level_created = pd.Timestamp(level.created_at)
+        level_type_str = level.level_type
+    elif trade.level_price:
+        # Fallback: use stored level_price from trade record
+        level_price = trade.level_price
+        # Try to find the matching DB level by price + type for created_at
+        if bt:
+            tf_map = {'1h': 'hourly', '4h': 'daily', '1d': 'daily', '1w': 'weekly', '1M': 'monthly'}
+            csv_tf = tf_map.get(bt.level_source_timeframe, bt.level_source_timeframe)
+            candidate = Level.query.filter(
+                Level.timeframe == csv_tf,
+                Level.price_level.between(level_price * 0.9999, level_price * 1.0001),
+                Level.created_at < trade.entry_time,
+            ).order_by(Level.created_at.desc()).first()
+            if candidate:
+                level_created = pd.Timestamp(candidate.created_at)
+                level_type_str = candidate.level_type
+
+    if level_price and bt:
+        source_tf = bt.level_source_timeframe
+
+        # Map source timeframe to pandas resample frequency
+        resample_map = {
+            '1h': '1h', '4h': '4h', '1d': '1D', '1w': '1W', '1M': '1MS',
+        }
+        freq = resample_map.get(source_tf, '1D')
+
+        # Resample 1h candles to source timeframe
+        resampled = candles.set_index('open_time').resample(freq).agg({
+            'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last',
+        }).dropna()
+        resampled = resampled.reset_index()
+
+        # Window: 20 candles before level creation (or entry) → trade exit + 5 candles after
+        anchor = level_created if level_created else pd.Timestamp(trade.entry_time)
+        level_idx = resampled['open_time'].searchsorted(anchor)
+        start_idx = max(0, level_idx - 20)
+
+        exit_idx = resampled['open_time'].searchsorted(exit_t)
+        end_idx = min(len(resampled), exit_idx + 6)
+
+        level_subset = resampled.iloc[start_idx:end_idx]
+
+        for _, row in level_subset.iterrows():
+            level_candles.append({
+                'time': int(row['open_time'].timestamp()),
+                'open': float(row['open']),
+                'high': float(row['high']),
+                'low': float(row['low']),
+                'close': float(row['close']),
+            })
+
+        level_info = {
+            'price': level_price,
+            'created_at': int(level_created.timestamp()) if level_created else None,
+            'timeframe': source_tf,
+            'level_type': level_type_str or bt.level_type,
+        }
+
     return jsonify({
         'trade': trade.to_dict(),
         'candles': chart_candles,
+        'level_candles': level_candles,
+        'level_info': level_info,
         'markers': {
             'entry_time': int(entry.timestamp()),
             'entry_price': trade.entry_price,

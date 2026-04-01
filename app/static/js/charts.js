@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let showPredictions = true;
     let viewMode = 'levels';    // 'levels', 'trades', 'all'
     let selectedTradeIdx = 'all'; // 'all' or trade index
+    let tradeConfig = 'fractals_fib_cc'; // API config preset
     let enabledLevels = { SFP: true, HTF: true, CC: true, Igor: true, VP: true };
     let enabledSourceTfs = { daily: true, weekly: true, monthly: true };
     let enabledStatus = { naked: true, touched: true };
@@ -330,7 +331,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        fetch('/api/forward-trades')
+        fetch(`/api/forward-trades?config=${tradeConfig}`)
             .then(r => r.json())
             .then(trades => {
                 if (!Array.isArray(trades)) return;
@@ -582,14 +583,28 @@ document.addEventListener('DOMContentLoaded', function() {
             viewMode = this.dataset.view;
             document.querySelectorAll('#view-mode .btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-            // Show/hide trade selector
+            // Show/hide trade controls
             const tsg = document.getElementById('trade-selector-group');
+            const tcg = document.getElementById('trade-config-group');
             if (tsg) tsg.style.display = (viewMode === 'trades') ? 'flex' : 'none';
+            if (tcg) tcg.style.display = (viewMode === 'trades') ? 'flex' : 'none';
             loadData();
         });
     });
 
     // Trade selector
+    // Strategy config selector
+    const tradeConfigSel = document.getElementById('trade-config');
+    if (tradeConfigSel) {
+        tradeConfigSel.addEventListener('change', function() {
+            tradeConfig = this.value;
+            allTrades = [];  // Force re-fetch
+            selectedTradeIdx = 'all';
+            _forward_trades_cache = {};
+            loadData();
+        });
+    }
+
     const tradeSel = document.getElementById('trade-selector');
     if (tradeSel) {
         tradeSel.addEventListener('change', function() {

@@ -762,11 +762,12 @@ _forward_trades_cache = {}
 def forward_trades():
     """Return forward test trades for chart visualization."""
     start_date = request.args.get('start', '2026-01-01')
-    cache_key = start_date
+    config_name = request.args.get('config', 'fractals_fib_cc')
+    cache_key = f"{start_date}_{config_name}"
 
     if cache_key not in _forward_trades_cache:
         try:
-            trades = _compute_forward_trades(start_date)
+            trades = _compute_forward_trades(start_date, config_name)
             _forward_trades_cache[cache_key] = trades
         except Exception as e:
             logger.error("Forward trades failed: %s", e)
@@ -775,7 +776,7 @@ def forward_trades():
     return jsonify(_forward_trades_cache[cache_key])
 
 
-def _compute_forward_trades(start_date):
+def _compute_forward_trades(start_date, config_name='fractals_fib_cc'):
     """Run forward test and return trades as list of dicts for chart."""
     import numpy as np
     from datetime import datetime as dt
@@ -815,16 +816,33 @@ def _compute_forward_trades(start_date):
     start_ts = int(dt.strptime(start_date, '%Y-%m-%d').timestamp())
     fwd_start = np.searchsorted(times_epoch, start_ts)
 
+    # Config presets
+    CONFIGS = {
+        'fractals_only': {
+            'level_types': ['Fractal_support', 'Fractal_resistance'],
+            'score_threshold': 2,
+        },
+        'fractals_fib_cc': {
+            'level_types': ['Fractal_support', 'Fractal_resistance', 'Fib_CC'],
+            'score_threshold': 2,
+        },
+        'old_4': {
+            'level_types': ['Fractal_support', 'Fractal_resistance',
+                            'PrevSession_VWAP', 'PrevSession_VP_POC'],
+            'score_threshold': 3,
+        },
+    }
+    preset = CONFIGS.get(config_name, CONFIGS['fractals_fib_cc'])
+
     config = {
-        'score_threshold': 3, 'zone_width': 0.01, 'touch_tolerance': 0.003,
+        'zone_width': 0.01, 'touch_tolerance': 0.001,
         'naked_only': True, 'scoring_mode': 'unique_types', 'entry_mode': 'touch',
         'session_filter': 'all',
-        'level_types': ['Fractal_support', 'Fractal_resistance',
-                        'PrevSession_VWAP', 'PrevSession_VP_POC'],
         'exit': {'strategy': 'breakeven_trail', 'rr_ratio': 1.5, 'swing_lookback': 10,
                  'atr_multiplier': 2.0, 'breakeven_at_rr': 2.75, 'partial_pct': 0.5,
                  'partial_rr': 2.0, 'timeout_candles': 45, 'sl_buffer_pct': 0.001},
     }
+    config.update(preset)
 
     entries = find_touch_entries(data, config)
     entries, scores = score_and_deduplicate(entries, data, config)

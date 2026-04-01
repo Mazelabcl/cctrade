@@ -425,10 +425,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     levels.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                 }
 
-                let _dbg = {total: levels.length, priceOut: 0, catOut: 0, tfOut: 0, statusOut: 0, tradeOut: 0, rangeOut: 0, dedup: 0};
                 levels.forEach(l => {
                     if (visibleCount >= MAX_LEVEL_SERIES) { capped = true; return; }
-                    if (l.price_level < minPrice - margin || l.price_level > maxPrice + margin) { _dbg.priceOut++; return; }
+                    // Skip price range filter when trade filter is active (trade range filter handles it)
+                    if (!tradeTimeFilter && (l.price_level < minPrice - margin || l.price_level > maxPrice + margin)) return;
 
                     const cat = getLevelCategory(l.level_type);
                     if (!enabledLevels[cat]) { _dbg.catOut++; return; }
@@ -454,15 +454,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     // Trade time filter: only show levels valid at trade time + near trade price
                     if (tradeTimeFilter) {
-                        if (birthTime > tradeTimeFilter) { _dbg.tradeOut++; return; }
+                        if (birthTime > tradeTimeFilter) return;
                         if (!naked && l.first_touched_at) {
                             const touchTime = Math.floor(new Date(l.first_touched_at).getTime() / 1000);
-                            if (touchTime < tradeTimeFilter) { _dbg.tradeOut++; return; }
+                            if (touchTime < tradeTimeFilter) return;
                         }
                         const tradeIdx = parseInt(selectedTradeIdx);
                         if (!isNaN(tradeIdx) && allTrades[tradeIdx]) {
                             const tradePrice = allTrades[tradeIdx].entry_price;
-                            if (l.price_level < tradePrice * 0.95 || l.price_level > tradePrice * 1.05) { _dbg.rangeOut++; return; }
+                            if (l.price_level < tradePrice * 0.95 || l.price_level > tradePrice * 1.05) return;
                         }
                     }
 
@@ -512,7 +512,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (countEl) {
                     let text = `${visibleCount} levels shown`;
                     if (capped) text += ` (capped at ${MAX_LEVEL_SERIES}, use filters)`;
-                    if (tradeTimeFilter) text += ` [dbg: ${JSON.stringify(_dbg)}]`;
                     countEl.textContent = text;
                 }
             })

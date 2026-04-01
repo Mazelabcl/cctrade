@@ -750,3 +750,166 @@ def pipeline_runs():
         .all()
     )
     return jsonify([r.to_dict() for r in runs])
+
+
+# ---------------------------------------------------------------------------
+# Forward Test Trades (for chart visualization)
+# ---------------------------------------------------------------------------
+
+_forward_trades_cache = {}
+
+@api_bp.route('/forward-trades')
+def forward_trades():
+    """Return forward test trades for chart visualization."""
+    start_date = request.args.get('start', '2026-01-01')
+    cache_key = start_date
+
+    if cache_key not in _forward_trades_cache:
+        try:
+            trades = _compute_forward_trades(start_date)
+            _forward_trades_cache[cache_key] = trades
+        except Exception as e:
+            logger.error("Forward trades failed: %s", e)
+            return jsonify({'error': str(e)}), 500
+
+    return jsonify(_forward_trades_cache[cache_key])
+
+
+def _compute_forward_trades(start_date):
+    """Run forward test and return trades as list of dicts for chart."""
+    import numpy as np
+    from datetime import datetime as dt
+    from ..services.level_trade_backtest_db import load_candles_db, load_levels_db
+
+    # Load 15m candles
+    candles_df = load_candles_db(db.session, timeframe='15m')
+    if candles_df.empty:
+        return []
+
+    # Use the confluence scalper logic
+    import sys, os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'scripts'))
+    from autoresearch.confluence_scalper import (
+        load_and_cache_data, find_touch_entries, score_and_deduplicate,
+        _simulate_exit, _get_swings,
+    )
+
+    cache = {}
+    data = load_and_cache_data(db.session, cache, timeframe='15m')
+    c_times = data['c_times']
+    c_highs = data['c_highs']
+    c_lows = data['c_lows']
+    c_closes = data['c_closes']
+    atr = data['atr']
+    n_candles = data['n_candles']
+
+    # Level data for zone lookup
+    levels_df = load_levels_db(db.session)
+    l_prices = levels_df['price_level'].values.astype(np.float64)
+    l_types = levels_df['level_type'].values.astype(str)
+    l_timeframes = levels_df['timeframe'].values.astype(str)
+    sorted_idx = np.argsort(l_prices)
+    sorted_prices = l_prices[sorted_idx]
+
+    times_epoch = c_times.astype('datetime64[s]').astype(np.int64)
+    start_ts = int(dt.strptime(start_date, '%Y-%m-%d').timestamp())
+    fwd_start = np.searchsorted(times_epoch, start_ts)
+
+    config = {
+        'score_threshold': 3, 'zone_width': 0.01, 'touch_tolerance': 0.003,
+        'naked_only': True, 'scoring_mode': 'unique_types', 'entry_mode': 'touch',
+        'session_filter': 'all',
+        'level_types': ['Fractal_support', 'Fractal_resistance',
+                        'PrevSession_VWAP', 'PrevSession_VP_POC'],
+        'exit': {'strategy': 'breakeven_trail', 'rr_ratio': 1.5, 'swing_lookback': 10,
+                 'atr_multiplier': 2.0, 'breakeven_at_rr': 2.75, 'partial_pct': 0.5,
+                 'partial_rr': 2.0, 'timeout_candles': 45, 'sl_buffer_pct': 0.001},
+    }
+
+    entries = find_touch_entries(data, config)
+    entries, scores = score_and_deduplicate(entries, data, config)
+    fwd_mask = entries[:, 0] >= fwd_start
+    entries_fwd = entries[fwd_mask]
+    scores_fwd = scores[fwd_mask]
+
+    sw_lows, sw_highs = _get_swings(data, 10)
+    sl_buffer = 0.001
+    be_rr = 2.75
+    timeout = 45
+
+    trades = []
+    for i in range(len(entries_fwd)):
+        ci = int(entries_fwd[i, 0])
+        li = int(entries_fwd[i, 1])
+        direction = int(entries_fwd[i, 2])
+
+        entry_price = float(c_closes[ci])
+        if direction == 1:
+            sl = float(c_lows[ci] * (1 - sl_buffer))
+        else:
+            sl = float(c_highs[ci] * (1 + sl_buffer))
+
+        risk = abs(entry_price - sl)
+        if risk <= 0 or risk / entry_price > 0.05 or ci + timeout >= n_candles:
+            continue
+
+        # Simulate exit
+        sl_cur = sl
+        be_reached = False
+        exit_bar = timeout
+        exit_price = float(c_closes[min(ci + timeout, n_candles - 1)])
+        exit_reason = 'TIMEOUT'
+
+        for j in range(1, min(timeout, n_candles - ci)):
+            k = ci + j
+            if direction == 1:
+                if c_lows[k] <= sl_cur:
+                    exit_bar = j
+                    exit_price = float(sl_cur)
+                    exit_reason = 'TRAIL' if be_reached else 'SL'
+                    break
+                if c_highs[k] >= entry_price + be_rr * risk:
+                    be_reached = True
+                if be_reached:
+                    sl_cur = max(sl_cur, max(entry_price, sw_lows[k]))
+            else:
+                if c_highs[k] >= sl_cur:
+                    exit_bar = j
+                    exit_price = float(sl_cur)
+                    exit_reason = 'TRAIL' if be_reached else 'SL'
+                    break
+                if c_lows[k] <= entry_price - be_rr * risk:
+                    be_reached = True
+                if be_reached:
+                    sl_cur = min(sl_cur, min(entry_price, sw_highs[k]))
+
+        pnl_r = round((exit_price - entry_price) / risk if direction == 1
+                      else (entry_price - exit_price) / risk, 2)
+
+        # Zone levels
+        zone_lo = entry_price * (1 - 0.01)
+        zone_hi = entry_price * (1 + 0.01)
+        left = np.searchsorted(sorted_prices, zone_lo)
+        right = np.searchsorted(sorted_prices, zone_hi)
+        zone_levels = []
+        if left < right:
+            for idx in sorted_idx[left:right][:10]:  # Max 10 for display
+                zone_levels.append(f"{l_types[idx]} ({l_timeframes[idx]}) @ {l_prices[idx]:.0f}")
+
+        entry_time = str(np.datetime_as_string(c_times[ci], unit='s'))
+        exit_time = str(np.datetime_as_string(c_times[min(ci + exit_bar, n_candles - 1)], unit='s'))
+
+        trades.append({
+            'entry_time': entry_time,
+            'exit_time': exit_time,
+            'direction': 'LONG' if direction == 1 else 'SHORT',
+            'entry_price': round(entry_price, 2),
+            'stop_loss': round(sl, 2),
+            'exit_price': round(exit_price, 2),
+            'exit_reason': exit_reason,
+            'pnl_r': pnl_r,
+            'confluence': int(scores_fwd[i]),
+            'zone_levels': zone_levels,
+        })
+
+    return trades

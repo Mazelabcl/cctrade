@@ -11,13 +11,15 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentCount = parseInt(urlParams.get('count')) || 500;
     let showFractals = true;
     let showPredictions = true;
-    let showTrades = true;
+    let viewMode = 'levels';    // 'levels', 'trades', 'all'
+    let selectedTradeIdx = 'all'; // 'all' or trade index
     let enabledLevels = { SFP: true, HTF: true, CC: true, Igor: true, VP: true };
     let enabledSourceTfs = { daily: true, weekly: true, monthly: true };
     let enabledStatus = { naked: true, touched: true };
     let levelSeriesList = [];   // line series for levels (start at birth)
     let tradeSeriesList = [];   // line series for trade SL/entry lines
     let lastChartData = [];     // cache for level redraws
+    let allTrades = [];         // cached forward trades
 
     const MAX_LEVEL_SERIES = 300;  // perf cap
 
@@ -170,18 +172,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     loadPredictions(markers);
                 } else {
                     window._baseMarkers = markers;
-                    const tradeM = showTrades ? (window._tradeMarkers || []) : [];
+                    const tradeM = (viewMode === 'trades' || viewMode === 'all') ? (window._tradeMarkers || []) : [];
                     candleSeries.setMarkers([...markers, ...tradeM].sort((a, b) => a.time - b.time));
-                }
-
-                if (showTrades) {
-                    loadTrades(data);
-                } else {
-                    clearTradeLines();
                 }
 
                 chart.timeScale().fitContent();
                 loadLevels(data);
+
+                // Load trades (for 'trades' and 'all' view modes)
+                if (viewMode === 'trades' || viewMode === 'all') {
+                    loadTrades();
+                } else {
+                    clearTradeLines();
+                    window._tradeMarkers = [];
+                }
             })
             .catch(err => console.error('Failed to load candles:', err));
     }
@@ -208,7 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
                 window._baseMarkers = markers;
-                const tradeM = showTrades ? (window._tradeMarkers || []) : [];
+                const tradeM = (viewMode === 'trades' || viewMode === 'all') ? (window._tradeMarkers || []) : [];
                 candleSeries.setMarkers([...markers, ...tradeM].sort((a, b) => a.time - b.time));
             })
             .catch(err => {
@@ -223,80 +227,114 @@ document.addEventListener('DOMContentLoaded', function() {
         tradeSeriesList = [];
     }
 
-    function loadTrades(candleData) {
+    function loadTrades() {
         clearTradeLines();
+
+        const renderTrades = (trades) => {
+            const tradeMarkers = [];
+
+            trades.forEach(t => {
+                const entryTime = Math.floor(new Date(t.entry_time).getTime() / 1000);
+                const exitTime = Math.floor(new Date(t.exit_time).getTime() / 1000);
+                const won = t.pnl_r > 0;
+                const isLong = t.direction === 'LONG';
+
+                // Entry marker
+                tradeMarkers.push({
+                    time: entryTime,
+                    position: isLong ? 'belowBar' : 'aboveBar',
+                    color: isLong ? '#00e676' : '#ff5252',
+                    shape: isLong ? 'arrowUp' : 'arrowDown',
+                    text: `${t.direction} ${t.pnl_r > 0 ? '+' : ''}${t.pnl_r}R`,
+                });
+
+                // Exit marker
+                tradeMarkers.push({
+                    time: exitTime,
+                    position: won ? 'aboveBar' : 'belowBar',
+                    color: won ? '#00e676' : '#ff5252',
+                    shape: won ? 'circle' : 'square',
+                    text: t.exit_reason,
+                });
+
+                // SL line (dashed red)
+                const slSeries = chart.addLineSeries({
+                    color: 'rgba(255, 82, 82, 0.6)', lineWidth: 1, lineStyle: 2,
+                    priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+                });
+                slSeries.setData([
+                    { time: entryTime, value: t.stop_loss },
+                    { time: exitTime, value: t.stop_loss },
+                ]);
+                tradeSeriesList.push(slSeries);
+
+                // Entry price line
+                const entrySeries = chart.addLineSeries({
+                    color: won ? 'rgba(0, 230, 118, 0.4)' : 'rgba(255, 82, 82, 0.4)',
+                    lineWidth: 1, lineStyle: 0,
+                    priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+                });
+                entrySeries.setData([
+                    { time: entryTime, value: t.entry_price },
+                    { time: exitTime, value: t.entry_price },
+                ]);
+                tradeSeriesList.push(entrySeries);
+            });
+
+            window._tradeMarkers = tradeMarkers;
+            const base = window._baseMarkers || [];
+            candleSeries.setMarkers([...base, ...tradeMarkers].sort((a, b) => a.time - b.time));
+        };
+
+        // Fetch trades if not cached
+        if (allTrades.length > 0) {
+            const filtered = filterTrades(allTrades);
+            renderTrades(filtered);
+            updateTradeStats(filtered);
+            return;
+        }
+
         fetch('/api/forward-trades')
             .then(r => r.json())
             .then(trades => {
                 if (!Array.isArray(trades)) return;
-
-                // Add entry/exit markers to existing markers
-                const tradeMarkers = [];
-
-                trades.forEach(t => {
-                    const entryTime = Math.floor(new Date(t.entry_time).getTime() / 1000);
-                    const exitTime = Math.floor(new Date(t.exit_time).getTime() / 1000);
-                    const won = t.pnl_r > 0;
-                    const isLong = t.direction === 'LONG';
-
-                    // Entry marker
-                    tradeMarkers.push({
-                        time: entryTime,
-                        position: isLong ? 'belowBar' : 'aboveBar',
-                        color: isLong ? '#00e676' : '#ff5252',
-                        shape: isLong ? 'arrowUp' : 'arrowDown',
-                        text: `${t.direction} ${t.pnl_r > 0 ? '+' : ''}${t.pnl_r}R`,
-                    });
-
-                    // Exit marker
-                    tradeMarkers.push({
-                        time: exitTime,
-                        position: won ? 'aboveBar' : 'belowBar',
-                        color: won ? '#00e676' : '#ff5252',
-                        shape: won ? 'circle' : 'square',
-                        text: t.exit_reason,
-                    });
-
-                    // SL line (dashed red from entry to exit)
-                    const slSeries = chart.addLineSeries({
-                        color: 'rgba(255, 82, 82, 0.6)',
-                        lineWidth: 1,
-                        lineStyle: 2, // dashed
-                        priceLineVisible: false,
-                        lastValueVisible: false,
-                        crosshairMarkerVisible: false,
-                    });
-                    slSeries.setData([
-                        { time: entryTime, value: t.stop_loss },
-                        { time: exitTime, value: t.stop_loss },
-                    ]);
-                    tradeSeriesList.push(slSeries);
-
-                    // Entry price line (solid green/red from entry to exit)
-                    const entrySeries = chart.addLineSeries({
-                        color: won ? 'rgba(0, 230, 118, 0.4)' : 'rgba(255, 82, 82, 0.4)',
-                        lineWidth: 1,
-                        lineStyle: 0, // solid
-                        priceLineVisible: false,
-                        lastValueVisible: false,
-                        crosshairMarkerVisible: false,
-                    });
-                    entrySeries.setData([
-                        { time: entryTime, value: t.entry_price },
-                        { time: exitTime, value: t.entry_price },
-                    ]);
-                    tradeSeriesList.push(entrySeries);
-                });
-
-                // Set trade markers (they'll be added after fractal/prediction markers)
-                // We store them globally and re-merge on next loadData
-                window._tradeMarkers = tradeMarkers;
-                // Re-set all markers
-                const current = window._baseMarkers || [];
-                const all = [...current, ...tradeMarkers];
-                candleSeries.setMarkers(all.sort((a, b) => a.time - b.time));
+                allTrades = trades;
+                populateTradeSelector(trades);
+                const filtered = filterTrades(trades);
+                renderTrades(filtered);
+                updateTradeStats(filtered);
             })
             .catch(err => console.error('Failed to load trades:', err));
+    }
+
+    function filterTrades(trades) {
+        if (selectedTradeIdx === 'all') return trades;
+        const idx = parseInt(selectedTradeIdx);
+        return isNaN(idx) ? trades : [trades[idx]];
+    }
+
+    function populateTradeSelector(trades) {
+        const sel = document.getElementById('trade-selector');
+        if (!sel) return;
+        sel.innerHTML = '<option value="all">All trades</option>';
+        trades.forEach((t, i) => {
+            const won = t.pnl_r > 0;
+            const icon = won ? '+' : '';
+            const label = `#${i+1} ${t.direction} ${t.entry_price.toFixed(0)} | ${icon}${t.pnl_r}R | ${t.exit_reason}`;
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = label;
+            opt.style.color = won ? '#00e676' : '#ff5252';
+            sel.appendChild(opt);
+        });
+    }
+
+    function updateTradeStats(trades) {
+        const el = document.getElementById('trade-stats');
+        if (!el || !trades.length) return;
+        const wins = trades.filter(t => t.pnl_r > 0).length;
+        const totalR = trades.reduce((s, t) => s + t.pnl_r, 0);
+        el.textContent = `${trades.length} trades | ${wins}W ${trades.length - wins}L | ${totalR > 0 ? '+' : ''}${totalR.toFixed(1)}R`;
     }
 
     function loadLevels(candleData) {
@@ -457,15 +495,26 @@ document.addEventListener('DOMContentLoaded', function() {
         fractalBtn.classList.add('active');
     }
 
-    // Trades toggle
-    const tradesBtn = document.getElementById('btn-trades');
-    if (tradesBtn) {
-        tradesBtn.addEventListener('click', function() {
-            showTrades = !showTrades;
-            this.classList.toggle('active', showTrades);
+    // View mode toggles
+    document.querySelectorAll('#view-mode .btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            viewMode = this.dataset.view;
+            document.querySelectorAll('#view-mode .btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            // Show/hide trade selector
+            const tsg = document.getElementById('trade-selector-group');
+            if (tsg) tsg.style.display = (viewMode === 'trades') ? 'flex' : 'none';
             loadData();
         });
-        tradesBtn.classList.add('active');
+    });
+
+    // Trade selector
+    const tradeSel = document.getElementById('trade-selector');
+    if (tradeSel) {
+        tradeSel.addEventListener('change', function() {
+            selectedTradeIdx = this.value;
+            loadData();
+        });
     }
 
     // Prediction marker toggle

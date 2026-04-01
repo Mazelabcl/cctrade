@@ -68,7 +68,7 @@ def load_candles_db(session: Session,
         {'symbol': symbol, 'tf': timeframe},
     )
     if not df.empty:
-        df['open_time'] = pd.to_datetime(df['open_time'])
+        df['open_time'] = pd.to_datetime(df['open_time'], format='mixed')
     return df
 
 

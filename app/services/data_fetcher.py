@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def fetch_candles(db: Session, symbol: str = 'BTCUSDT',
                   interval: str = '1h',
                   start_str: str = '1 Jan 2017',
-                  end_str: str = '30 Jun 2025',
+                  end_str: str = 'now',
                   api_key: str = '',
                   api_secret: str = '') -> int:
     """Fetch candles from Binance and persist to database.
@@ -43,6 +43,10 @@ def fetch_candles(db: Session, symbol: str = 'BTCUSDT',
 
     try:
         client = Client(api_key, api_secret)
+
+        # Resolve 'now' to current date
+        if end_str == 'now':
+            end_str = datetime.now(timezone.utc).strftime('%d %b %Y %H:%M:%S')
 
         # Check for historical gap (earliest candle later than requested start)
         earliest = (

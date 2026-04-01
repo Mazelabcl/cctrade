@@ -11,7 +11,13 @@ from ..services.data_fetcher import fetch_candles
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TIMEFRAMES = '1h'
+# ALL timeframes needed for the system. Never sync partially.
+# 1m: Volume Profile calculation
+# 15m: Trade signals (confluence scalper)
+# 1h, 4h: Fractal predictor features
+# 1d, 1w, 1M: HTF levels, fractals, fibonacci, session levels
+ALL_TIMEFRAMES = '1m,15m,1h,4h,1d,1w,1M'
+DEFAULT_TIMEFRAMES = ALL_TIMEFRAMES
 
 
 def get_last_fetch_time() -> datetime | None:

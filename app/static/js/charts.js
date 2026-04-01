@@ -114,15 +114,16 @@ document.addEventListener('DOMContentLoaded', function() {
         levelSeriesList = [];
     }
 
-    function buildLevelQueryParams() {
-        const params = new URLSearchParams({ active_only: 'true' });
+    function buildLevelQueryParams(forTrade) {
+        // In trade mode, get ALL levels (including invalidated) so we can filter by trade time
+        const params = new URLSearchParams({ active_only: forTrade ? 'false' : 'true' });
         const tfs = Object.entries(enabledSourceTfs)
             .filter(([_, on]) => on)
             .map(([tf]) => tf);
         if (tfs.length > 0 && tfs.length < 3) {
             params.set('timeframe', tfs.join(','));
         }
-        if (enabledStatus.naked && !enabledStatus.touched) {
+        if (!forTrade && enabledStatus.naked && !enabledStatus.touched) {
             params.set('naked_only', 'true');
         }
         return params.toString();
@@ -177,15 +178,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 chart.timeScale().fitContent();
-                loadLevels(data);
 
-                // Load trades (for 'trades' and 'all' view modes)
+                // Load trades first (so we know which trade is selected for level filtering)
                 if (viewMode === 'trades' || viewMode === 'all') {
                     loadTrades();
                 } else {
                     clearTradeLines();
                     window._tradeMarkers = [];
                 }
+
+                // Load levels (filtered by trade time if a specific trade is selected)
+                loadLevels(data);
             })
             .catch(err => console.error('Failed to load candles:', err));
     }
@@ -322,6 +325,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const filtered = filterTrades(allTrades);
             renderTrades(filtered);
             updateTradeStats(filtered);
+            // Reload levels now that we know which trade is selected
+            if (selectedTradeIdx !== 'all' && lastChartData.length) loadLevels(lastChartData);
             return;
         }
 
@@ -330,10 +335,14 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(trades => {
                 if (!Array.isArray(trades)) return;
                 allTrades = trades;
-                populateTradeSelector(trades);
+                if (!document.querySelector('#trade-selector option[value="1"]')) {
+                    populateTradeSelector(trades);
+                }
                 const filtered = filterTrades(trades);
                 renderTrades(filtered);
                 updateTradeStats(filtered);
+                // Now reload levels with trade filter active
+                if (selectedTradeIdx !== 'all' && lastChartData.length) loadLevels(lastChartData);
             })
             .catch(err => console.error('Failed to load trades:', err));
     }
@@ -347,6 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function populateTradeSelector(trades) {
         const sel = document.getElementById('trade-selector');
         if (!sel) return;
+        const currentVal = selectedTradeIdx;  // Preserve selection
         sel.innerHTML = '<option value="all">All trades</option>';
         trades.forEach((t, i) => {
             const won = t.pnl_r > 0;
@@ -358,6 +368,10 @@ document.addEventListener('DOMContentLoaded', function() {
             opt.style.color = won ? '#00e676' : '#ff5252';
             sel.appendChild(opt);
         });
+        // Restore previous selection
+        if (currentVal !== 'all') {
+            sel.value = currentVal;
+        }
     }
 
     function updateTradeStats(trades) {
@@ -371,22 +385,29 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadLevels(candleData) {
         clearLevelLines();
 
-        // In Trades mode, don't show levels at all (trade lines are enough)
-        // Unless 'all' trades selected — then show levels normally
-        if (viewMode === 'trades') return;
+        // In Trades mode with a SPECIFIC trade selected, show only that trade's levels
+        // In Trades mode with 'all' selected, skip levels (too cluttered)
+        if (viewMode === 'trades' && selectedTradeIdx === 'all') return;
 
         if (!candleData.length || !lastChartData.length) return;
         const prices = candleData.flatMap(c => [c.high, c.low]);
         const minPrice = Math.min(...prices);
         const maxPrice = Math.max(...prices);
 
+        // When a specific trade is selected, filter levels to only those valid at trade time
         let tradeTimeFilter = null;
+        if (selectedTradeIdx !== 'all' && allTrades.length > 0) {
+            const idx = parseInt(selectedTradeIdx);
+            if (!isNaN(idx) && allTrades[idx]) {
+                tradeTimeFilter = Math.floor(new Date(allTrades[idx].entry_time).getTime() / 1000);
+            }
+        }
         const margin = (maxPrice - minPrice) * 0.1;
 
         const firstTime = lastChartData[0].time;
         const lastTime = lastChartData[lastChartData.length - 1].time;
 
-        const queryParams = buildLevelQueryParams();
+        const queryParams = buildLevelQueryParams(!!tradeTimeFilter);
         fetch(`/api/levels?${queryParams}`)
             .then(r => r.json())
             .then(levels => {
@@ -395,23 +416,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 let visibleCount = 0;
                 let capped = false;
 
-                // Sort by created_at descending — newest levels get priority within the cap
-                levels.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                // Sort: when filtering by trade, sort by proximity to trade price
+                // Otherwise sort by created_at descending (newest first)
+                if (tradeTimeFilter && selectedTradeIdx !== 'all' && allTrades.length > 0) {
+                    const tp = allTrades[parseInt(selectedTradeIdx)]?.entry_price || 0;
+                    levels.sort((a, b) => Math.abs(a.price_level - tp) - Math.abs(b.price_level - tp));
+                } else {
+                    levels.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                }
 
+                let _dbg = {total: levels.length, priceOut: 0, catOut: 0, tfOut: 0, statusOut: 0, tradeOut: 0, rangeOut: 0, dedup: 0};
                 levels.forEach(l => {
                     if (visibleCount >= MAX_LEVEL_SERIES) { capped = true; return; }
-                    if (l.price_level < minPrice - margin || l.price_level > maxPrice + margin) return;
+                    if (l.price_level < minPrice - margin || l.price_level > maxPrice + margin) { _dbg.priceOut++; return; }
 
                     const cat = getLevelCategory(l.level_type);
-                    if (!enabledLevels[cat]) return;
+                    if (!enabledLevels[cat]) { _dbg.catOut++; return; }
 
                     // Source TF filter
                     if (!enabledSourceTfs[l.timeframe]) return;
 
-                    // Status filter
+                    // Status filter (in trade mode, show all - time filter handles it)
                     const naked = isNaked(l);
-                    if (naked && !enabledStatus.naked) return;
-                    if (!naked && !enabledStatus.touched) return;
+                    if (!tradeTimeFilter) {
+                        if (naked && !enabledStatus.naked) return;
+                        if (!naked && !enabledStatus.touched) return;
+                    }
 
                     // Birth time — where the level line starts
                     const birthTime = Math.floor(new Date(l.created_at).getTime() / 1000);
@@ -422,14 +452,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         endTime = Math.floor(new Date(l.first_touched_at).getTime() / 1000);
                     }
 
-                    // Trade time filter: only show levels that existed AND were naked at trade time
+                    // Trade time filter: only show levels valid at trade time + near trade price
                     if (tradeTimeFilter) {
-                        // Level must have been born before the trade
-                        if (birthTime > tradeTimeFilter) return;
-                        // Level must have been naked at trade time (not yet touched)
+                        if (birthTime > tradeTimeFilter) { _dbg.tradeOut++; return; }
                         if (!naked && l.first_touched_at) {
                             const touchTime = Math.floor(new Date(l.first_touched_at).getTime() / 1000);
-                            if (touchTime < tradeTimeFilter) return; // Already touched before trade
+                            if (touchTime < tradeTimeFilter) { _dbg.tradeOut++; return; }
+                        }
+                        const tradeIdx = parseInt(selectedTradeIdx);
+                        if (!isNaN(tradeIdx) && allTrades[tradeIdx]) {
+                            const tradePrice = allTrades[tradeIdx].entry_price;
+                            if (l.price_level < tradePrice * 0.95 || l.price_level > tradePrice * 1.05) { _dbg.rangeOut++; return; }
                         }
                     }
 
@@ -479,6 +512,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (countEl) {
                     let text = `${visibleCount} levels shown`;
                     if (capped) text += ` (capped at ${MAX_LEVEL_SERIES}, use filters)`;
+                    if (tradeTimeFilter) text += ` [dbg: ${JSON.stringify(_dbg)}]`;
                     countEl.textContent = text;
                 }
             })
@@ -561,7 +595,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (tradeSel) {
         tradeSel.addEventListener('change', function() {
             selectedTradeIdx = this.value;
-            loadData();
+            // Lightweight re-render: just trade lines + filtered levels
+            loadTrades();  // Uses cached allTrades, no API call
+            if (lastChartData.length) {
+                // Small delay to ensure trades are rendered first
+                setTimeout(() => loadLevels(lastChartData), 100);
+            }
         });
     }
 

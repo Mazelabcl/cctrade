@@ -148,7 +148,9 @@ def load_and_cache_data(session, _cache={}, timeframe='1m'):
     if '_levels_loaded' not in _cache:
         print("Loading levels from DB...", flush=True)
         t1 = time.time()
-        levels = load_levels_db(session)
+        # CRITICAL: Only load D-W-M levels. Hourly levels are NOT part of
+        # Chart Champions methodology and contaminate results.
+        levels = load_levels_db(session, source_timeframes=['daily', 'weekly', 'monthly'])
         print(f"  Loaded {len(levels):,} levels ({time.time()-t1:.1f}s)", flush=True)
 
         if levels.empty:

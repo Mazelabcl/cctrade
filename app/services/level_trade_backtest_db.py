@@ -73,21 +73,42 @@ def load_candles_db(session: Session,
 
 
 def load_levels_db(session: Session,
-                   symbol: str = 'BTCUSDT') -> pd.DataFrame:
-    """Load all non-invalidated levels from SQLite (fast raw-SQL path).
+                   symbol: str = 'BTCUSDT',
+                   source_timeframes: list[str] | None = None) -> pd.DataFrame:
+    """Load non-invalidated levels from SQLite (fast raw-SQL path).
+
+    Args:
+        source_timeframes: Filter by level source timeframe.
+            Default None = all timeframes.
+            Example: ['daily', 'weekly', 'monthly'] for D-W-M only.
+            IMPORTANT: For Chart Champions strategy, always use D-W-M.
+            Hourly levels exist but are NOT part of the coach's methodology.
 
     For PrevSession/VP levels, adds a 'superseded_at' column indicating when
     a newer level of the same (type, timeframe) replaces this one.
     """
-    df = _query_to_df(
-        session,
-        "SELECT id, price_level, level_type, timeframe, source, created_at "
-        "FROM levels "
-        "WHERE invalidated_at IS NULL "
-        "ORDER BY created_at ASC",
-    )
+    if source_timeframes:
+        placeholders = ','.join(f'"{tf}"' for tf in source_timeframes)
+        query = (
+            "SELECT id, price_level, level_type, timeframe, source, "
+            "created_at, first_touched_at "
+            "FROM levels "
+            f"WHERE invalidated_at IS NULL AND timeframe IN ({placeholders}) "
+            "ORDER BY created_at ASC"
+        )
+    else:
+        query = (
+            "SELECT id, price_level, level_type, timeframe, source, "
+            "created_at, first_touched_at "
+            "FROM levels "
+            "WHERE invalidated_at IS NULL "
+            "ORDER BY created_at ASC"
+        )
+    df = _query_to_df(session, query)
     if not df.empty:
-        df['created_at'] = pd.to_datetime(df['created_at'])
+        df['created_at'] = pd.to_datetime(df['created_at'], format='mixed')
+        if 'first_touched_at' in df.columns:
+            df['first_touched_at'] = pd.to_datetime(df['first_touched_at'], format='mixed')
 
         # PrevSession/VP are session-relative: only the most recent per
         # (level_type, timeframe) should be active at any time.

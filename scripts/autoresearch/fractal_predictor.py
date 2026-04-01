@@ -216,8 +216,8 @@ def load_data(session, timeframe='1h'):
 
     print("Loading levels from DB...", flush=True)
     t0 = time.time()
-    levels = load_levels_db(session)
-    print(f"  Loaded {len(levels):,} levels ({time.time()-t0:.1f}s)", flush=True)
+    levels = load_levels_db(session, source_timeframes=['daily', 'weekly', 'monthly'])
+    print(f"  Loaded {len(levels):,} levels (D-W-M only) ({time.time()-t0:.1f}s)", flush=True)
 
     # Level arrays for vectorized computation
     l_prices = np.array(levels['price_level'].values, dtype=np.float64)

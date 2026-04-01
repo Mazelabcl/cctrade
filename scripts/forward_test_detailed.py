@@ -49,7 +49,7 @@ def run_detailed(top_n=None, start_date='2026-01-01'):
         l_types = data.get('l_types_str', None)
         if l_types is None:
             from app.services.level_trade_backtest_db import load_levels_db
-            levels_df = load_levels_db(db.session)
+            levels_df = load_levels_db(db.session, source_timeframes=['daily', 'weekly', 'monthly'])
             l_types = levels_df['level_type'].values.astype(str)
             l_timeframes = levels_df['timeframe'].values.astype(str)
             l_prices_full = levels_df['price_level'].values.astype(np.float64)

@@ -70,8 +70,8 @@ def run_realtime_1m(vol_threshold=3.0, session_filter='all'):
         from app.services.level_trade_backtest_db import load_levels_db
         import pandas as pd
 
-        levels_df = load_levels_db(db.session)
-        print(f"  {len(levels_df)} total levels loaded", flush=True)
+        levels_df = load_levels_db(db.session, source_timeframes=['daily', 'weekly', 'monthly'])
+        print(f"  {len(levels_df)} levels loaded (D-W-M only)", flush=True)
 
         # Filter to key level types (fractals + VWAP + VP_POC)
         key_types = {'Fractal_support', 'Fractal_resistance',

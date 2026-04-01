@@ -804,7 +804,7 @@ def _compute_forward_trades(start_date):
     n_candles = data['n_candles']
 
     # Level data for zone lookup
-    levels_df = load_levels_db(db.session)
+    levels_df = load_levels_db(db.session, source_timeframes=['daily', 'weekly', 'monthly'])
     l_prices = levels_df['price_level'].values.astype(np.float64)
     l_types = levels_df['level_type'].values.astype(str)
     l_timeframes = levels_df['timeframe'].values.astype(str)

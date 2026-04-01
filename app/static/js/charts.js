@@ -371,19 +371,16 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadLevels(candleData) {
         clearLevelLines();
 
+        // In Trades mode, don't show levels at all (trade lines are enough)
+        // Unless 'all' trades selected — then show levels normally
+        if (viewMode === 'trades') return;
+
         if (!candleData.length || !lastChartData.length) return;
         const prices = candleData.flatMap(c => [c.high, c.low]);
         const minPrice = Math.min(...prices);
         const maxPrice = Math.max(...prices);
 
-        // When a specific trade is selected in Trades view, filter levels to trade time
         let tradeTimeFilter = null;
-        if ((viewMode === 'trades') && selectedTradeIdx !== 'all' && allTrades.length > 0) {
-            const idx = parseInt(selectedTradeIdx);
-            if (!isNaN(idx) && allTrades[idx]) {
-                tradeTimeFilter = Math.floor(new Date(allTrades[idx].entry_time).getTime() / 1000);
-            }
-        }
         const margin = (maxPrice - minPrice) * 0.1;
 
         const firstTime = lastChartData[0].time;

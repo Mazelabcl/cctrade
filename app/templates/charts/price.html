@@ -25,6 +25,7 @@
     <div class="chart-controls">
         <!-- Timeframe selector -->
         <div class="btn-group" id="tf-selector">
+            <button class="btn btn-outline-secondary" data-tf="15m">15m</button>
             <button class="btn btn-outline-secondary" data-tf="1h">1H</button>
             <button class="btn btn-outline-secondary" data-tf="4h">4H</button>
             <button class="btn btn-outline-secondary active" data-tf="1d">1D</button>
@@ -126,5 +127,5 @@
 
 {% block extra_js %}
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="{{ url_for('static', filename='js/charts.js') }}?v=3"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}?v=4"></script>
 {% endblock %}

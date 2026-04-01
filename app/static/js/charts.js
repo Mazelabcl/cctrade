@@ -227,58 +227,89 @@ document.addEventListener('DOMContentLoaded', function() {
         tradeSeriesList = [];
     }
 
+    // 15m candle duration in seconds
+    const TF_SECONDS = { '1h': 3600, '4h': 14400, '1d': 86400, '1w': 604800, '15m': 900 };
+    function barDuration() { return TF_SECONDS[currentTf] || 900; }
+
     function loadTrades() {
         clearTradeLines();
 
         const renderTrades = (trades) => {
             const tradeMarkers = [];
+            const fiveBars = barDuration() * 5;
+
+            // Update trade info text
+            const infoEl = document.getElementById('trade-info');
 
             trades.forEach(t => {
                 const entryTime = Math.floor(new Date(t.entry_time).getTime() / 1000);
                 const exitTime = Math.floor(new Date(t.exit_time).getTime() / 1000);
+                const lineEnd = entryTime + fiveBars;
                 const won = t.pnl_r > 0;
                 const isLong = t.direction === 'LONG';
 
-                // Entry marker
+                // Entry marker (arrow)
                 tradeMarkers.push({
                     time: entryTime,
                     position: isLong ? 'belowBar' : 'aboveBar',
-                    color: isLong ? '#00e676' : '#ff5252',
+                    color: '#ffffff',
                     shape: isLong ? 'arrowUp' : 'arrowDown',
                     text: `${t.direction} ${t.pnl_r > 0 ? '+' : ''}${t.pnl_r}R`,
                 });
+
+                // 1) Entry line — WHITE thick, 5 bars
+                const entrySeries = chart.addLineSeries({
+                    color: '#ffffff', lineWidth: 3, lineStyle: 0,
+                    priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+                });
+                entrySeries.setData([
+                    { time: entryTime, value: t.entry_price },
+                    { time: lineEnd, value: t.entry_price },
+                ]);
+                tradeSeriesList.push(entrySeries);
+
+                // 2) SL line — RED thick, 5 bars
+                const slSeries = chart.addLineSeries({
+                    color: '#ff1744', lineWidth: 3, lineStyle: 0,
+                    priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+                });
+                slSeries.setData([
+                    { time: entryTime, value: t.stop_loss },
+                    { time: lineEnd, value: t.stop_loss },
+                ]);
+                tradeSeriesList.push(slSeries);
+
+                // 3) Exit line — GREEN thick, 5 bars at exit price
+                const exitSeries = chart.addLineSeries({
+                    color: won ? '#00e676' : '#ff5252', lineWidth: 3, lineStyle: 0,
+                    priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+                });
+                const exitLineStart = Math.max(entryTime, exitTime - fiveBars);
+                exitSeries.setData([
+                    { time: exitLineStart, value: t.exit_price },
+                    { time: exitTime + fiveBars, value: t.exit_price },
+                ]);
+                tradeSeriesList.push(exitSeries);
 
                 // Exit marker
                 tradeMarkers.push({
                     time: exitTime,
                     position: won ? 'aboveBar' : 'belowBar',
-                    color: won ? '#00e676' : '#ff5252',
-                    shape: won ? 'circle' : 'square',
-                    text: t.exit_reason,
+                    color: won ? '#00e676' : '#ff1744',
+                    shape: 'circle',
+                    text: `Exit: ${t.exit_reason} ${t.pnl_r > 0 ? '+' : ''}${t.pnl_r}R`,
                 });
 
-                // SL line (dashed red)
-                const slSeries = chart.addLineSeries({
-                    color: 'rgba(255, 82, 82, 0.6)', lineWidth: 1, lineStyle: 2,
-                    priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
-                });
-                slSeries.setData([
-                    { time: entryTime, value: t.stop_loss },
-                    { time: exitTime, value: t.stop_loss },
-                ]);
-                tradeSeriesList.push(slSeries);
-
-                // Entry price line
-                const entrySeries = chart.addLineSeries({
-                    color: won ? 'rgba(0, 230, 118, 0.4)' : 'rgba(255, 82, 82, 0.4)',
-                    lineWidth: 1, lineStyle: 0,
-                    priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
-                });
-                entrySeries.setData([
-                    { time: entryTime, value: t.entry_price },
-                    { time: exitTime, value: t.entry_price },
-                ]);
-                tradeSeriesList.push(entrySeries);
+                // Show trade info
+                if (infoEl && trades.length === 1) {
+                    infoEl.innerHTML = `<b>${t.direction}</b> @ $${t.entry_price.toLocaleString()} | ` +
+                        `SL: $${t.stop_loss.toLocaleString()} (${t.risk_pct || '?'}%) | ` +
+                        `Exit: $${t.exit_price.toLocaleString()} <b>(${t.exit_reason})</b> | ` +
+                        `P&L: <span style="color:${won ? '#00e676' : '#ff1744'}">${t.pnl_r > 0 ? '+' : ''}${t.pnl_r}R</span> | ` +
+                        `Levels: ${(t.zone_levels || []).slice(0, 5).join(', ')}`;
+                } else if (infoEl) {
+                    infoEl.innerHTML = '';
+                }
             });
 
             window._tradeMarkers = tradeMarkers;
@@ -344,6 +375,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const prices = candleData.flatMap(c => [c.high, c.low]);
         const minPrice = Math.min(...prices);
         const maxPrice = Math.max(...prices);
+
+        // When a specific trade is selected in Trades view, filter levels to trade time
+        let tradeTimeFilter = null;
+        if ((viewMode === 'trades') && selectedTradeIdx !== 'all' && allTrades.length > 0) {
+            const idx = parseInt(selectedTradeIdx);
+            if (!isNaN(idx) && allTrades[idx]) {
+                tradeTimeFilter = Math.floor(new Date(allTrades[idx].entry_time).getTime() / 1000);
+            }
+        }
         const margin = (maxPrice - minPrice) * 0.1;
 
         const firstTime = lastChartData[0].time;
@@ -383,6 +423,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     let endTime = lastTime;
                     if (!naked && l.first_touched_at) {
                         endTime = Math.floor(new Date(l.first_touched_at).getTime() / 1000);
+                    }
+
+                    // Trade time filter: only show levels that existed AND were naked at trade time
+                    if (tradeTimeFilter) {
+                        // Level must have been born before the trade
+                        if (birthTime > tradeTimeFilter) return;
+                        // Level must have been naked at trade time (not yet touched)
+                        if (!naked && l.first_touched_at) {
+                            const touchTime = Math.floor(new Date(l.first_touched_at).getTime() / 1000);
+                            if (touchTime < tradeTimeFilter) return; // Already touched before trade
+                        }
                     }
 
                     // Skip levels whose entire life is outside the visible chart range

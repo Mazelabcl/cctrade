@@ -908,6 +908,7 @@ def _compute_forward_trades(start_date):
             'exit_price': round(exit_price, 2),
             'exit_reason': exit_reason,
             'pnl_r': pnl_r,
+            'risk_pct': round(risk / entry_price * 100, 3),
             'confluence': int(scores_fwd[i]),
             'zone_levels': zone_levels,
         })

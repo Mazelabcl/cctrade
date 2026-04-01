@@ -68,6 +68,66 @@
     </div>
 </div>
 
+<!-- Paper Trading Live Card -->
+<div class="card border-info mb-3" id="paper-trading-card">
+    <div class="card-header bg-info bg-opacity-10 d-flex justify-content-between align-items-center">
+        <strong><i class="bi bi-activity me-1"></i> Paper Trading (Live)</strong>
+        <div>
+            <button class="btn btn-sm btn-outline-info" onclick="checkNow()">Check Now</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="resetPaperTrades()">Reset</button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row text-center" id="paper-stats">
+            <div class="col"><span class="fs-4 fw-bold" id="pt-trades">-</span><br><small class="text-muted">Trades</small></div>
+            <div class="col"><span class="fs-4 fw-bold" id="pt-wr">-</span><br><small class="text-muted">Win Rate</small></div>
+            <div class="col"><span class="fs-4 fw-bold" id="pt-pf">-</span><br><small class="text-muted">PF</small></div>
+            <div class="col"><span class="fs-4 fw-bold" id="pt-totalr">-</span><br><small class="text-muted">Total R</small></div>
+            <div class="col"><span class="fs-4 fw-bold" id="pt-net">-</span><br><small class="text-muted">Net/mo ($10)</small></div>
+            <div class="col"><span class="fs-4 fw-bold" id="pt-open">-</span><br><small class="text-muted">Open</small></div>
+        </div>
+        <div id="paper-trades-list" class="mt-2 small"></div>
+    </div>
+</div>
+
+<script>
+function loadPaperStats() {
+    fetch('/api/paper-trades/stats').then(r => r.json()).then(s => {
+        document.getElementById('pt-trades').textContent = s.closed_trades || 0;
+        document.getElementById('pt-wr').textContent = s.win_rate ? s.win_rate + '%' : '-';
+        document.getElementById('pt-pf').textContent = s.profit_factor || '-';
+        document.getElementById('pt-totalr').textContent = s.total_r ? (s.total_r > 0 ? '+' : '') + s.total_r + 'R' : '-';
+        document.getElementById('pt-net').textContent = s.net_per_month ? '$' + s.net_per_month : '-';
+        document.getElementById('pt-open').textContent = s.open_trades || 0;
+    });
+    fetch('/api/paper-trades').then(r => r.json()).then(trades => {
+        const el = document.getElementById('paper-trades-list');
+        if (!trades.length) { el.innerHTML = '<span class="text-muted">No trades yet. Enable live sync in Settings, or click "Check Now".</span>'; return; }
+        let html = '<table class="table table-sm table-dark mb-0"><thead><tr><th>Time</th><th>Dir</th><th>Entry</th><th>SL</th><th>Status</th><th>P&L</th></tr></thead><tbody>';
+        trades.slice(0, 10).forEach(t => {
+            const time = t.signal_time ? t.signal_time.substring(0, 16) : '-';
+            const pnl = t.pnl_r != null ? (t.pnl_r > 0 ? '+' : '') + t.pnl_r + 'R' : '-';
+            const cls = t.status === 'open' ? 'text-info' : (t.pnl_r > 0 ? 'text-success' : 'text-danger');
+            html += '<tr><td>' + time + '</td><td>' + t.direction + '</td><td>' + t.entry_price + '</td><td>' + t.stop_loss + '</td><td>' + t.status + '</td><td class="' + cls + '">' + pnl + '</td></tr>';
+        });
+        html += '</tbody></table>';
+        el.innerHTML = html;
+    });
+}
+function checkNow() {
+    fetch('/api/paper-trades/check-now', {method:'POST'}).then(r => r.json()).then(r => {
+        if (r.new_signal) alert('New signal: ' + r.signal_direction + ' at ' + r.signal_entry);
+        loadPaperStats();
+    });
+}
+function resetPaperTrades() {
+    if (!confirm('Delete all paper trades?')) return;
+    fetch('/api/paper-trades/reset', {method:'POST'}).then(() => loadPaperStats());
+}
+loadPaperStats();
+setInterval(loadPaperStats, 60000); // Refresh every minute
+</script>
+
 <!-- Tab Navigation -->
 <ul class="nav nav-tabs mb-3" id="researchTabs">
     <li class="nav-item">

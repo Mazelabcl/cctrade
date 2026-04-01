@@ -54,7 +54,15 @@
       "Bash(git status:*)",
       "Bash(python -c \":*)",
       "Bash(kill 458)",
-      "Bash(kill 1666)"
+      "Bash(kill 1666)",
+      "Bash(PYTHONUNBUFFERED=1 \"C:\\\\Users\\\\aldot\\\\.gemini\\\\antigravity\\\\scratch\\\\claudecode\\\\tradebot\\\\.venv\\\\Scripts\\\\python.exe\" -u scripts/autoresearch/evaluate.py)",
+      "Bash(PYTHONUNBUFFERED=1 \"C:\\\\Users\\\\aldot\\\\.gemini\\\\antigravity\\\\scratch\\\\claudecode\\\\tradebot\\\\.venv\\\\Scripts\\\\python.exe\" -u scripts/autoresearch/agent.py --experiments 10)",
+      "Bash(PYTHONUNBUFFERED=1 \"C:\\\\Users\\\\aldot\\\\.gemini\\\\antigravity\\\\scratch\\\\claudecode\\\\tradebot\\\\.venv\\\\Scripts\\\\python.exe\" -u scripts/exit_feature_analysis.py)",
+      "Bash(PYTHONUNBUFFERED=1 \"C:\\\\Users\\\\aldot\\\\.gemini\\\\antigravity\\\\scratch\\\\claudecode\\\\tradebot\\\\.venv\\\\Scripts\\\\python.exe\" -u scripts/autoresearch/agent.py --experiments 100)",
+      "Bash(PYTHONUNBUFFERED=1 \"C:\\\\Users\\\\aldot\\\\.gemini\\\\antigravity\\\\scratch\\\\claudecode\\\\tradebot\\\\.venv\\\\Scripts\\\\python.exe\" -u scripts/autoresearch/agent.py --experiments 500)",
+      "Bash(PYTHONUNBUFFERED=1 \"C:\\\\Users\\\\aldot\\\\.gemini\\\\antigravity\\\\scratch\\\\claudecode\\\\tradebot\\\\.venv\\\\Scripts\\\\python.exe\" -u scripts/autoresearch/feature_discovery.py --experiments 200 --tf 4h)",
+      "Bash(alembic heads:*)",
+      "Bash(alembic merge:*)"
     ],
     "deny": []
   }

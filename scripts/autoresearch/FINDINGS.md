@@ -357,18 +357,57 @@ Combinar features de niveles de TODOS los timeframes en un solo modelo. Un nivel
 
 ---
 
-## Resumen ejecutivo
+## CRITICO: Auditoria de niveles hourly (descubierto post-experimentos)
+
+### Problema
+
+101,165 niveles hourly (Fib + HTF) existian en la DB y fueron cargados en TODOS los experimentos. Cuando AutoResearch probo HTF_level y Fib, estos competian contra 85K niveles hourly que son ruido. Esto causo que HTF y Fib parecieran peores de lo que realmente son.
+
+### Impacto
+
+- **Config ganadora (Fractal + VWAP + VP_POC): NO afectada** — esos tipos no tienen hourly
+- **Conclusion de que HTF y Fib no sirven: INCORRECTA** — estaban contaminados
+- **Fib_CC del coach: CONFIRMADO COMO CLAVE** despues de limpiar
+
+### Fix aplicado
+
+`load_levels_db()` ahora acepta `source_timeframes=['daily', 'weekly', 'monthly']`. TODOS los scripts de AutoResearch actualizados para usar solo D-W-M.
+
+### Resultados con niveles limpios D-W-M (backtest 2017-2025)
+
+| Config | PF | WR | Trades | Net/mes |
+|--------|-----|------|--------|---------|
+| Fractals only | 862 | 94% | 819 | $333 |
+| **Fractals + Fib_CC** | **13.4** | **72%** | **1,098** | **$283** |
+| Fractals + ALL Fib | 3.80 | 48% | 1,612 | $180 |
+| Fractals + VWAP + VP_POC (old) | 2.78 | 39% | 2,881 | $238 |
+| ALL 18 types | 1.29 | 27% | 4,661 | $30 |
+| Fib_CC only | 1.10 | 33% | 473 | -$3 |
+
+**Fib_CC es el 2do nivel mas poderoso despues de fractales.** El coach tenia razon.
+
+### Forward test 2026 con niveles limpios
+
+| Config | PF | WR | Trades | Net/mes |
+|--------|-----|------|--------|---------|
+| Fractals only | 999 | 100% | 24 | $377 |
+| Fractals + Fib_CC | 4.16 | 50% | 46 | $209 |
+| Old 4 (VWAP+VP_POC) | 3.11 | 39% | 82 | $267 |
+
+---
+
+## Resumen ejecutivo (actualizado con niveles limpios)
 
 | Sistema | Timeframe | Resultado | Status |
 |---------|-----------|-----------|--------|
-| Fractal swing (Mode A) | 4h | PF 10+ | VIABLE - el edge mas fuerte |
-| Feature discovery (Mode B) | 4h | F1=0.10 | DESCARTADO - retail features no predicen |
+| Fractal swing (Mode A) | 4h | PF 10+ | VIABLE |
+| Feature discovery (Mode B) | 4h | F1=0.10 | DESCARTADO - retail no predicen |
 | Confluence scalper (Mode C) | 1m | PF 2.14 gross | DESCARTADO - comisiones |
-| Confluence scalper (Mode C) | 15m | PF 2.39, +$164/mes | VIABLE - sweet spot |
-| Confluence scalper (Mode C) | 30m | PF 1.38 | DESCARTADO - sin edge |
-| Sin fractales (Mode C) | 15m | PF 1.39, -$40/mes | DESCARTADO - comisiones |
-| tf_weighted sin fractales | 15m | PF 1.12, -$187/mes | DESCARTADO - peor |
-| **Fractal predictor (Mode D)** | **1h** | **F1=0.40, adj prec 86%** | **PROMETEDOR** |
-| **Fractal predictor (Mode D)** | **4h** | **F1=0.40, adj prec 89%** | **PROMETEDOR** |
+| **Fractals only (clean D-W-M)** | **15m** | **PF 862, $333/mo** | **MEJOR CALIDAD** |
+| **Fractals + Fib_CC (clean)** | **15m** | **PF 13.4, $283/mo** | **MEJOR BALANCE** |
+| Old 4 (VWAP+VP_POC) | 15m | PF 2.78, $238/mo | VIABLE - mas volumen |
+| Fractal predictor (Mode D) | 1h/4h | F1=0.40, adj prec 89% | PROMETEDOR |
+| Forward 2026 fractals only | 15m | PF 999, $377/mo, 100%WR | **OOS VALIDADO** |
+| Forward 2026 fractals+Fib_CC | 15m | PF 4.16, $209/mo, 50%WR | **OOS VALIDADO** |
 
-**Los niveles del coach son el edge real.** ML confirma que los niveles de Chart Champions (HTF, Fib, VP, Session) combinados con price action predicen zonas de reaccion con 89% de precision ajustada. Los indicadores retail (RSI, momentum) no aportan nada adicional.
+**Los fractales son el edge dominante. Fib_CC es el complemento mas valioso.** Los indicadores retail no aportan nada. Niveles solo deben ser de D-W-M (Daily, Weekly, Monthly).

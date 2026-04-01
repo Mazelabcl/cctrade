@@ -447,18 +447,28 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Birth time — where the level line starts
                     const birthTime = Math.floor(new Date(l.created_at).getTime() / 1000);
 
-                    // End time: naked levels extend to chart end, touched levels end at first touch
+                    // End time: structural levels end at first_touched_at, mobile at superseded_at
                     let endTime = lastTime;
-                    if (!naked && l.first_touched_at) {
+                    if (l.first_touched_at) {
                         endTime = Math.floor(new Date(l.first_touched_at).getTime() / 1000);
+                    }
+                    if (l.superseded_at) {
+                        // Mobile levels (PrevSession, VP) end when superseded by next one
+                        const supersededTime = Math.floor(new Date(l.superseded_at).getTime() / 1000);
+                        endTime = Math.min(endTime, supersededTime);
                     }
 
                     // Trade time filter: only show levels valid at trade time + near trade price
                     if (tradeTimeFilter) {
                         if (birthTime > tradeTimeFilter) return;
-                        if (!naked && l.first_touched_at) {
+                        // Skip if already touched/superseded before trade
+                        if (l.first_touched_at) {
                             const touchTime = Math.floor(new Date(l.first_touched_at).getTime() / 1000);
                             if (touchTime < tradeTimeFilter) return;
+                        }
+                        if (l.superseded_at) {
+                            const supTime = Math.floor(new Date(l.superseded_at).getTime() / 1000);
+                            if (supTime < tradeTimeFilter) return;
                         }
                         const tradeIdx = parseInt(selectedTradeIdx);
                         if (!isNaN(tradeIdx) && allTrades[tradeIdx]) {

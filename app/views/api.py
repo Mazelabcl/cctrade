@@ -131,7 +131,25 @@ def levels():
         )
 
     rows = query.order_by(Level.price_level).all()
-    return jsonify([l.to_dict() for l in rows])
+
+    # For PrevSession/VP levels, compute superseded_at (when next level of same type replaces it)
+    result = []
+    # Group by (type, timeframe) to find superseding
+    from collections import defaultdict
+    mobile_groups = defaultdict(list)
+    for l in rows:
+        d = l.to_dict()
+        if l.level_type and (l.level_type.startswith('PrevSession') or l.level_type.startswith('VP_')):
+            mobile_groups[(l.level_type, l.timeframe)].append(d)
+        result.append(d)
+
+    # Set superseded_at for mobile levels
+    for key, group in mobile_groups.items():
+        group.sort(key=lambda x: x['created_at'])
+        for i in range(len(group) - 1):
+            group[i]['superseded_at'] = group[i + 1]['created_at']
+
+    return jsonify(result)
 
 
 @api_bp.route('/predictions')

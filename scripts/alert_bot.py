@@ -57,11 +57,13 @@ def send_telegram(token, chat_id, message):
 
 
 def check_and_alert():
-    """Check for new signals and send alerts."""
+    """Smart alerts: always sends a message with market status."""
     from app import create_app
     from app.extensions import db
     from app.models.setting import get_setting
-    from app.services.confluence_signal import check_for_signal, update_open_trades
+    from app.services.confluence_signal import (
+        check_for_signal, update_open_trades, get_market_status,
+    )
 
     app = create_app()
     with app.app_context():
@@ -72,7 +74,7 @@ def check_and_alert():
             logger.warning("Telegram not configured. Run: python scripts/alert_bot.py --setup")
             return
 
-        # First sync latest candles
+        # Sync latest candles
         try:
             from app.tasks.data_sync import sync_candle_data
             count = sync_candle_data()
@@ -85,15 +87,14 @@ def check_and_alert():
         signal = check_for_signal(db.session)
         if signal:
             levels = json.loads(signal.level_types_json) if signal.level_types_json else []
+            icon = '🟢' if signal.direction == 'LONG' else '🔴'
             msg = (
-                f"<b>{'🟢' if signal.direction == 'LONG' else '🔴'} "
-                f"{signal.direction} Signal</b>\n\n"
+                f"<b>{icon} {signal.direction} SIGNAL!</b>\n\n"
                 f"<b>Entry:</b> ${signal.entry_price:,.2f}\n"
                 f"<b>Stop Loss:</b> ${signal.stop_loss:,.2f}\n"
                 f"<b>Risk:</b> {signal.risk_pct:.3f}%\n"
                 f"<b>Confluence:</b> {signal.confluence_score} types\n"
-                f"<b>Levels:</b> {', '.join(levels)}\n\n"
-                f"<i>15m Confluence Scalper | be_rr=2.75</i>"
+                f"<b>Levels:</b> {', '.join(levels)}\n"
             )
             send_telegram(token, chat_id, msg)
 
@@ -103,17 +104,70 @@ def check_and_alert():
             icon = '✅' if trade.pnl_r > 0 else '❌'
             msg = (
                 f"<b>{icon} Trade Closed</b>\n\n"
-                f"<b>Direction:</b> {trade.direction}\n"
-                f"<b>Entry:</b> ${trade.entry_price:,.2f}\n"
-                f"<b>Exit:</b> ${trade.exit_price:,.2f}\n"
-                f"<b>Reason:</b> {trade.exit_reason}\n"
+                f"<b>{trade.direction}</b> from ${trade.entry_price:,.2f}\n"
+                f"<b>Exit:</b> ${trade.exit_price:,.2f} ({trade.exit_reason})\n"
                 f"<b>P&L:</b> {trade.pnl_r:+.2f}R "
                 f"(${trade.pnl_r * 10:+.2f} at $10 risk)\n"
             )
             send_telegram(token, chat_id, msg)
 
-        if not signal and not closed:
-            logger.info("No new signals or closed trades")
+        # Always send market status
+        status = get_market_status(db.session)
+        if status.get('status') == 'no_data':
+            send_telegram(token, chat_id, "No candle data available.")
+            return
+
+        price = status['price']
+        time_str = status.get('candle_time', '?')[:16]
+
+        # Open trade update
+        if status['open_trades']:
+            for t in status['open_trades']:
+                be_icon = '🛡' if t['breakeven_reached'] else '⏳'
+                r_icon = '📈' if t['unrealized_r'] > 0 else '📉'
+                msg = (
+                    f"<b>{r_icon} Open: {t['direction']}</b> from ${t['entry_price']:,.2f}\n"
+                    f"Current: ${price:,.2f} ({t['unrealized_r']:+.1f}R)\n"
+                    f"{be_icon} BE: {'ACTIVE' if t['breakeven_reached'] else 'not yet'} "
+                    f"| Trail SL: ${t['current_trail_sl']:,.2f}\n"
+                    f"Bars: {t['bars_since_entry']}"
+                )
+                send_telegram(token, chat_id, msg)
+            return  # Don't spam status when trade is open
+
+        # Approaching zone alert
+        if status['approaching_zones']:
+            zone = status['approaching_zones'][0]
+            direction = '⬇️ support' if zone['direction'] == 'support' else '⬆️ resistance'
+            levels_text = '\n'.join(
+                f"  - {l['type']} ({l['tf']}) @ ${l['price']:,.2f}"
+                for l in zone['levels'][:5]
+            )
+            msg = (
+                f"<b>⚠️ Approaching Zone!</b>\n\n"
+                f"BTC: ${price:,.2f} -> {direction}\n"
+                f"Zone @ ${zone['center_price']:,.2f} ({zone['dist_pct']:.2f}% away)\n"
+                f"Confluence: {zone['confluence']} types\n"
+                f"{levels_text}\n\n"
+                f"<i>Prepare for entry</i>"
+            )
+            send_telegram(token, chat_id, msg)
+            return
+
+        # Normal status (no trade, no approaching zone)
+        sup = status.get('nearest_support')
+        res = status.get('nearest_resistance')
+        sup_text = f"{sup['type']} ({sup['tf']}) @ ${sup['price']:,.2f} — {sup['dist_pct']:.2f}% below" if sup else "none"
+        res_text = f"{res['type']} ({res['tf']}) @ ${res['price']:,.2f} — {res['dist_pct']:.2f}% above" if res else "none"
+
+        msg = (
+            f"<b>📊 Status</b> ({time_str})\n\n"
+            f"BTC: ${price:,.2f}\n"
+            f"Support: {sup_text}\n"
+            f"Resistance: {res_text}\n"
+            f"Open trades: {len(status['open_trades'])}"
+        )
+        send_telegram(token, chat_id, msg)
 
 
 def setup(token, chat_id):
@@ -132,10 +186,11 @@ def setup(token, chat_id):
 
 
 def test_message():
-    """Send a test message."""
+    """Send a test message with current market status."""
     from app import create_app
     from app.extensions import db
     from app.models.setting import get_setting
+    from app.services.confluence_signal import get_market_status
 
     app = create_app()
     with app.app_context():
@@ -146,12 +201,32 @@ def test_message():
             print("Telegram not configured. Run: python scripts/alert_bot.py --setup --token TOKEN --chat-id CHAT_ID")
             return
 
-        msg = (
-            "<b>🤖 Tradebot Alert System</b>\n\n"
-            "Test message - alerts are working!\n"
-            "You will receive signals from the 15m confluence scalper.\n\n"
-            "<i>PF 3.11 | WR 39% | $268/mo ($10 risk)</i>"
-        )
+        # Try to get live market status
+        try:
+            status = get_market_status(db.session)
+            price = status.get('price', '?')
+            sup = status.get('nearest_support')
+            res = status.get('nearest_resistance')
+            sup_text = f"${sup['price']:,.2f} ({sup['type']} {sup['tf']}, {sup['dist_pct']:.2f}%)" if sup else "none"
+            res_text = f"${res['price']:,.2f} ({res['type']} {res['tf']}, {res['dist_pct']:.2f}%)" if res else "none"
+            zones = len(status.get('approaching_zones', []))
+
+            msg = (
+                f"<b>🤖 Tradebot Alert System — TEST</b>\n\n"
+                f"Alerts are working!\n\n"
+                f"<b>Current BTC:</b> ${price:,.2f}\n"
+                f"<b>Nearest support:</b> {sup_text}\n"
+                f"<b>Nearest resistance:</b> {res_text}\n"
+                f"<b>Approaching zones:</b> {zones}\n\n"
+                f"<i>You will receive status updates every 15 min</i>"
+            )
+        except Exception as e:
+            msg = (
+                f"<b>🤖 Tradebot Alert System — TEST</b>\n\n"
+                f"Alerts are working!\n"
+                f"<i>(No market data available: {e})</i>"
+            )
+
         ok = send_telegram(token, chat_id, msg)
         print("Test message sent!" if ok else "Failed to send test message")
 

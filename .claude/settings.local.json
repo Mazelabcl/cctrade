@@ -62,7 +62,10 @@
       "Bash(PYTHONUNBUFFERED=1 \"C:\\\\Users\\\\aldot\\\\.gemini\\\\antigravity\\\\scratch\\\\claudecode\\\\tradebot\\\\.venv\\\\Scripts\\\\python.exe\" -u scripts/autoresearch/agent.py --experiments 500)",
       "Bash(PYTHONUNBUFFERED=1 \"C:\\\\Users\\\\aldot\\\\.gemini\\\\antigravity\\\\scratch\\\\claudecode\\\\tradebot\\\\.venv\\\\Scripts\\\\python.exe\" -u scripts/autoresearch/feature_discovery.py --experiments 200 --tf 4h)",
       "Bash(alembic heads:*)",
-      "Bash(alembic merge:*)"
+      "Bash(alembic merge:*)",
+      "WebFetch(domain:api.telegram.org)",
+      "Bash(cp \"C:/Users/aldot/.gemini/antigravity/scratch/claudecode/tradebot/app/services/confluence_signal.py\" \"C:/Users/aldot/.gemini/antigravity/scratch/claudecode/tradebot/.claude/worktrees/trusting-swirles/app/services/confluence_signal.py\")",
+      "Bash(cp \"C:/Users/aldot/.gemini/antigravity/scratch/claudecode/tradebot/app/models/paper_trade.py\" \"C:/Users/aldot/.gemini/antigravity/scratch/claudecode/tradebot/.claude/worktrees/trusting-swirles/app/models/paper_trade.py\")"
     ],
     "deny": []
   }

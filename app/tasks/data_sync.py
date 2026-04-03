@@ -72,6 +72,17 @@ def sync_candle_data():
         except Exception as e:
             logger.error("Failed to sync %s %s: %s", symbol, interval, e)
 
+    # After fetching candles, update level touch tracking
+    # This ensures first_touched_at stays accurate with new price data
+    if total > 0:
+        try:
+            from ..services.level_touch_tracker import update_touched_levels
+            touched = update_touched_levels(db.session, timeframe='15m')
+            if touched > 0:
+                logger.info("Updated %d levels as touched by new price data", touched)
+        except Exception as e:
+            logger.error("Level touch tracking failed: %s", e)
+
     # Persist sync metadata to DB
     now = datetime.now(timezone.utc)
     try:

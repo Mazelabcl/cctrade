@@ -82,19 +82,48 @@ def check_for_signal(session):
     if existing:
         return None
 
-    # Load active naked levels of the configured types
-    levels = (
+    # Load active levels of the configured types
+    # Filter to D-W-M only (no hourly contamination)
+    all_levels = (
         session.query(Level)
         .filter(
             Level.level_type.in_(config['level_types']),
             Level.invalidated_at.is_(None),
+            Level.timeframe.in_(['daily', 'weekly', 'monthly']),
             Level.created_at <= latest_candle.open_time,
         )
         .all()
     )
 
-    if config['naked_only']:
-        levels = [l for l in levels if l.first_touched_at is None]
+    # Filter for "naked" / valid levels
+    levels = []
+    candle_time = latest_candle.open_time
+
+    for l in all_levels:
+        is_mobile = l.level_type.startswith('PrevSession') or l.level_type.startswith('VP_')
+
+        if is_mobile:
+            # Mobile levels: only keep the MOST RECENT of each (type, timeframe)
+            # Check if a newer level of same type+tf exists before candle_time
+            newer = (
+                session.query(Level)
+                .filter(
+                    Level.level_type == l.level_type,
+                    Level.timeframe == l.timeframe,
+                    Level.invalidated_at.is_(None),
+                    Level.created_at > l.created_at,
+                    Level.created_at <= candle_time,
+                )
+                .first()
+            )
+            if newer is None:
+                # This is the most recent → valid
+                levels.append(l)
+        else:
+            # Structural levels: naked if first_touched_at is None
+            if config['naked_only'] and l.first_touched_at is not None:
+                continue
+            levels.append(l)
 
     if not levels:
         return None

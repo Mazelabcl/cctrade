@@ -64,6 +64,8 @@
             <option value="fractals_fib_cc">Fractals + Fib CC</option>
             <option value="fractals_only">Fractals only</option>
             <option value="old_4">Old 4 (VWAP+VP_POC)</option>
+            <option value="prevsession_useu">PrevSession US+EU (BE trail)</option>
+            <option value="prevsession_atr">PrevSession ATR trail (intraday)</option>
         </select>
     </div>
     <div class="filter-group" id="trade-selector-group" style="display:none">
@@ -135,5 +137,5 @@
 
 {% block extra_js %}
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="{{ url_for('static', filename='js/charts.js') }}?v=16"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}?v=17"></script>
 {% endblock %}

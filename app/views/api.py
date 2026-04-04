@@ -839,27 +839,53 @@ def _compute_forward_trades(start_date, config_name='fractals_fib_cc'):
         'fractals_only': {
             'level_types': ['Fractal_support', 'Fractal_resistance'],
             'score_threshold': 2,
+            'exit': {'strategy': 'breakeven_trail', 'rr_ratio': 1.5, 'swing_lookback': 10,
+                     'atr_multiplier': 2.0, 'breakeven_at_rr': 2.75, 'partial_pct': 0.5,
+                     'partial_rr': 2.0, 'timeout_candles': 45, 'sl_buffer_pct': 0.001},
         },
         'fractals_fib_cc': {
             'level_types': ['Fractal_support', 'Fractal_resistance', 'Fib_CC'],
             'score_threshold': 2,
+            'exit': {'strategy': 'breakeven_trail', 'rr_ratio': 1.5, 'swing_lookback': 10,
+                     'atr_multiplier': 2.0, 'breakeven_at_rr': 2.75, 'partial_pct': 0.5,
+                     'partial_rr': 2.0, 'timeout_candles': 45, 'sl_buffer_pct': 0.001},
         },
         'old_4': {
             'level_types': ['Fractal_support', 'Fractal_resistance',
                             'PrevSession_VWAP', 'PrevSession_VP_POC'],
             'score_threshold': 3,
+            'exit': {'strategy': 'breakeven_trail', 'rr_ratio': 1.5, 'swing_lookback': 10,
+                     'atr_multiplier': 2.0, 'breakeven_at_rr': 2.75, 'partial_pct': 0.5,
+                     'partial_rr': 2.0, 'timeout_candles': 45, 'sl_buffer_pct': 0.001},
+        },
+        'prevsession_useu': {
+            'level_types': ['PrevSession_High', 'PrevSession_Low', 'PrevSession_EQ',
+                            'PrevSession_25', 'PrevSession_75'],
+            'score_threshold': 3,
+            'session_filter': 'us_eu',
+            'exit': {'strategy': 'breakeven_trail', 'rr_ratio': 1.5, 'swing_lookback': 10,
+                     'atr_multiplier': 2.0, 'breakeven_at_rr': 2.75, 'partial_pct': 0.5,
+                     'partial_rr': 2.0, 'timeout_candles': 45, 'sl_buffer_pct': 0.001},
+        },
+        'prevsession_atr': {
+            'level_types': ['PrevSession_High', 'PrevSession_Low', 'PrevSession_EQ',
+                            'PrevSession_25', 'PrevSession_75'],
+            'score_threshold': 3,
+            'exit': {'strategy': 'atr_trail', 'rr_ratio': 1.5, 'swing_lookback': 10,
+                     'atr_multiplier': 0.5, 'breakeven_at_rr': 1.0, 'partial_pct': 0.5,
+                     'partial_rr': 2.0, 'timeout_candles': 20, 'sl_buffer_pct': 0.001},
         },
     }
-    preset = CONFIGS.get(config_name, CONFIGS['fractals_fib_cc'])
+    import copy as _copy
+    preset = _copy.deepcopy(CONFIGS.get(config_name, CONFIGS['fractals_fib_cc']))
 
     config = {
         'zone_width': 0.01, 'touch_tolerance': 0.001,
         'naked_only': True, 'scoring_mode': 'unique_types', 'entry_mode': 'touch',
-        'session_filter': 'all',
-        'exit': {'strategy': 'breakeven_trail', 'rr_ratio': 1.5, 'swing_lookback': 10,
-                 'atr_multiplier': 2.0, 'breakeven_at_rr': 2.75, 'partial_pct': 0.5,
-                 'partial_rr': 2.0, 'timeout_candles': 45, 'sl_buffer_pct': 0.001},
+        'session_filter': preset.pop('session_filter', 'all'),
     }
+    exit_cfg = preset.pop('exit', {})
+    config['exit'] = exit_cfg
     config.update(preset)
 
     entries = find_touch_entries(data, config)
@@ -868,10 +894,13 @@ def _compute_forward_trades(start_date, config_name='fractals_fib_cc'):
     entries_fwd = entries[fwd_mask]
     scores_fwd = scores[fwd_mask]
 
-    sw_lows, sw_highs = _get_swings(data, 10)
-    sl_buffer = 0.001
-    be_rr = 2.75
-    timeout = 45
+    sw_lows, sw_highs = _get_swings(data, exit_cfg.get('swing_lookback', 10))
+    sl_buffer = exit_cfg.get('sl_buffer_pct', 0.001)
+    be_rr = exit_cfg.get('breakeven_at_rr', 2.75)
+    timeout = exit_cfg.get('timeout_candles', 45)
+    exit_strategy = exit_cfg.get('strategy', 'breakeven_trail')
+    atr_mult = exit_cfg.get('atr_multiplier', 2.0)
+    rr_ratio = exit_cfg.get('rr_ratio', 1.5)
 
     trades = []
     for i in range(len(entries_fwd)):
@@ -889,38 +918,30 @@ def _compute_forward_trades(start_date, config_name='fractals_fib_cc'):
         if risk <= 0 or risk / entry_price > 0.05 or ci + timeout >= n_candles:
             continue
 
-        # Simulate exit
-        sl_cur = sl
-        be_reached = False
-        exit_bar = timeout
-        exit_price = float(c_closes[min(ci + timeout, n_candles - 1)])
-        exit_reason = 'TIMEOUT'
+        # Simulate exit using the scalper's function
+        pnl_r_raw = _simulate_exit(
+            exit_strategy, direction, entry_price, sl, risk, ci,
+            c_highs, c_lows, c_closes, atr, sw_lows, sw_highs,
+            timeout, rr_ratio, be_rr, atr_mult, 0.5, 2.0
+        )
+        pnl_r = round(pnl_r_raw, 2)
 
+        # Find exit bar (approximate from PnL)
+        if direction == 1:
+            exit_price = round(entry_price + pnl_r * risk, 2)
+        else:
+            exit_price = round(entry_price - pnl_r * risk, 2)
+
+        # Find actual exit bar
+        exit_bar = timeout
         for j in range(1, min(timeout, n_candles - ci)):
             k = ci + j
-            if direction == 1:
-                if c_lows[k] <= sl_cur:
-                    exit_bar = j
-                    exit_price = float(sl_cur)
-                    exit_reason = 'TRAIL' if be_reached else 'SL'
-                    break
-                if c_highs[k] >= entry_price + be_rr * risk:
-                    be_reached = True
-                if be_reached:
-                    sl_cur = max(sl_cur, max(entry_price, sw_lows[k]))
-            else:
-                if c_highs[k] >= sl_cur:
-                    exit_bar = j
-                    exit_price = float(sl_cur)
-                    exit_reason = 'TRAIL' if be_reached else 'SL'
-                    break
-                if c_lows[k] <= entry_price - be_rr * risk:
-                    be_reached = True
-                if be_reached:
-                    sl_cur = min(sl_cur, min(entry_price, sw_highs[k]))
-
-        pnl_r = round((exit_price - entry_price) / risk if direction == 1
-                      else (entry_price - exit_price) / risk, 2)
+            if direction == 1 and c_lows[k] <= sl:
+                exit_bar = j; break
+            elif direction == -1 and c_highs[k] >= sl:
+                exit_bar = j; break
+        # Determine exit reason
+        exit_reason = 'TIMEOUT' if exit_bar >= timeout else ('SL' if pnl_r <= -0.9 else 'TRAIL')
 
         # Zone levels
         zone_lo = entry_price * (1 - 0.01)

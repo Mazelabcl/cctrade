@@ -43,30 +43,52 @@ Types (from Chart Champions methodology):
 
 **Structural levels** (Fractal, HTF, Fib):
 - Born: when the pattern completes on a candle
-- Source timeframes: ONLY daily, weekly, monthly (NEVER hourly)
+- Source timeframes: Currently tested with daily, weekly, monthly. Other TFs
+  (4h, 1h, etc.) could work but haven't been validated yet — this is an OPEN
+  RESEARCH QUESTION. The toolkit should make it easy to experiment with any TF.
 - Die: when price touches them (`first_touched_at` gets set)
 - "Naked" = never touched = still valid for trading
+- IMPORTANT: `first_touched_at` depends on which CANDLE TIMEFRAME you're analyzing.
+  A daily HTF level at $68,000 might be first touched at 17:00 on 1h candles,
+  but at 17:15 on 15m candles, or 16:45 on 4h candles. The touch time should be
+  recalculated based on the granularity of the analysis timeframe (use the finest
+  available — typically 15m — for accuracy). The level itself is the same across
+  all analysis timeframes, only the touch detection granularity changes.
 
 **Mobile levels** (PrevSession, VP):
-- Born: at the START of the next session
+- Born: at the START of the next session (e.g., Monday's PrevSession_High is
+  calculated from Monday's data but becomes available on Tuesday 00:00 UTC)
+- So for any given candle, "PrevSession" = the PREVIOUS completed session's data
 - Die: when the NEXT level of same type+timeframe is created (`superseded_at`)
-- `first_touched_at` is NOT used for mobile levels
-- Only the most recent of each (type, timeframe) is valid
+  (e.g., Monday's PrevSession_High dies when Tuesday's PrevSession_High is created on Wednesday)
+- `first_touched_at` is NOT used for mobile levels — only `superseded_at`
+- Only the most recent of each (type, timeframe) is valid at any point in time
 
 ### Confluence
-When 2+ different level TYPES exist within ±1% of the same price.
+When 2+ different level TYPES exist within a configurable zone around the same price.
 Example: Fractal_support + Fib_CC + PrevSession_VWAP all near $67,000 = confluence zone.
+NOTE: The zone width (tested at 1% but could be 0.5%, 2%, etc.), minimum number of types,
+and which types count — ALL of these should be PARAMETERS that the researcher can experiment
+with. Nothing is fixed. The toolkit should make it trivial to test different combinations.
 
 ### Touch detection
 A candle "touches" a level when:
 - `candle.low <= level_price * 1.003` AND `candle.close > level_price` → LONG
 - `candle.high >= level_price * 0.997` AND `candle.close < level_price` → SHORT
 
-### Exit strategies
+#### Exit strategies (what we've tried so far — NOT exhaustive)
+These are the exit strategies implemented so far. New ones can and should be invented:
 - **breakeven_trail**: SL stays at original until price moves +be_rr×R, then trails with swing lows
 - **atr_trail**: SL trails at price - atr_multiplier × ATR
 - **fixed_rr**: Close at fixed risk/reward ratio
 - **swing_trail**: SL trails with swing lows/highs immediately
+
+The toolkit should make it EASY to add new exit strategies (just a function that
+takes candles + entry + SL and returns exit price/time). Ideas not yet tried:
+- Time-based partial closes
+- Multi-target exits (close 50% at 2R, let rest run)
+- Volatility-adjusted trailing
+- Higher-TF confirmation-based exits (hold longer if 4h confirms)
 
 ## Proven code to extract (READ THESE FILES)
 
@@ -105,8 +127,12 @@ A candle "touches" a level when:
 
 ## Known issues / lessons learned (DO NOT REPEAT)
 
-1. **NEVER use hourly levels.** Only daily, weekly, monthly. 101K hourly levels contaminated
-   early experiments and made HTF/Fib appear useless when they weren't.
+1. **Hourly levels contaminated early experiments.** When we calculated levels from 1h candles
+   AND from daily/weekly/monthly candles, the 101K hourly levels drowned out the signal from
+   the ~7K D-W-M levels. This made HTF and Fib appear useless when they weren't.
+   LESSON: When experimenting, be intentional about which SOURCE TIMEFRAMES generate levels.
+   Don't mix without purpose. Start with D-W-M (proven), then experiment with adding 4h, 1h
+   etc. as a SEPARATE research question. The toolkit should make this a parameter.
 
 2. **`first_touched_at` must be recalculated** every time new candles are added.
    Otherwise levels appear "naked" forever even after price crossed them.
